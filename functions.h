@@ -8,6 +8,10 @@
 #include <cstdio>
 #include <math.h>
 
+const unsigned long BUCKET_SIZE = 64 * pow(2, 20);  //64KB (I think)
+const unsigned long TUPLE_SIZE = 2 * sizeof(int64_t);
+const int TUPLES_PER_BUCKET = (int)(BUCKET_SIZE / TUPLE_SIZE);  //each bucket must be smaller than 64KB //size of bucket = num_tuples * sizeof(tuples)  //num_tuples (of each bucket) = 64KB / sizeof(tuple)
+
 class tuple
 {
 public:
@@ -29,5 +33,8 @@ class result
 };
 
 result* join(relation* R, relation* S);
+int** create_hist(relation*);
+int** create_psum(int**);
+relation* re_ordered(relation*);
 
 #endif

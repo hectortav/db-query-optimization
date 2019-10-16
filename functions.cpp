@@ -81,23 +81,69 @@ result* join(relation* R, relation* S)
     lst->print();
 }
 
-void create_hist(relation *relR)
+int** create_hist(relation *rel)
 {
-    int x=pow(2,8);
-    int hist[x][2]; //static array?
+    int x = pow(2,8);
+    int **hist = new int*[2];
+    for(int i = 0; i < 2; i++)
+        hist[i] = new int[x];
     int64_t key;
-    int i;
-    for(i = 0; i < pow(2, 8); i++)
+    for(int i = 0; i < x; i++)
     {
-        hist[i][0]= i;
-        hist[i][1]= 0;
+        hist[0][i]= i;
+        hist[1][i]= 0;
     }
 
-    for (i = 0; i < relR->num_tuples; i++)
+    for (int i = 0; i < rel->num_tuples; i++)
     {
-        key = (relR->tuples[i].key >> 56) & 0xFF;
-        hist[key][1]++;
+        key = (rel->tuples[i].key >> 56) & 0xFF;
+        std::cout << key << std::endl;
+        hist[1][key]++;
     }
+    return hist;
+}
+
+int** create_psum(int** hist)
+{
+    int count = 0;
+    int x = pow(2,8);
+    int **psum = new int*[2];
+    for(int i = 0; i < 2; i++)
+        psum[i] = new int[x];
+
+    for (int i = 0; i < x; i++)
+    {
+        psum[0][i] = hist[0][i];
+        psum[1][i] = count;
+        count+=hist[1][i];
+    }
+    return psum;
+}
+
+relation* re_ordered(relation *rel)
+{
+    relation new_rel;
+    //create histogram
+    int** hist = create_hist(rel);
+    int** psum = create_psum(hist);
+    int x = pow(2, 8);
+
+    //new_rel.num_tuples = rel->num_tuples;
+    //new_rel.tuples = new tuple[new_rel.num_tuple];
     
+
+    //testing
+    //for (int i = 0; i < x; i++)
+    //    std::cout << psum[0][i] << " " << psum[1][i] << std::endl;
+
+    delete [] hist[0];
+    delete [] hist[1];
+    delete [] hist;
+    
+    delete [] psum[0];
+    delete [] psum[1];
+    delete [] psum;
+
+    return &new_rel;
 
 }
