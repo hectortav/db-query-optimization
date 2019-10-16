@@ -12,6 +12,7 @@ public:
     int64_t key;
     int64_t payload;
 };
+
 class relation
 {
 public:
@@ -19,6 +20,7 @@ public:
     uint64_t num_tuples;
     void print();
 };
+
 class result
 {
 
