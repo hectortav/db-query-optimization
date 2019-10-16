@@ -4,11 +4,25 @@
 
 
 class listnode{
-  void* content;
+public:
+  char* content;
+  int size;
   listnode* next;
-  void insert();
-  listnode();
+  listnode(int sz);
   ~listnode();
 };
+
+class list{
+public:
+  listnode* first;
+  listnode* last;
+  int lnodesz;
+  list(int lnodesz);
+  ~list();
+  bool insert(char* txt);
+  void print();
+};
+
+
 
 #endif

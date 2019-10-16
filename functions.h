@@ -5,6 +5,7 @@
 #include <cstring>
 #include "list.h"
 #include <ctime>
+#include <cstdio>
 class tuple
 {
 public:
@@ -16,9 +17,13 @@ class relation
 public:
     tuple* tuples;
     uint64_t num_tuples;
+    void print();
 };
 class result
 {
 
 };
+
+result* join(relation* R, relation* S);
+
 #endif
