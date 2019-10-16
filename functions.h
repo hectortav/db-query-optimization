@@ -4,5 +4,18 @@
 #include <cstdlib>
 #include <cstring>
 #include "list.h"
+class tuple
+{
+    int64_t key;
+    int64_t payload;
+};
+class relation
+{
+    tuple* tuples;
+    uint64_t num_tuples;
+};
+class result
+{
 
+};
 #endif
