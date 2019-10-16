@@ -6,6 +6,8 @@
 #include "list.h"
 #include <ctime>
 #include <cstdio>
+#include <math.h>
+
 class tuple
 {
 public:

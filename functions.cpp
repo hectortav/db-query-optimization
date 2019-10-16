@@ -10,13 +10,6 @@ void relation::print()
 
 result* join(relation* R, relation* S)
 {
-    /*std::cout<<"join"<<std::endl;
-    int64_t** array;
-    array=new int64_t*[50000];
-    for(int i=0;i<50000;i++)
-        array[i]=new int64_t[2]{-1,-1};
-    int samestart=-1;
-    std::cout<<"aloced"<<std::endl;*/
     int samestart=-1;
     list* lst=new list(5);
     for(int r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
@@ -29,7 +22,7 @@ result* join(relation* R, relation* S)
             char x[20];
             sprintf(x,"%ld %ld\n",R->tuples[r].key,S->tuples[s].key);
             lst->insert(x);
-            std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
+            //std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
             //i++;
             //std::cout<<"Matching: R:"<<R->tuples[r].key<<" S:"<<S->tuples[s].key<<std::endl;
             /*array[i][0]=R->tuples[r].key;
@@ -87,11 +80,11 @@ result* join(relation* R, relation* S)
     std::cout<<std::endl;
     lst->print();
 }
-#include <math.h>
 
 void create_hist(relation *relR)
 {
-    int hist[pow(2, 8)][2] //static array?
+    int x=pow(2,8);
+    int hist[x][2]; //static array?
     int64_t key;
     int i;
     for(i = 0; i < pow(2, 8); i++)
@@ -100,9 +93,9 @@ void create_hist(relation *relR)
         hist[i][1]= 0;
     }
 
-    for (i = 0; i < relation.num_tuples; i++)
+    for (i = 0; i < relR->num_tuples; i++)
     {
-        key = (relR.tuples[i].key >> 56) & 0xFF;
+        key = (relR->tuples[i].key >> 56) & 0xFF;
         hist[key][1]++;
     }
     
