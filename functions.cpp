@@ -151,7 +151,8 @@ relation* re_ordered(relation *rel, int shift)
     int64_t** psum = create_psum(hist);
     int x = pow(2, 8);
     int64_t key;
-    int size, i, j, y;
+    int i, j, y;
+    tuple *ptr = NULL, *memory = NULL;
 
     new_rel->num_tuples = rel->num_tuples;
     new_rel->tuples = new tuple[new_rel->num_tuples];
@@ -164,8 +165,6 @@ relation* re_ordered(relation *rel, int shift)
     {
         //hash
         key = (0xFFFFFFFF & rel->tuples[i].key) >> (8*shift) & 0xFF;
-        //keep count of tuples in bucket
-        size =  hist[1][key];
         //find hash in psum = pos in new relation
         key = psum[1][key];
 
@@ -226,6 +225,33 @@ relation* re_ordered(relation *rel, int shift)
         }
 
         i++;
+    }
+
+    if (shift == 0)
+    {
+        memory = new tuple[TUPLES_PER_BUCKET];
+        i = 0;
+        while (i < x)
+        {
+            if (hist[1][i] > 0)
+            {
+                j = psum[1][i];
+                if (i + 1 < x)
+                    y = psum[1][i+1];
+                else
+                    y = new_rel->num_tuples;
+                ptr = &(new_rel->tuples[j]);
+                std::cout << (y - j) << " " << y << " " << j << " " << std::endl;
+                //memcpy(memory, ptr, (size_t)(TUPLE_SIZE * (y-j)));
+                std::cout << &ptr[0] << " " << &(ptr[0]) + TUPLE_SIZE << std::endl;
+                for(int k = 0; k < (y-j); k++)
+                    std::cout << ptr[k].key << " " << ptr[k].payload << " " << &ptr[k] << std::endl;
+                    //std::cout << memory[k].key << " " << memory[k].payload << std::endl;
+
+            }
+            i++;
+        }
+        delete [] memory;
     }
 
     delete [] hist[0];
