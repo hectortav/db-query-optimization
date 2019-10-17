@@ -25,6 +25,7 @@ bool list::insert(char* txt)
     if(ssz+this->last->size>this->lnodesz)
         this->last=this->last->next=new listnode(this->lnodesz);
     strcat(this->last->content,txt);
+    return true;
 }
 void list::print()
 {

@@ -9,10 +9,12 @@ int main(void)
     relation R,S;
     
     R.num_tuples = 10;
-    R.tuples = new tuple[R.num_tuples] {{0xF,0}, {0xF,1}, {0xF,2}, {0xF,3}, {0xF,4},
-                                        {0xFF,5}, {0xFF,6},
-                                        {0x0,7}, {0x0,8}, {0x0,9}};
-    relation *ro_R = re_ordered(&R);
+    R.tuples = new tuple[R.num_tuples] {
+        {0xBFF,5}, {0xAFF,6},
+        {0xBAA,0}, {0xBAA,1}, {0xAAA,2}, {0xCAA,3}, {0xCAA,4},
+        {0xCCC,7}, {0xBCC,8}, {0xACC,9}
+                                        };
+    relation *ro_R = re_ordered(&R, 0);
     ro_R->print();
 
     delete ro_R;
