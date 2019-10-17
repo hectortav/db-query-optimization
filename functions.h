@@ -33,8 +33,8 @@ class result
 };
 
 result* join(relation* R, relation* S);
-int** create_hist(relation*);
-int** create_psum(int**);
+int64_t** create_hist(relation*);
+int64_t** create_psum(int64_t**);
 relation* re_ordered(relation*);
 
 #endif

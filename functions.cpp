@@ -81,12 +81,12 @@ result* join(relation* R, relation* S)
     lst->print();
 }
 
-int** create_hist(relation *rel)
+int64_t** create_hist(relation *rel)
 {
     int x = pow(2,8);
-    int **hist = new int*[2];
+    int64_t **hist = new int64_t*[2];
     for(int i = 0; i < 2; i++)
-        hist[i] = new int[x];
+        hist[i] = new int64_t[x];
     int64_t key;
     for(int i = 0; i < x; i++)
     {
@@ -96,25 +96,25 @@ int** create_hist(relation *rel)
 
     for (int i = 0; i < rel->num_tuples; i++)
     {
-        key = (rel->tuples[i].key >> 56) & 0xFF;
-        std::cout << key << std::endl;
+        //key = (rel->tuples[i].key >> 56) & 0xFF;
+        key = rel->tuples[i].key & 0xFF;
         hist[1][key]++;
     }
     return hist;
 }
 
-int** create_psum(int** hist)
+int64_t** create_psum(int64_t** hist)
 {
     int count = 0;
     int x = pow(2,8);
-    int **psum = new int*[2];
+    int64_t **psum = new int64_t*[2];
     for(int i = 0; i < 2; i++)
-        psum[i] = new int[x];
+        psum[i] = new int64_t[x];
 
     for (int i = 0; i < x; i++)
     {
-        psum[0][i] = hist[0][i];
-        psum[1][i] = count;
+        psum[0][i] = (int64_t)hist[0][i];
+        psum[1][i] = (int64_t)count;
         count+=hist[1][i];
     }
     return psum;
@@ -124,8 +124,8 @@ relation* re_ordered(relation *rel)
 {
     relation new_rel;
     //create histogram
-    int** hist = create_hist(rel);
-    int** psum = create_psum(hist);
+    int64_t** hist = create_hist(rel);
+    int64_t** psum = create_psum(hist);
     int x = pow(2, 8);
 
     //new_rel.num_tuples = rel->num_tuples;
@@ -133,8 +133,9 @@ relation* re_ordered(relation *rel)
     
 
     //testing
-    //for (int i = 0; i < x; i++)
-    //    std::cout << psum[0][i] << " " << psum[1][i] << std::endl;
+    for (int i = 0; i < x; i++)
+        if (i == x-1 || psum[1][i] != psum[1][i+1])
+            std::cout << psum[0][i] << " " << psum[1][i] << std::endl;
 
     delete [] hist[0];
     delete [] hist[1];
@@ -144,6 +145,6 @@ relation* re_ordered(relation *rel)
     delete [] psum[1];
     delete [] psum;
 
-    return &new_rel;
+    return NULL;
 
 }
