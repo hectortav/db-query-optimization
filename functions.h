@@ -39,4 +39,11 @@ int64_t** create_hist(relation*, int);
 int64_t** create_psum(int64_t**);
 relation* re_ordered(relation*, int);
 
+// functions for bucket sort
+void swap(tuple** tuples, unsigned int elem1, unsigned int elem2);
+unsigned int randomIndex(unsigned int startIndex, unsigned int stopIndex);
+int partition(tuple** tuples, int startIndex, int stopIndex);
+void quickSort(tuple** tuples, int startIndex, int stopIndex);
+void sortBucket(relation* rel, unsigned int startIndex, unsigned int endIndex);
+
 #endif
