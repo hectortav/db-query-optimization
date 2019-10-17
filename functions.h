@@ -25,6 +25,8 @@ public:
     tuple* tuples;
     uint64_t num_tuples;
     void print();
+    relation();
+    ~relation();
 };
 
 class result

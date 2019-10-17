@@ -8,6 +8,18 @@ void relation::print()
     }
 }
 
+relation::relation()
+{
+    num_tuples = 0;
+    tuples = NULL;
+}
+
+relation::~relation()
+{
+    if (tuples != NULL)
+        delete [] tuples;
+}
+
 result* join(relation* R, relation* S)
 {
     int samestart=-1;
@@ -113,7 +125,7 @@ int64_t** create_psum(int64_t** hist)
 
     for (int i = 0; i < x; i++)
     {
-        psum[0][i] = (int64_t)hist[0][i];
+        psum[0][i] = hist[0][i];
         psum[1][i] = (int64_t)count;
         count+=hist[1][i];
     }
@@ -122,20 +134,43 @@ int64_t** create_psum(int64_t** hist)
 
 relation* re_ordered(relation *rel)
 {
-    relation new_rel;
+    relation *new_rel = new relation();
     //create histogram
     int64_t** hist = create_hist(rel);
     int64_t** psum = create_psum(hist);
     int x = pow(2, 8);
+    int64_t key;
 
-    //new_rel.num_tuples = rel->num_tuples;
-    //new_rel.tuples = new tuple[new_rel.num_tuple];
-    
+    new_rel->num_tuples = rel->num_tuples;
+    new_rel->tuples = new tuple[new_rel->num_tuples];
+    bool *flag = new bool[new_rel->num_tuples];
+    for (int i = 0; i < rel->num_tuples; i++)
+    {
+        flag[i] = false;
+    }
 
     //testing
-    for (int i = 0; i < x; i++)
+    /*for (int i = 0; i < x; i++)
         if (i == x-1 || psum[1][i] != psum[1][i+1])
-            std::cout << psum[0][i] << " " << psum[1][i] << std::endl;
+            std::cout << psum[0][i] << " " << psum[1][i] << std::endl;*/
+
+    for (int i = 0; i < rel->num_tuples; i++)
+    {
+        //hash
+        key = rel->tuples[i].key & 0xFF;
+        //find hash in psum = pos in new relation
+        key = psum[1][key];
+        //key++ until their is an empty place
+        while (flag[key] == true && key < rel->num_tuples)
+            key++;
+        //std::cout << key << std::endl;
+        if (key < rel->num_tuples)
+        {
+            new_rel->tuples[key].key = rel->tuples[i].key;
+            new_rel->tuples[key].payload = rel->tuples[i].payload;
+            flag[key] = true;
+        }
+    }   
 
     delete [] hist[0];
     delete [] hist[1];
@@ -144,7 +179,9 @@ relation* re_ordered(relation *rel)
     delete [] psum[0];
     delete [] psum[1];
     delete [] psum;
+    delete [] flag;
 
-    return NULL;
+
+    return new_rel;
 
 }
