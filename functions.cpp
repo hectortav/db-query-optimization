@@ -225,6 +225,19 @@ relation* re_ordered(relation *rel, int shift)
         i++;
     }
 
+    /*i = 0;
+    while (i < x)
+    {
+        if (hist[1][i] > 0)
+        {
+            if (i + 1 < x)
+                sortBucket(new_rel, psum[1][i], psum[1][i+1]);
+            else
+                sortBucket(new_rel, psum[1][i], new_rel->num_tuples);
+        }
+        i++;
+    }*/
+
     delete [] hist[0];
     delete [] hist[1];
 
