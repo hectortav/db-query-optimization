@@ -247,3 +247,55 @@ relation* re_ordered(relation *rel, int shift)
     return new_rel;
 
 }
+
+void swap(tuple** tuple1,tuple** tuple2)
+{
+    tuple* temp = *tuple1;
+    *tuple1 = *tuple2;
+    *tuple2 = temp;
+}
+
+unsigned int randomIndex(unsigned int startIndex, unsigned int stopIndex) {
+    srand(time(NULL));
+
+    return rand()%(stopIndex - startIndex + 1);
+}
+
+int partition(tuple** tuples, int startIndex, int stopIndex)
+{ 
+    unsigned int pivotIndex = randomIndex(startIndex, stopIndex);
+    int64_t pivot = tuples[pivotIndex]->payload;
+    swap(&tuples[pivotIndex], &tuples[stopIndex]);
+     
+    int i = startIndex - 1;  // index of smaller element 
+  
+    for (int j = startIndex; j < stopIndex; j++) 
+    {
+        if (tuples[j]->payload < pivot) 
+        { 
+            // if current element is smaller than the pivot 
+            i++;    // increment index of smaller element 
+            swap(&tuples[i], &tuples[j]);
+        } 
+    } 
+    swap(&tuples[i + 1], &tuples[stopIndex]);
+    return (i + 1);
+}
+
+
+void quickSort(tuple** tuples, int startIndex, int stopIndex) 
+{ 
+    if (startIndex < stopIndex) 
+    { 
+        int partitionIndex = partition(tuples, startIndex, stopIndex); 
+  
+        quickSort(tuples, startIndex, partitionIndex - 1); 
+        quickSort(tuples, partitionIndex + 1, stopIndex); 
+    } 
+}
+
+void sortBucket(relation* rel, unsigned int startIndex, unsigned int stopIndex) {
+    tuple* tuples = rel->tuples;
+
+    quickSort(&rel->tuples, startIndex, stopIndex);
+}
