@@ -189,6 +189,8 @@ relation* re_ordered(relation *rel, int shift)
     i = 0;
     while (i < x)
     {
+        if ((hist[1][i] > TUPLES_PER_BUCKET) && ((shift + 1) * 8 <= 64))
+        {
             // new rel to re_order
             temp = new relation();
             temp->num_tuples = hist[1][i];
@@ -205,30 +207,21 @@ relation* re_ordered(relation *rel, int shift)
                 j++;
                 y++;
             }
-            if ((hist[1][i] > TUPLES_PER_BUCKET) && ((shift + 1) * 8 <= 64))
+            rtn = re_ordered(temp, shift+1);
+            j = psum[1][i];
+            y = 0;
+            while (j < x)
             {
-                rtn = re_ordered(temp, shift+1);
-                j = psum[1][i];
-                y = 0;
-                while (j < x)
-                {
-                    if (j >= psum[1][i+1])
-                        break;
-                    new_rel->tuples[j].key = rtn->tuples[y].key;
-                    new_rel->tuples[j].payload = rtn->tuples[y].payload;
-                    j++;
-                    y++;
-                }
+                if (j >= psum[1][i+1])
+                    break;
+                new_rel->tuples[j].key = rtn->tuples[y].key;
+                new_rel->tuples[j].payload = rtn->tuples[y].payload;
+                j++;
+                y++;
             }
-
-            if (shift == 0)
-            {
-                sortBucket(new_rel, 0, new_rel->num_tuples);
-            }
-
             delete rtn;
             delete temp;
-
+        }
         i++;
     }
 
