@@ -15,7 +15,10 @@ int main(void)
         {0xBAA,0}, {0xBAA,1}, {0xAAA,2}, {0xCAA,3}, {0xCAA,4},
         {0xCCC,7}, {0xBCC,8}, {0xACC,9}
                                         };
+    std::cout << "before" << std::endl;
+    R.print();
     relation *ro_R = re_ordered(&R, 0);
+    std::cout << "after" << std::endl;
     ro_R->print();
 
     delete ro_R;

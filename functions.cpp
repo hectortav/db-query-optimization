@@ -225,7 +225,9 @@ relation* re_ordered(relation *rel, int shift)
         i++;
     }
 
-    /*i = 0;
+    // std::cout << "before sort" << std::endl;
+    // new_rel->print();
+    i = 0;
     while (i < x)
     {
         if (hist[1][i] > 0)
@@ -236,7 +238,10 @@ relation* re_ordered(relation *rel, int shift)
                 sortBucket(new_rel, psum[1][i], new_rel->num_tuples);
         }
         i++;
-    }*/
+    }
+
+    // std::cout << "after sort" << std::endl;
+    // new_rel->print();
 
     delete [] hist[0];
     delete [] hist[1];
@@ -254,43 +259,51 @@ relation* re_ordered(relation *rel, int shift)
 
 }
 
-void swap(tuple** tuple1,tuple** tuple2)
+void swap(tuple* tuple1, tuple* tuple2)
 {
-    tuple* temp = *tuple1;
-    *tuple1 = *tuple2;
-    *tuple2 = temp;
+    int64_t tempKey = tuple1->key;
+    int64_t tempPayload = tuple1->payload;
+
+    tuple1->key = tuple2->key;
+    tuple1->payload = tuple2->payload;
+
+    tuple2->key = tempKey;
+    tuple2->payload = tempPayload;
 }
 
 unsigned int randomIndex(unsigned int startIndex, unsigned int stopIndex) {
     srand(time(NULL));
 
-    return rand()%(stopIndex - startIndex + 1);
+    return rand()%(stopIndex - startIndex) + startIndex;
 }
 
-int partition(tuple** tuples, int startIndex, int stopIndex)
+int partition(tuple* tuples, int startIndex, int stopIndex)
 { 
     unsigned int pivotIndex = randomIndex(startIndex, stopIndex);
-    int64_t pivot = tuples[pivotIndex]->payload;
+
+    int64_t pivot = tuples[pivotIndex].payload;
+
     swap(&tuples[pivotIndex], &tuples[stopIndex]);
-     
+
     int i = startIndex - 1;  // index of smaller element 
   
     for (int j = startIndex; j < stopIndex; j++) 
     {
-        if (tuples[j]->payload < pivot) 
+        if (tuples[j].payload < pivot) 
         { 
             // if current element is smaller than the pivot 
             i++;    // increment index of smaller element 
+            
             swap(&tuples[i], &tuples[j]);
-        } 
-    } 
+        }
+    }
     swap(&tuples[i + 1], &tuples[stopIndex]);
     return (i + 1);
 }
 
 
-void quickSort(tuple** tuples, int startIndex, int stopIndex) 
-{ 
+void quickSort(tuple* tuples, int startIndex, int stopIndex) 
+{
     if (startIndex < stopIndex) 
     { 
         int partitionIndex = partition(tuples, startIndex, stopIndex); 
@@ -301,7 +314,6 @@ void quickSort(tuple** tuples, int startIndex, int stopIndex)
 }
 
 void sortBucket(relation* rel, unsigned int startIndex, unsigned int stopIndex) {
-    tuple* tuples = rel->tuples;
-
-    quickSort(&rel->tuples, startIndex, stopIndex);
+        // std::cout << "startIndex: " << startIndex << ", stopIndex: " << stopIndex << std::endl;
+    quickSort(rel->tuples, startIndex, stopIndex);
 }
