@@ -101,7 +101,7 @@ int64_t** create_hist(relation *rel, int shift)
     int64_t **hist = new int64_t*[2];
     for(int i = 0; i < 2; i++)
         hist[i] = new int64_t[x];
-    int64_t key, mid;
+    int64_t payload, mid;
     for(int i = 0; i < x; i++)
     {
         hist[0][i]= i;
@@ -110,14 +110,14 @@ int64_t** create_hist(relation *rel, int shift)
 
     for (int i = 0; i < rel->num_tuples; i++)
     {
-        mid = (0xFFFFFFFF & rel->tuples[i].key) >> (8*shift);
-        key = mid & 0xFF;
-        if (key > 0xFF)
+        mid = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift);
+        payload = mid & 0xFF;
+        if (payload > 0xFF)
         {
-            std::cout << "ERROR " << key << std::endl;
+            std::cout << "ERROR " << payload << std::endl;
             return NULL;
         }
-        hist[1][key]++;
+        hist[1][payload]++;
     }
     return hist;
 }
@@ -150,7 +150,7 @@ relation* re_ordered(relation *rel, int shift)
     //create psum
     int64_t** psum = create_psum(hist);
     int x = pow(2, 8);
-    int64_t key;
+    int64_t payload;
     int i, j, y;
 
     new_rel->num_tuples = rel->num_tuples;
@@ -163,19 +163,19 @@ relation* re_ordered(relation *rel, int shift)
     while(i < rel->num_tuples)
     {
         //hash
-        key = (0xFFFFFFFF & rel->tuples[i].key) >> (8*shift) & 0xFF;
+        payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
         //find hash in psum = pos in new relation
-        key = psum[1][key];
+        payload = psum[1][payload];
 
-        //key++ until their is an empty place
-        while ((key < rel->num_tuples) && flag[key])
-            key++;
+        //payload++ until their is an empty place
+        while ((payload < rel->num_tuples) && flag[payload])
+            payload++;
 
-        if (key < rel->num_tuples)
+        if (payload < rel->num_tuples)
         {
-            new_rel->tuples[key].key = rel->tuples[i].key;
-            new_rel->tuples[key].payload = rel->tuples[i].payload;
-            flag[key] = true;
+            new_rel->tuples[payload].payload = rel->tuples[i].payload;
+            new_rel->tuples[payload].key = rel->tuples[i].key;
+            flag[payload] = true;
         }
         i++;
     }
@@ -202,8 +202,8 @@ relation* re_ordered(relation *rel, int shift)
                 if (i + 1 < x)
                     if (j >= psum[1][i+1])
                         break;
-                temp->tuples[y].key = new_rel->tuples[j].key;
                 temp->tuples[y].payload = new_rel->tuples[j].payload;
+                temp->tuples[y].key = new_rel->tuples[j].key;
                 j++;
                 y++;
             }
@@ -214,8 +214,8 @@ relation* re_ordered(relation *rel, int shift)
             {
                 if (j >= psum[1][i+1])
                     break;
-                new_rel->tuples[j].key = rtn->tuples[y].key;
                 new_rel->tuples[j].payload = rtn->tuples[y].payload;
+                new_rel->tuples[j].key = rtn->tuples[y].key;
                 j++;
                 y++;
             }
