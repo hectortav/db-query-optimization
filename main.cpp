@@ -18,6 +18,7 @@ int main(void)
     std::cout << "before" << std::endl;
     R.print();
     relation *ro_R = re_ordered(&R, 0);
+    // quickSort(R.tuples, 0, R.num_tuples - 1);
     std::cout << "after" << std::endl;
     ro_R->print();
 
