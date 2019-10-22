@@ -101,7 +101,7 @@ int64_t** create_hist(relation *rel, int shift)
     int64_t **hist = new int64_t*[2];
     for(int i = 0; i < 2; i++)
         hist[i] = new int64_t[x];
-    int64_t payload, mid;
+    int64_t key, mid;
     for(int i = 0; i < x; i++)
     {
         hist[0][i]= i;
@@ -110,14 +110,15 @@ int64_t** create_hist(relation *rel, int shift)
 
     for (int i = 0; i < rel->num_tuples; i++)
     {
-        mid = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift);
-        payload = mid & 0xFF;
-        if (payload > 0xFF)
+        //mid = (0xFFFFFFFF & rel->tuples[i].key) >> (8*shift);
+        key = ((0xFFFFFFFF & rel->tuples[i].key) >> (8 * (3 - shift))) & 0xFF;
+
+        if (key > 0xFF)
         {
-            std::cout << "ERROR " << payload << std::endl;
+            std::cout << "ERROR " << key << std::endl;
             return NULL;
         }
-        hist[1][payload]++;
+        hist[1][key]++;
     }
     return hist;
 }
@@ -126,15 +127,14 @@ int64_t** create_psum(int64_t** hist)
 {
     int count = 0;
     int x = pow(2,8);
-    int64_t **psum = new int64_t*[3];
-    for(int i = 0; i < 3; i++)
+    int64_t **psum = new int64_t*[2];
+    for(int i = 0; i < 2; i++)
         psum[i] = new int64_t[x];
 
     for (int i = 0; i < x; i++)
     {
         psum[0][i] = hist[0][i];
         psum[1][i] = (int64_t)count;
-        psum[2][i] = 0; //how many times we hashed
         count+=hist[1][i];
     }
     return psum;
@@ -150,7 +150,7 @@ relation* re_ordered(relation *rel, int shift)
     //create psum
     int64_t** psum = create_psum(hist);
     int x = pow(2, 8);
-    int64_t payload;
+    int64_t key;
     int i, j, y;
 
     new_rel->num_tuples = rel->num_tuples;
@@ -163,19 +163,20 @@ relation* re_ordered(relation *rel, int shift)
     while(i < rel->num_tuples)
     {
         //hash
-        payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
+        //key = (0xFFFFFFFF & rel->tuples[i].key) >> (8*shift) & 0xFF;
+        key = ((0xFFFFFFFF & rel->tuples[i].key) >> (8 * (3 - shift))) & 0xFF;
         //find hash in psum = pos in new relation
-        payload = psum[1][payload];
+        key = psum[1][key];
 
-        //payload++ until their is an empty place
-        while ((payload < rel->num_tuples) && flag[payload])
-            payload++;
+        //key++ until their is an empty place
+        while ((key < rel->num_tuples) && flag[key])
+            key++;
 
-        if (payload < rel->num_tuples)
+        if (key < rel->num_tuples)
         {
-            new_rel->tuples[payload].payload = rel->tuples[i].payload;
-            new_rel->tuples[payload].key = rel->tuples[i].key;
-            flag[payload] = true;
+            new_rel->tuples[key].key = rel->tuples[i].key;
+            new_rel->tuples[key].payload = rel->tuples[i].payload;
+            flag[key] = true;
         }
         i++;
     }
@@ -189,7 +190,7 @@ relation* re_ordered(relation *rel, int shift)
     i = 0;
     while (i < x)
     {
-        if ((hist[1][i] > TUPLES_PER_BUCKET) && ((shift + 1) * 8 <= 64))
+        if ((hist[1][i] > TUPLES_PER_BUCKET) && (shift  < 3))
         {
             // new rel to re_order
             temp = new relation();
@@ -202,43 +203,75 @@ relation* re_ordered(relation *rel, int shift)
                 if (i + 1 < x)
                     if (j >= psum[1][i+1])
                         break;
-                temp->tuples[y].payload = new_rel->tuples[j].payload;
                 temp->tuples[y].key = new_rel->tuples[j].key;
+                temp->tuples[y].payload = new_rel->tuples[j].payload;
                 j++;
                 y++;
             }
-            rtn = re_ordered(temp, shift+1);
+            rtn = re_ordered(temp, shift + 1);
             j = psum[1][i];
             y = 0;
             while (j < x)
             {
                 if (j >= psum[1][i+1])
                     break;
-                new_rel->tuples[j].payload = rtn->tuples[y].payload;
                 new_rel->tuples[j].key = rtn->tuples[y].key;
+                new_rel->tuples[j].payload = rtn->tuples[y].payload;
                 j++;
                 y++;
             }
             delete rtn;
             delete temp;
         }
+        else if (hist[1][i] > 0)
+        {
+                //print bucket before sort
+                /*std::cout << "{" << std::endl;
+                if (i + 1 < x)
+                {
+                    for (int l = psum[1][i]; l < psum[1][i+1]; l++)
+                        std::cout << new_rel->tuples[l].key << ". " << new_rel->tuples[l].payload << std::endl;
+                }
+                else
+                {
+                    for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
+                        std::cout << new_rel->tuples[l].key << ". " << new_rel->tuples[l].payload << std::endl;
+                }
+                std::cout << "}" << std::endl;
+            std::cout << std::endl;*/
+            if (i + 1 < x)
+            {
+                //std::cout << "-sort- " << psum[1][i] << " " << psum[1][i+1] << std::endl;
+                sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
+            }
+            else
+            {
+                //std::cout << "-sort- " << psum[1][i] << " " << new_rel->num_tuples << std::endl;
+                sortBucket(new_rel, psum[1][i], new_rel->num_tuples - 1);
+            }
+        }
+        
+        //print buckets
+        /*if (hist[1][i] > 0)
+        {
+            if (i + 1 < x)
+            {
+                for (int l = psum[1][i]; l < psum[1][i+1]; l++)
+                    std::cout << new_rel->tuples[l].key << ". " << new_rel->tuples[l].payload << std::endl;
+            }
+            else
+            {
+                for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
+                    std::cout << new_rel->tuples[l].key << ". " << new_rel->tuples[l].payload << std::endl;
+            }
+            std::cout << std::endl;
+        }*/
+        
         i++;
     }
 
     // std::cout << "before sort" << std::endl;
     // new_rel->print();
-    i = 0;
-    while (i < x)
-    {
-        if (hist[1][i] > 0)
-        {
-            if (i + 1 < x)
-                sortBucket(new_rel, psum[1][i], psum[1][i+1]);
-            else
-                sortBucket(new_rel, psum[1][i], new_rel->num_tuples);
-        }
-        i++;
-    }
 
     // sortBucket(new_rel, 0, 4);
 
