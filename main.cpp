@@ -11,15 +11,15 @@ int main(void)
     R.num_tuples = 10;
     R.tuples = new tuple[R.num_tuples]/* {{0xF}, {0x1}, {0x1}, {0xF}, {0x3}, {0x3}, {0xA}, {0xA}, {0xC}, {0xC}};*/
     {
-        {0xBFF,5}, {0xAFF,6},
-        {0xBAA,0}, {0xBAA,1}, {0xAAA,2}, {0xCAA,3}, {0xCAA,4},
-        {0xCCC,7}, {0xBCC,8}, {0xACC,9}
+        {5, 0xBFF}, {6, 0xAFF},
+        {0, 0xBAA}, {1, 0xBAA}, {2, 0xAAA}, {3, 0xCAA}, {4, 0xCAA},
+        {7, 0xCCC}, {8, 0xBCC}, {9, 0xACC}
                                         };
     std::cout << "before" << std::endl;
     R.print();
     relation *ro_R = re_ordered(&R, 0);
     // quickSort(R.tuples, 0, R.num_tuples - 1);
-    std::cout << "after" << std::endl;
+    std::cout << "\nafter" << std::endl;
     ro_R->print();
 
     delete ro_R;
