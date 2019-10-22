@@ -11,8 +11,8 @@
 class tuple
 {
 public:
-    int64_t key;
-    int64_t payload;
+    uint64_t key;
+    uint64_t payload;
 };
 
 const unsigned long BUCKET_SIZE = 64 * pow(2, 20);  //64KB (I think)
@@ -38,8 +38,8 @@ class result
 };
 
 result* join(relation* R, relation* S);
-int64_t** create_hist(relation*, int);
-int64_t** create_psum(int64_t**);
+uint64_t** create_hist(relation*, int);
+uint64_t** create_psum(uint64_t**);
 relation* re_ordered(relation*, int);
 
 // functions for bucket sort

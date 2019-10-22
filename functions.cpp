@@ -95,13 +95,13 @@ result* join(relation* R, relation* S)
     return NULL;
 }
 
-int64_t** create_hist(relation *rel, int shift)
+uint64_t** create_hist(relation *rel, int shift)
 {
     int x = pow(2,8);
-    int64_t **hist = new int64_t*[2];
+    uint64_t **hist = new uint64_t*[2];
     for(int i = 0; i < 2; i++)
-        hist[i] = new int64_t[x];
-    int64_t payload, mid;
+        hist[i] = new uint64_t[x];
+    uint64_t payload, mid;
     for(int i = 0; i < x; i++)
     {
         hist[0][i]= i;
@@ -123,18 +123,18 @@ int64_t** create_hist(relation *rel, int shift)
     return hist;
 }
 
-int64_t** create_psum(int64_t** hist)
+uint64_t** create_psum(uint64_t** hist)
 {
     int count = 0;
     int x = pow(2,8);
-    int64_t **psum = new int64_t*[2];
+    uint64_t **psum = new uint64_t*[2];
     for(int i = 0; i < 2; i++)
-        psum[i] = new int64_t[x];
+        psum[i] = new uint64_t[x];
 
     for (int i = 0; i < x; i++)
     {
         psum[0][i] = hist[0][i];
-        psum[1][i] = (int64_t)count;
+        psum[1][i] = (uint64_t)count;
         count+=hist[1][i];
     }
     return psum;
@@ -146,11 +146,11 @@ relation* re_ordered(relation *rel, int shift)
     relation *temp;
     relation *rtn;
     //create histogram
-    int64_t** hist = create_hist(rel, shift);
+    uint64_t** hist = create_hist(rel, shift);
     //create psum
-    int64_t** psum = create_psum(hist);
+    uint64_t** psum = create_psum(hist);
     int x = pow(2, 8);
-    int64_t payload;
+    uint64_t payload;
     int i, j, y;
 
     new_rel->num_tuples = rel->num_tuples;
@@ -296,8 +296,8 @@ relation* re_ordered(relation *rel, int shift)
 
 void swap(tuple* tuple1, tuple* tuple2)
 {
-    int64_t tempKey = tuple1->key;
-    int64_t tempPayload = tuple1->payload;
+    uint64_t tempKey = tuple1->key;
+    uint64_t tempPayload = tuple1->payload;
 
     tuple1->key = tuple2->key;
     tuple1->payload = tuple2->payload;
@@ -316,7 +316,7 @@ int partition(tuple* tuples, int startIndex, int stopIndex)
 { 
     int pivotIndex = randomIndex(startIndex, stopIndex);
 
-    int64_t pivot = tuples[pivotIndex].payload;
+    uint64_t pivot = tuples[pivotIndex].payload;
 
     swap(&tuples[pivotIndex], &tuples[stopIndex]);
 
