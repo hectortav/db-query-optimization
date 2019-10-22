@@ -285,7 +285,6 @@ relation* re_ordered(relation *rel, int shift)
     
     delete [] psum[0];
     delete [] psum[1];
-    delete [] psum[2];
 
     delete [] psum;
     delete [] flag;
