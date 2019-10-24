@@ -25,6 +25,7 @@ bool list::insert(char* txt)
     if(ssz+this->last->size>this->lnodesz)
         this->last=this->last->next=new listnode(this->lnodesz);
     strcat(this->last->content,txt);
+    this->last->size+=ssz;
 }
 void list::print()
 {
@@ -32,6 +33,7 @@ void list::print()
     while(t!=NULL)
     {
         std::cout<<t->content;
+        std::cout<<std::endl;
         t=t->next;
     }
 }

@@ -25,9 +25,10 @@ public:
 
 class result
 {
-
+public:
+    list* lst;
 };
 
-result* join(relation* R, relation* S);
+result* join(relation* R, relation* S,int64_t**r,int64_t**s,int rsz,int ssz,int joincol);
 
 #endif

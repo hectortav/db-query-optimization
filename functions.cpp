@@ -8,10 +8,11 @@ void relation::print()
     }
 }
 
-result* join(relation* R, relation* S)
+result* join(relation* R, relation* S,int64_t**rr,int64_t**ss,int rsz,int ssz,int joincol)
 {
     int samestart=-1;
-    list* lst=new list(5);
+    int lstsize=1024*1024;
+    list* lst=new list(lstsize);
     for(int r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
     {
         //std::cout<<"checking: R:"<<R->tuples[r].payload<<" S:"<<S->tuples[s].payload<<std::endl;
@@ -19,11 +20,25 @@ result* join(relation* R, relation* S)
         if(dec==0)
         {
             //std::cout<<R->tuples[r].payload<<" same"<<std::endl; 
-            char x[20];
-            sprintf(x,"%ld %ld\n",R->tuples[r].key,S->tuples[s].key);
+            char x[lstsize+2];
+            x[0]='\0';
+            for(int i=0;i<rsz;i++)
+            {
+                sprintf(x,"%s%ld ",x,rr[i][R->tuples[r].key]);
+            }
+            for(int i=0;i<ssz;i++)
+            {
+                if(joincol==i)
+                    continue;
+                sprintf(x,"%s%ld ",x,ss[i][S->tuples[s].key]);
+            }
+            sprintf(x,"%s\n",x);
+            //printf(x);
+            //sprintf(x,"%ld %ld\n",R->tuples[r].key,S->tuples[s].key);
             lst->insert(x);
-            //std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
-            //i++;
+            std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
+            //std::cout<<x;
+            i++;
             //std::cout<<"Matching: R:"<<R->tuples[r].key<<" S:"<<S->tuples[s].key<<std::endl;
             /*array[i][0]=R->tuples[r].key;
             array[i][1]=R->tuples[s].key;
@@ -78,7 +93,10 @@ result* join(relation* R, relation* S)
         std::cout<<i<<". "<<array[i][0]<<" "<<array[i][1]<<std::endl;
     }*/
     std::cout<<std::endl;
-    lst->print();
+    result* rslt=new result;
+    rslt->lst=lst;
+    return rslt;
+    //lst->print();
 }
 
 void create_hist(relation *relR)
