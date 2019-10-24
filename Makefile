@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-I -g -lm
 DEPS=list.h functions.h
-OBJ=main.o list.o functions.o
+OBJ=main.o functions.o list.o
 
 %.o: %.c $(DEPS)
 	$(CC) -g -c -o $@ $< $(CFLAGS)

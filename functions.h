@@ -8,6 +8,9 @@
 #include <cstdio>
 #include <math.h>
 
+typedef class list list;
+
+
 class tuple
 {
 public:

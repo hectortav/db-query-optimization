@@ -5,22 +5,94 @@
 
 int main(void)
 {
-    srand(time(NULL));
-    relation R,S;
-    
-    R.num_tuples = 10;
-    R.tuples = new tuple[R.num_tuples]/* {{0xF}, {0x1}, {0x1}, {0xF}, {0x3}, {0x3}, {0xA}, {0xA}, {0xC}, {0xC}};*/
+    srand(time(NULL));int64_t** r, **s;
+    int rxnum,rynum,sxnum,synum;
+    rxnum=4;rynum=10;
+    sxnum=3;synum=5;
+    r=new int64_t*[rxnum];
+    for(int i=0;i<rxnum;i++)
     {
-        {5, 0xBFF}, {6, 0xAFF},
-        {0, 0xBAA}, {1, 0xBAA}, {2, 0xAAA}, {3, 0xCAA}, {4, 0xCAA},
-        {7, 0xCCC}, {8, 0xBCC}, {9, 0xACC}
-                                        };
-    std::cout << "before" << std::endl;
+        r[i]=new int64_t[rynum];
+        for(int j=0;j<rynum;j++)
+        {   
+            r[i][j]=rand()%10;
+        }
+        
+        
+    }
+    s=new int64_t*[sxnum];
+    for(int i=0;i<sxnum;i++)
+    {
+        s[i]=new int64_t[synum];
+        for(int j=0;j<synum;j++)
+        {   
+            s[i][j]=rand()%10;
+        }
+    }
+    for(int i=0;i<rynum;i++)
+    {
+        for(int j=0;j<rxnum;j++)
+            std::cout<<r[j][i]<<" ";
+        std::cout<<"\n";
+    }
+    std::cout<<"\n";
+    for(int i=0;i<synum;i++)
+    {
+        for(int j=0;j<sxnum;j++)
+            std::cout<<s[j][i]<<" ";
+        std::cout<<"\n";
+    }
+    relation R,S;
+    R.num_tuples=rynum;
+    S.num_tuples=synum;
+    int col;
+    std::cout<<"\nWhich column? ";
+    std::cin>>col;
+    while(col<1||col>rxnum||col>sxnum)
+    {
+        std::cout<<"invalid index! Which column? ";
+        std::cin>>col;
+    }
+    col--;
+    R.tuples=new tuple[R.num_tuples];
+    S.tuples=new tuple[S.num_tuples];
+    for(int i=0;i<rynum;i++)
+    {
+        R.tuples[i].key=i;
+        R.tuples[i].payload=r[col][i];
+    }
+    for(int i=0;i<synum;i++)
+    {
+        S.tuples[i].key=i;
+        S.tuples[i].payload=s[col][i];
+    }
     R.print();
-    relation *ro_R = re_ordered(&R, 0);
-    // quickSort(R.tuples, 0, R.num_tuples - 1);
-    std::cout << "\nafter" << std::endl;
+    std::cout<<"\n";
+    S.print();
+    relation* ro_R=re_ordered(&R,0);
+    std::cout<<"\n";
     ro_R->print();
+    relation* ro_S=re_ordered(&S,0);
+    std::cout<<"\n";
+    ro_S->print();
 
-    delete ro_R;
+    result* rslt=join(ro_R,ro_S,r,s,rxnum,sxnum,col);
+    std::cout<<"\n";
+    rslt->lst->print();
+    delete rslt;
+    // R.num_tuples = 10;
+    // R.tuples = new tuple[R.num_tuples]/* {{0xF}, {0x1}, {0x1}, {0xF}, {0x3}, {0x3}, {0xA}, {0xA}, {0xC}, {0xC}};*/
+    // {
+    //     {5, 0xBFF}, {6, 0xAFF},
+    //     {0, 0xBAA}, {1, 0xBAA}, {2, 0xAAA}, {3, 0xCAA}, {4, 0xCAA},
+    //     {7, 0xCCC}, {8, 0xBCC}, {9, 0xACC}
+    //                                     };
+    // std::cout << "before" << std::endl;
+    // R.print();
+    // relation *ro_R = re_ordered(&R, 0);
+    // // quickSort(R.tuples, 0, R.num_tuples - 1);
+    // std::cout << "\nafter" << std::endl;
+    // ro_R->print();
+
+    // delete ro_R;
 }

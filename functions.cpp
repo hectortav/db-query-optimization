@@ -45,10 +45,10 @@ result* join(relation* R, relation* S,int64_t**rr,int64_t**ss,int rsz,int ssz,in
                 sprintf(x,"%s%ld ",x,ss[i][S->tuples[s].key]);
             }
             sprintf(x,"%s\n",x);
-            //printf(x);
+            //printf("%s \n",x);
             //sprintf(x,"%ld %ld\n",R->tuples[r].key,S->tuples[s].key);
             lst->insert(x);
-            std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
+            //std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
             //std::cout<<x;
             i++;
             //std::cout<<"Matching: R:"<<R->tuples[r].key<<" S:"<<S->tuples[s].key<<std::endl;
@@ -105,13 +105,11 @@ result* join(relation* R, relation* S,int64_t**rr,int64_t**ss,int rsz,int ssz,in
         std::cout<<i<<". "<<array[i][0]<<" "<<array[i][1]<<std::endl;
     }*/
     std::cout<<std::endl;
-<<<<<<< HEAD
     result* rslt=new result;
     rslt->lst=lst;
     return rslt;
     //lst->print();
-=======
-    lst->print();
+    //lst->print();
     //evala Return gia na mhn vgazei Warning
     return NULL;
 }
@@ -159,7 +157,6 @@ uint64_t** create_psum(uint64_t** hist)
         count+=hist[1][i];
     }
     return psum;
->>>>>>> 7b0f47bf5b88cfdc08d5872057816ab2e90365e1
 }
 
 relation* re_ordered(relation *rel, int shift)
