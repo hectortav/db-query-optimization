@@ -26,6 +26,7 @@ bool list::insert(char* txt)
         this->last=this->last->next=new listnode(this->lnodesz);
     strcat(this->last->content,txt);
     this->last->size+=ssz;
+    return true;
 }
 void list::print()
 {
