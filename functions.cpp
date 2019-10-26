@@ -185,17 +185,18 @@ relation* re_ordered(relation *rel, int shift)
         //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
         payload = ((0xFFFFFFFF & rel->tuples[i].payload) >> (8 * (3 - shift))) & 0xFF;
         //find hash in psum = pos in new relation
-        payload = psum[1][payload];
+        
+        int next_i = psum[1][payload];
 
         //key++ until their is an empty place
-        while ((payload < rel->num_tuples) && flag[payload])
-            payload++;
+        while ((next_i < rel->num_tuples) && flag[next_i])
+            next_i++;
 
-        if (payload < rel->num_tuples)
+        if (next_i < rel->num_tuples)
         {
-            new_rel->tuples[payload].payload = rel->tuples[i].payload;
-            new_rel->tuples[payload].key = rel->tuples[i].key;
-            flag[payload] = true;
+            new_rel->tuples[next_i].payload = rel->tuples[i].payload;
+            new_rel->tuples[next_i].key = rel->tuples[i].key;
+            flag[next_i] = true;
         }
         i++;
     }
