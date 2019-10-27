@@ -85,6 +85,20 @@ int main(void)
     result* rslt=join(ro_R,ro_S,r,s,rxnum,sxnum,col);
     std::cout<<"\n";
     rslt->lst->print();
+    
+    delete new_rel_R;
+    delete new_rel_S;
+    for(int i=0;i<rxnum;i++)
+    {
+        delete[] r[i];
+    }
+    delete[] r;
+    for(int i=0;i<sxnum;i++)
+    {
+        delete[] s[i];
+    }
+    delete[] s;
+    delete rslt->lst;
     delete rslt;
     // R.num_tuples = 10;
     // R.tuples = new tuple[R.num_tuples]/* {{0xF}, {0x1}, {0x1}, {0xF}, {0x3}, {0x3}, {0xA}, {0xA}, {0xC}, {0xC}};*/
