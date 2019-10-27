@@ -134,7 +134,7 @@ uint64_t** create_hist(relation *rel, int shift)
     for (int i = 0; i < rel->num_tuples; i++)
     {
         //mid = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift);
-        payload = hashFunction(rel->tuples[i].payload, 3-shift);
+        payload = hashFunction(rel->tuples[i].payload, 7-shift);
 
         if (payload > 0xFF)
         {
@@ -185,7 +185,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int shift)
     {
         //hash
         //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
-        payload = hashFunction(rel->tuples[i].payload, 3 - shift);
+        payload = hashFunction(rel->tuples[i].payload, 7 - shift);
         //find hash in psum = pos in new relation
         
         int next_i = psum[1][payload];
@@ -212,7 +212,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int shift)
     i = 0;
     while (i < x)
     {
-        if ((hist[1][i] > TUPLES_PER_BUCKET) && (shift  < 3))
+        if ((hist[1][i] > TUPLES_PER_BUCKET) && (shift  < 7))
         {
             // new rel to re_order
             temp = new relation();
