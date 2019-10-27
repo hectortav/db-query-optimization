@@ -20,6 +20,10 @@ relation::~relation()
         delete [] tuples;
 }
 
+unsigned char hashFunction(uint64_t payload, int shift) {
+    return (payload >> (8 * shift)) & 0xFF;
+}
+
 result* join(relation* R, relation* S,int64_t**rr,int64_t**ss,int rsz,int ssz,int joincol)
 {
     int samestart=-1;
@@ -130,7 +134,7 @@ uint64_t** create_hist(relation *rel, int shift)
     for (int i = 0; i < rel->num_tuples; i++)
     {
         //mid = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift);
-        payload = ((0xFFFFFFFF & rel->tuples[i].payload) >> (8 * (3 - shift))) & 0xFF;
+        payload = hashFunction(rel->tuples[i].payload, 3-shift);
 
         if (payload > 0xFF)
         {
@@ -183,7 +187,7 @@ relation* re_ordered(relation *rel, int shift)
     {
         //hash
         //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
-        payload = ((0xFFFFFFFF & rel->tuples[i].payload) >> (8 * (3 - shift))) & 0xFF;
+        payload = hashFunction(rel->tuples[i].payload, 3 - shift);
         //find hash in psum = pos in new relation
         
         int next_i = psum[1][payload];

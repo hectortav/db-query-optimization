@@ -20,9 +20,9 @@ int main()
    }
 
    /* add the tests to the suite */
-   /* NOTE - ORDER IS IMPORTANT - MUST TEST fread() AFTER fprintf() */
-   if ((NULL == CU_add_test(pSuite, "test of swap()", testSWAP))
-    // || (NULL == CU_add_test(pSuite, "test of fread()", testFREAD))
+   if ((NULL == CU_add_test(pSuite, "test of randomIndex()", testRandomIndex))
+     || (NULL == CU_add_test(pSuite, "test of swap()", testSwap))
+     || (NULL == CU_add_test(pSuite, "test of hashFunction()", testHashFunction))
     )
    {
       CU_cleanup_registry();
