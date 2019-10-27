@@ -45,7 +45,7 @@ unsigned char hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,int64_t**r,int64_t**s,int rsz,int ssz,int joincol);
 uint64_t** create_hist(relation*, int);
 uint64_t** create_psum(uint64_t**);
-relation* re_ordered(relation*, int);
+relation* re_ordered(relation*,relation*, int);
 
 // functions for bucket sort
 void swap(tuple* tuple1, tuple* tuple2);

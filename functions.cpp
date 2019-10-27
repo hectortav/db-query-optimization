@@ -163,9 +163,9 @@ uint64_t** create_psum(uint64_t** hist)
     return psum;
 }
 
-relation* re_ordered(relation *rel, int shift)
+relation* re_ordered(relation *rel, relation* new_rel, int shift)
 {
-    relation *new_rel = new relation();
+    // relation *new_rel = new relation();
     relation *temp;
     relation *rtn;
     //create histogram
@@ -176,10 +176,8 @@ relation* re_ordered(relation *rel, int shift)
     uint64_t payload;
     int i, j, y;
 
-    new_rel->num_tuples = rel->num_tuples;
-    new_rel->tuples = new tuple[new_rel->num_tuples];
-    bool *flag = new bool[new_rel->num_tuples];
-    for (i = 0; i < new_rel->num_tuples; i++)
+    bool *flag = new bool[rel->num_tuples];
+    for (i = 0; i < rel->num_tuples; i++)
         flag[i] = false;
 
     i = 0;
@@ -219,20 +217,8 @@ relation* re_ordered(relation *rel, int shift)
             // new rel to re_order
             temp = new relation();
             temp->num_tuples = hist[1][i];
-            temp->tuples = new tuple[temp->num_tuples];
-            j = psum[1][i];
-            y = 0;
-            while (j < x)
-            {   
-                if (i + 1 < x)
-                    if (j >= psum[1][i+1])
-                        break;
-                temp->tuples[y].payload = new_rel->tuples[j].payload;
-                temp->tuples[y].key = new_rel->tuples[j].key;
-                j++;
-                y++;
-            }
-            rtn = re_ordered(temp, shift + 1);
+            temp->tuples = (new_rel->tuples + psum[1][i]);
+            rtn = re_ordered(temp, rel, shift + 1);
             j = psum[1][i];
             y = 0;
             while (j < x)
@@ -244,8 +230,7 @@ relation* re_ordered(relation *rel, int shift)
                 j++;
                 y++;
             }
-            delete rtn;
-            delete temp;
+            std::free(temp); // free only relation's pointer because the tuples are not taking additional space
         }
         else if (hist[1][i] > 0)
         {
@@ -271,7 +256,7 @@ relation* re_ordered(relation *rel, int shift)
             else
             {
                 //std::cout << "-sort- " << psum[1][i] << " " << new_rel->num_tuples << std::endl;
-                sortBucket(new_rel, psum[1][i], new_rel->num_tuples - 1);
+                sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
             }
         }
         
@@ -314,7 +299,6 @@ relation* re_ordered(relation *rel, int shift)
     delete [] flag;
 
     return new_rel;
-
 }
 
 void swap(tuple* tuple1, tuple* tuple2)
@@ -359,7 +343,7 @@ int partition(tuple* tuples, int startIndex, int stopIndex)
     return (i + 1);
 }
 
-
+// (startIndex, stopIndex) -> inclusive
 void quickSort(tuple* tuples, int startIndex, int stopIndex)
 {
     if (startIndex < stopIndex) 
