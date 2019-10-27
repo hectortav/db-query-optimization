@@ -5,14 +5,14 @@
 
 int main(void)
 {
-    srand(time(NULL));int64_t** r, **s;
+    srand(time(NULL));uint64_t** r, **s;
     int rxnum,rynum,sxnum,synum;
     rxnum=4;rynum=10;
     sxnum=3;synum=5;
-    r=new int64_t*[rxnum];
+    r=new uint64_t*[rxnum];
     for(int i=0;i<rxnum;i++)
     {
-        r[i]=new int64_t[rynum];
+        r[i]=new uint64_t[rynum];
         for(int j=0;j<rynum;j++)
         {   
             r[i][j]=rand()%10;
@@ -20,10 +20,10 @@ int main(void)
         
         
     }
-    s=new int64_t*[sxnum];
+    s=new uint64_t*[sxnum];
     for(int i=0;i<sxnum;i++)
     {
-        s[i]=new int64_t[synum];
+        s[i]=new uint64_t[synum];
         for(int j=0;j<synum;j++)
         {   
             s[i][j]=rand()%10;

@@ -24,7 +24,7 @@ unsigned char hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
 
-result* join(relation* R, relation* S,int64_t**rr,int64_t**ss,int rsz,int ssz,int joincol)
+result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
 {
     int samestart=-1;
     int lstsize=1024*1024;
