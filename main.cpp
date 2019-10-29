@@ -81,11 +81,26 @@ int main(void)
     relation* ro_S=re_ordered(&S,new_rel_S, 0);
     std::cout<<"\n";
     ro_S->print();
+    std::cout<<"\n";
 
     result* rslt=join(ro_R,ro_S,r,s,rxnum,sxnum,col);
-    std::cout<<"\n";
     rslt->lst->print();
-    
+    std::cout<<"\n";
+    uint64_t** fnl=rslt->lst->lsttoarr();
+    int fnlx=rslt->lst->rowsz;
+    int fnly=rslt->lst->rows;
+    for(int i=0;i<fnly;i++)
+    {
+        for(int j=0;j<fnlx;j++)
+        {
+            std::cout<<fnl[j][i]<<" ";
+        }
+        std::cout<<"\n";
+    }
+    for(int i=0;i<fnlx;i++)
+    {
+        delete[] fnl[i];
+    }
     delete new_rel_R;
     delete new_rel_S;
     for(int i=0;i<rxnum;i++)

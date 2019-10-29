@@ -28,7 +28,7 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
 {
     int samestart=-1;
     int lstsize=1024*1024;
-    list* lst=new list(lstsize);
+    list* lst=new list(lstsize,rsz+ssz-1);
     for(int r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
     {
         //std::cout<<"checking: R:"<<R->tuples[r].payload<<" S:"<<S->tuples[s].payload<<std::endl;
@@ -36,22 +36,24 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
         if(dec==0)
         {
             //std::cout<<R->tuples[r].payload<<" same"<<std::endl; 
-            char x[lstsize+2];
-            x[0]='\0';
+            //char x[lstsize+2];
+            //x[0]='\0';
             for(int i=0;i<rsz;i++)
             {
-                sprintf(x,"%s%ld ",x,rr[i][R->tuples[r].key]);
+                //sprintf(x,"%s%ld ",x,rr[i][R->tuples[r].key]);
+                lst->insert(rr[i][R->tuples[r].key]);
             }
             for(int i=0;i<ssz;i++)
             {
                 if(joincol==i)
                     continue;
-                sprintf(x,"%s%ld ",x,ss[i][S->tuples[s].key]);
+                //sprintf(x,"%s%ld ",x,ss[i][S->tuples[s].key]);
+                lst->insert(ss[i][S->tuples[s].key]);
             }
-            sprintf(x,"%s\n",x);
-            //printf("%s \n",x);
+            //sprintf(x,"%s\n",x);
+            //printf("%s",x);
             //sprintf(x,"%ld %ld\n",R->tuples[r].key,S->tuples[s].key);
-            lst->insert(x);
+        //lst->insert(x);
             //std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
             //std::cout<<x;
             i++;

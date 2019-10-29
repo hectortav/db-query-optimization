@@ -17,10 +17,14 @@ public:
   listnode* first;
   listnode* last;
   int lnodesz;
-  list(int lnodesz);
+  int rowsz;
+  int rows;
+  int tmpcntr;
+  list(int lnodesz,int rowsz);
   ~list();
-  bool insert(char* txt);
+  bool insert(uint64_t num);
   void print();
+  uint64_t** lsttoarr();
 };
 
 
