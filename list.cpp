@@ -38,6 +38,11 @@ bool list::insert(uint64_t num)
 }
 void list::print()
 {
+    if(this->first==NULL)
+    {
+        std::cout<<"No joined pairs"<<std::endl;
+        return;
+    }
     listnode* t=this->first;
     int cntr=0;
     while(t!=NULL)
@@ -59,6 +64,9 @@ void list::print()
 }
 uint64_t** list::lsttoarr()
 {
+    if(this->first==NULL)
+        return NULL;
+    
     uint64_t** arr;
     arr=new uint64_t*[rowsz];
     for(int i=0;i<rowsz;i++)

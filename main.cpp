@@ -7,7 +7,7 @@ int main(void)
 {
     srand(time(NULL));uint64_t** r, **s;
     int rxnum,rynum,sxnum,synum;
-    rxnum=4;rynum=10;
+    rxnum=4;rynum=3;
     sxnum=3;synum=5;
     r=new uint64_t*[rxnum];
     for(int i=0;i<rxnum;i++)
@@ -89,18 +89,22 @@ int main(void)
     uint64_t** fnl=rslt->lst->lsttoarr();
     int fnlx=rslt->lst->rowsz;
     int fnly=rslt->lst->rows;
-    for(int i=0;i<fnly;i++)
+    if(fnl!=NULL)
     {
-        for(int j=0;j<fnlx;j++)
+        for(int i=0;i<fnly;i++)
         {
-            std::cout<<fnl[j][i]<<" ";
+            for(int j=0;j<fnlx;j++)
+            {
+                std::cout<<fnl[j][i]<<" ";
+            }
+            std::cout<<"\n";
         }
-        std::cout<<"\n";
+        for(int i=0;i<fnlx;i++)
+        {
+            delete[] fnl[i];
+        }
     }
-    for(int i=0;i<fnlx;i++)
-    {
-        delete[] fnl[i];
-    }
+    
     delete new_rel_R;
     delete new_rel_S;
     for(int i=0;i<rxnum;i++)
