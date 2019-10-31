@@ -86,7 +86,7 @@ int main(void)
     result* rslt=join(ro_R,ro_S,r,s,rxnum,sxnum,col);
     rslt->lst->print();
     std::cout<<"\n";
-    uint64_t** fnl=rslt->lst->lsttoarr();
+    /*uint64_t** fnl=rslt->lst->lsttoarr();
     int fnlx=rslt->lst->rowsz;
     int fnly=rslt->lst->rows;
     if(fnl!=NULL)
@@ -103,7 +103,8 @@ int main(void)
         {
             delete[] fnl[i];
         }
-    }
+        delete[] fnl;
+    }*/
     
     delete new_rel_R;
     delete new_rel_S;
