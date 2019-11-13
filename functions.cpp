@@ -362,3 +362,13 @@ void sortBucket(relation* rel, int startIndex, int stopIndex) {
     // stopIndex--;
     quickSort(rel->tuples, startIndex, stopIndex);
 }
+
+void extractcolumn(relation& rel,uint64_t **array, int column)
+{
+    rel.tuples=new tuple[rel.num_tuples];
+    for(int i=0;i<rel.num_tuples;i++)
+    {
+        rel.tuples[i].key=i;
+        rel.tuples[i].payload=array[column][i];
+    }
+}

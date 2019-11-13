@@ -53,5 +53,7 @@ int randomIndex(int startIndex, int stopIndex);
 int partition(tuple* tuples, int startIndex, int stopIndex);
 void quickSort(tuple* tuples, int startIndex, int stopIndex);
 void sortBucket(relation* rel, int startIndex, int endIndex);
+void extractcolumn(relation& rel,uint64_t **array, int column);
+
 
 #endif

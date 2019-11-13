@@ -54,18 +54,8 @@ int main(void)
         std::cin>>col;
     }
     col--;
-    R.tuples=new tuple[R.num_tuples];
-    S.tuples=new tuple[S.num_tuples];
-    for(int i=0;i<rynum;i++)
-    {
-        R.tuples[i].key=i;
-        R.tuples[i].payload=r[col][i];
-    }
-    for(int i=0;i<synum;i++)
-    {
-        S.tuples[i].key=i;
-        S.tuples[i].payload=s[col][i];
-    }
+    extractcolumn(R,r,col);
+    extractcolumn(S,s,col);
     R.print();
     std::cout<<"\n";
     S.print();
