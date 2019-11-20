@@ -20,6 +20,22 @@ relation::~relation()
         delete [] tuples;
 }
 
+InputArray::InputArray(uint64_t rowsNum, uint64_t columnsNum) {
+    this->rowsNum = rowsNum;
+    this->columnsNum = columnsNum;
+    this->columns = new uint64_t*[columnsNum];
+    for (int i = 0; i < columnsNum; i++) {
+        this->columns[i] = new uint64_t[rowsNum];
+    }
+}
+
+InputArray::~InputArray() {
+    for (int i = 0; i < columnsNum; i++) {
+        delete[] this->columns[i];
+    }
+    delete[] this->columns;
+}
+
 unsigned char hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
@@ -371,4 +387,38 @@ void extractcolumn(relation& rel,uint64_t **array, int column)
         rel.tuples[i].key=i;
         rel.tuples[i].payload=array[column][i];
     }
+}
+
+InputArray** readArrays() {
+    InputArray** inputArrays = new InputArray*[MAX_INPUT_ARRAYS_NUM]; // size is fixed
+
+    size_t fileNameSize = MAX_INPUT_FILE_NAME_SIZE;
+    char fileName[fileNameSize];
+
+    unsigned int inputArraysIndex = 0;
+    while (fgets(fileName, fileNameSize, stdin) != NULL) {
+        fileName[strlen(fileName) - 1] = '\0'; // remove newline character
+
+        uint64_t rowsNum, columnsNum, cellValue;
+        FILE *fileP;
+
+        fileP = fopen(fileName, "rb");
+
+        fread(&rowsNum, sizeof(uint64_t), 1, fileP);
+        fread(&columnsNum, sizeof(uint64_t), 1, fileP);
+
+        inputArrays[inputArraysIndex] = new InputArray(rowsNum, columnsNum);
+
+        for (uint64_t i = 0; i < columnsNum; i++) {
+            for (uint16_t j = 0; j < rowsNum; j++) {
+                fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP);
+            }
+        }
+
+        fclose(fileP);
+
+        inputArraysIndex++;
+    }
+
+    return inputArrays;
 }

@@ -8,6 +8,9 @@
 #include <cstdio>
 #include <math.h>
 
+#define MAX_INPUT_FILE_NAME_SIZE 20
+#define MAX_INPUT_ARRAYS_NUM 20
+
 typedef class list list;
 
 
@@ -41,6 +44,16 @@ public:
     list* lst;
 };
 
+class InputArray
+{
+    public:
+    uint64_t rowsNum, columnsNum;
+    uint64_t** columns;
+
+    InputArray(uint64_t rowsNum, uint64_t columnsNum);
+    ~InputArray();
+};
+
 unsigned char hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 uint64_t** create_hist(relation*, int);
@@ -54,6 +67,6 @@ int partition(tuple* tuples, int startIndex, int stopIndex);
 void quickSort(tuple* tuples, int startIndex, int stopIndex);
 void sortBucket(relation* rel, int startIndex, int endIndex);
 void extractcolumn(relation& rel,uint64_t **array, int column);
-
+InputArray** readArrays();
 
 #endif
