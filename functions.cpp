@@ -487,20 +487,21 @@ char** makeparts(char* query)
     parts[2]=query+start;
     return parts;
 }
-void handlequery(char** parts,uint64_t*** allrelations)
+void handlequery(char** parts,InputArray* allrelations)
 {
     /*for(int i=0;i<3;i++)
     {
         std::cout<<parts[i]<<std::endl;
     }*/
     std::cout<<std::endl;
-    uint64_t*** relations=loadrelations(parts[0],allrelations);
-    uint64_t** result=handlepredicates(relations,parts[1]);
+    InputArray* relations=loadrelations(parts[0],allrelations);
+    InputArray* result=handlepredicates(relations,parts[1]);
     handleprojection(result,parts[2]);
+    std::cout<<std::endl;
     
 
 }
-uint64_t*** loadrelations(char* part,uint64_t*** allrelations)
+InputArray* loadrelations(char* part,InputArray* allrelations)
 {
     std::cout<<"LOADRELATIONS: "<<part<<std::endl;
     int cntr=1;
@@ -513,12 +514,12 @@ uint64_t*** loadrelations(char* part,uint64_t*** allrelations)
     relations=new uint64_t**[cntr];
     //std::cout<<cntr<<" relations"<<std::endl;
 }
-uint64_t** handlepredicates(uint64_t*** relations,char* part)
+InputArray* handlepredicates(InputArray* relations,char* part)
 {
     std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
 
 }
-void handleprojection(uint64_t** array,char* part)
+void handleprojection(InputArray* array,char* part)
 {
     std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
 

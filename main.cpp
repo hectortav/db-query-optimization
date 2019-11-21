@@ -127,7 +127,7 @@ int main(void)
     // delete ro_R;
 
 
-    uint64_t*** allrelations;
+    InputArray* allrelations;
     int lines;
     char** arr=readbatch(lines);
     std::cout<<std::endl;
