@@ -5,7 +5,7 @@
 
 int main(void)
 {
-    /*srand(time(NULL));uint64_t** r, **s;
+    srand(time(NULL));uint64_t** r, **s;
     int rxnum,rynum,sxnum,synum;
     rxnum=4;rynum=3;
     sxnum=3;synum=5;
@@ -95,8 +95,19 @@ int main(void)
         }
         delete[] fnl;
     }*/
-    
-    /*delete new_rel_R;
+
+    uint64_t** fnl=rslt->lst->lsttoarr();
+    for(int i=0;i<rslt->lst->rows;i++)
+    {
+        for(int j=0;j<rslt->lst->rowsz;j++)
+        {
+            std::cout<<fnl[j][i]<<" ";
+        }
+        std::cout<<std::endl;
+    }
+
+
+    delete new_rel_R;
     delete new_rel_S;
     for(int i=0;i<rxnum;i++)
     {

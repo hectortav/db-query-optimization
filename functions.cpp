@@ -44,7 +44,8 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
 {
     int samestart=-1;
     int lstsize=1024*1024;
-    list* lst=new list(lstsize,rsz+ssz-1);
+    //list* lst=new list(lstsize,rsz+ssz-1);
+    list*lst=new list(lstsize,2);
     for(int r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
     {
         //std::cout<<"checking: R:"<<R->tuples[r].payload<<" S:"<<S->tuples[s].payload<<std::endl;
@@ -54,7 +55,9 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
             //std::cout<<R->tuples[r].payload<<" same"<<std::endl; 
             //char x[lstsize+2];
             //x[0]='\0';
-            for(int i=0;i<rsz;i++)
+            lst->insert(R->tuples[r].key);
+            lst->insert(S->tuples[s].key);
+            /*for(int i=0;i<rsz;i++)
             {
                 //sprintf(x,"%s%ld ",x,rr[i][R->tuples[r].key]);
                 lst->insert(rr[i][R->tuples[r].key]);
@@ -65,7 +68,7 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
                     continue;
                 //sprintf(x,"%s%ld ",x,ss[i][S->tuples[s].key]);
                 lst->insert(ss[i][S->tuples[s].key]);
-            }
+            }*/
             //sprintf(x,"%s\n",x);
             //printf("%s",x);
             //sprintf(x,"%ld %ld\n",R->tuples[r].key,S->tuples[s].key);
@@ -612,6 +615,8 @@ char** splitpreds(char* ch,int& cn)
 }
 void optimizepredicates(char** preds)
 {
+    //filters first
+
 
 }
 void predsplittoterms(char* pred,int& rel1,int& col1,int& rel2,int& col2,int& flag)
