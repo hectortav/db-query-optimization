@@ -127,14 +127,14 @@ int main(void)
     // delete ro_R;
 
 
-
+    uint64_t*** allrelations;
     int lines;
     char** arr=readbatch(lines);
     std::cout<<std::endl;
     for(int i=0;i<lines;i++)
     {
         //std::cout<<arr[i]<<std::endl;
-        handlequery(makeparts(arr[i]));
+        handlequery(makeparts(arr[i]),allrelations);
     }
 
 }

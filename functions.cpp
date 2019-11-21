@@ -487,20 +487,20 @@ char** makeparts(char* query)
     parts[2]=query+start;
     return parts;
 }
-void handlequery(char** parts)
+void handlequery(char** parts,uint64_t*** allrelations)
 {
     /*for(int i=0;i<3;i++)
     {
         std::cout<<parts[i]<<std::endl;
     }*/
     std::cout<<std::endl;
-    uint64_t*** relations=loadrelations(parts[0]);
+    uint64_t*** relations=loadrelations(parts[0],allrelations);
     uint64_t** result=handlepredicates(relations,parts[1]);
     handleprojection(result,parts[2]);
     
 
 }
-uint64_t*** loadrelations(char* part)
+uint64_t*** loadrelations(char* part,uint64_t*** allrelations)
 {
     std::cout<<"LOADRELATIONS: "<<part<<std::endl;
     int cntr=1;
