@@ -70,9 +70,9 @@ void extractcolumn(relation& rel,uint64_t **array, int column);
 InputArray** readArrays();
 char** readbatch(int& lns);
 char** makeparts(char* query);
-void handlequery(char** parts,InputArray* allrelations);
-InputArray* loadrelations(char* part,InputArray* allrelations);
-InputArray* handlepredicates(InputArray* relations,char* part);
+void handlequery(char** parts,InputArray** allrelations);
+InputArray** loadrelations(char* part,InputArray** allrelations);
+InputArray* handlepredicates(InputArray** relations,char* part);
 void handleprojection(InputArray* array,char* part);
 
 #endif
