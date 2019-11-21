@@ -494,14 +494,15 @@ void handlequery(char** parts,InputArray** allrelations)
         std::cout<<parts[i]<<std::endl;
     }*/
     std::cout<<std::endl;
-    InputArray** relations=loadrelations(parts[0],allrelations);
-    InputArray* result=handlepredicates(relations,parts[1]);
+    int relationsnum;
+    InputArray** relations=loadrelations(parts[0],allrelations,relationsnum);
+    InputArray* result=handlepredicates(relations,parts[1],relationsnum);
     handleprojection(result,parts[2]);
     std::cout<<std::endl;
     
 
 }
-InputArray** loadrelations(char* part,InputArray** allrelations)
+InputArray** loadrelations(char* part,InputArray** allrelations,int& relationsnum)
 {
     std::cout<<"LOADRELATIONS: "<<part<<std::endl;
     int cntr=1;
@@ -512,16 +513,145 @@ InputArray** loadrelations(char* part,InputArray** allrelations)
             cntr++;
     }
     relations=new uint64_t**[cntr];
+    relationsnum=cntr;
     //std::cout<<cntr<<" relations"<<std::endl;
 }
-InputArray* handlepredicates(InputArray** relations,char* part)
+InputArray* handlepredicates(InputArray** relations,char* part,int relationsnum)
 {
     std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
+    int cntr;
+    char** preds=splitpreds(part,cntr);
+    optimizepredicates(preds);
+    for(int i=0;i<cntr;i++)
+    {
+        std::cout<<"\t"<<preds[i]<<std::endl;
+        int rel1,col1;
+        int rel2,col2;
+        int flag;
+        predsplittoterms(preds[i],rel1,col1,rel2,col2,flag);
+        std::cout<<rel1<<" "<<col1<<"    "<<rel2<<" "<<col2<<"    "<<flag<<std::endl;
+        if(rel2==-1)
+        {
+            //case with comparison with number
+            if(flag==0)
+            {
+                //>
+            }
+            else if(flag==1)
+            {
+                //<
+            }
+            else if(flag==2)
+            {
+                //=
+            }
+        }
+        else
+        {
+            //case with two rels
+            if(rel1==rel2)
+            {
+                //special case
+            }
+            else
+            {
+                //join
+            }
+        }
+    }
+
+    
+
 
 }
 void handleprojection(InputArray* array,char* part)
 {
     std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
+    int keep=1;
+    for(int i=0;part[i]!='\0';i++)
+    {
+        if(part[i]==' ')
+            keep++;
+    }
+    //InputArray* fnl=new InputArray(keep,array->columnsNum);
+    /*for(int i=0,newcol=0;i<array->columnsNum;i++)
+    {
+        for(int j=0;j<array->rowsNum;j++)
+        {
+            //dostuff
+        }
+    }*/
 
+}
+char** splitpreds(char* ch,int& cn)
+{
+    int cntr=1;
+    for(int i=0;ch[i]!='\0';i++)
+    {
+        if(ch[i]=='&')
+            cntr++;
+    }
+    char** preds;
+    preds=new char*[cntr];
+    cntr=0;
+    int start=0;
+    for(int i=0;ch[i]!='\0';i++)
+    {
+        if(ch[i]=='&')
+        {
+            preds[cntr]=ch+start;
+            start=i+1;
+            cntr++;
+            ch[i]='\0';
+        }
+    }
+    preds[cntr]=ch+start;
+    cntr++;
+    cn=cntr;
+    return preds;
+}
+void optimizepredicates(char** preds)
+{
+
+}
+void predsplittoterms(char* pred,int& rel1,int& col1,int& rel2,int& col2,int& flag)
+{
+    char buffer[1024];
+    rel1=col1=rel2=col2=flag=-1;
+    for(int start=0,end=0,i=0,j=0,term=0;(i==0)||(i>0&&pred[i-1])!='\0';i++,j++)
+    {
+        if(pred[i]=='.')
+        {
+            buffer[j]='\0';
+            if(term==0)
+                rel1=atoi(buffer);
+            else
+                rel2=atoi(buffer);
+            j=-1;
+            term++;
+
+        }
+        else if(pred[i]=='>'||pred[i]=='<'||pred[i]=='=')
+        {
+            if(pred[i]=='>')
+                flag=0;
+            else if(pred[i]=='<')
+                flag=1;
+            else if(pred[i]=='=')
+                flag=2;
+            buffer[j]='\0';
+            col1=atoi(buffer);
+            term++;
+            j=-1;
+        }
+        else if(pred[i]=='\0')
+        {
+            buffer[j]='\0';
+            col2=atoi(buffer);
+        }
+        else
+            buffer[j]=pred[i];
+
+    }
 }
 
