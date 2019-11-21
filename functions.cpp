@@ -422,3 +422,105 @@ InputArray** readArrays() {
 
     return inputArrays;
 }
+char** readbatch(int& lns)
+{
+    char ch;
+    list* l=new list(1024,0);
+    int flag=0;
+    int lines=0;
+    while(1)
+    {
+        ch=getchar();
+        if(ch=='\n'&&flag)
+            continue;
+        l->insert(ch);
+        if(ch=='F'&&flag)
+            break;
+        if(ch=='\n')
+        {
+            flag=1;
+            lines++;
+        }
+        else flag=0;
+    }
+    char* arr=l->lsttocharr();
+    char** fnl=new char*[lines];
+    int start=0;
+    int ln=0;
+    for(int i=0;arr[i]!='\0';i++)
+    {
+        if(arr[i]=='\n')
+        {
+            fnl[ln]=new char[i-start+1];
+            memcpy(fnl[ln],arr+start,i-start);
+            fnl[ln][i-start]='\0';
+            ln++;
+            start=i+1;
+        }
+    }
+    /*std::cout<<"\n";
+    for(int i=0;i<ln;i++)
+    {
+        std::cout<<fnl[i]<<std::endl;
+    }*/
+    delete[] arr;
+    delete l;
+    lns=ln;
+    return fnl;
+}
+char** makeparts(char* query)
+{
+    std::cout<<query<<std::endl;
+    int start=0;
+    char** parts;
+    parts=new char*[3];
+    for(int part=0,i=0;query[i]!='\0';i++)
+    {
+        if(query[i]=='|')
+        {
+            query[i]='\0';
+            parts[part]=query+start;
+            start=i+1;
+            part++;
+        }
+    }
+    parts[2]=query+start;
+    return parts;
+}
+void handlequery(char** parts)
+{
+    /*for(int i=0;i<3;i++)
+    {
+        std::cout<<parts[i]<<std::endl;
+    }*/
+    std::cout<<std::endl;
+    uint64_t*** relations=loadrelations(parts[0]);
+    uint64_t** result=handlepredicates(relations,parts[1]);
+    handleprojection(result,parts[2]);
+    
+
+}
+uint64_t*** loadrelations(char* part)
+{
+    std::cout<<"LOADRELATIONS: "<<part<<std::endl;
+    int cntr=1;
+    uint64_t*** relations;
+    for(int i=0;part[i]!='\0';i++)
+    {
+        if(part[i]==' ')
+            cntr++;
+    }
+    relations=new uint64_t**[cntr];
+    //std::cout<<cntr<<" relations"<<std::endl;
+}
+uint64_t** handlepredicates(uint64_t*** relations,char* part)
+{
+    std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
+
+}
+void handleprojection(uint64_t** array,char* part)
+{
+    std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
+
+}
+

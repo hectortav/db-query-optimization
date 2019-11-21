@@ -23,8 +23,10 @@ public:
   list(int lnodesz,int rowsz);
   ~list();
   bool insert(uint64_t num);
+  bool insert(char ch);
   void print();
   uint64_t** lsttoarr();
+  char* lsttocharr();
 };
 
 

@@ -36,6 +36,7 @@ bool list::insert(uint64_t num)
     this->last->size+=sizeof(num);
     return true;
 }
+
 void list::print()
 {
     if(this->first==NULL)
@@ -94,7 +95,36 @@ uint64_t** list::lsttoarr()
     }
     return arr;
 }
-
+bool list::insert(char ch)
+{
+    if(this->last==NULL)
+    {
+        this->first=this->last=new listnode(this->lnodesz);
+        this->tmpcntr++;
+    }
+    if(sizeof(ch)+this->last->size>this->lnodesz)
+    {
+        this->last=this->last->next=new listnode(this->lnodesz);
+        this->tmpcntr++;
+    }
+    memcpy(this->last->content+this->last->size,&ch,sizeof(ch));
+    this->last->size+=sizeof(ch);
+    return true;
+}
+char* list::lsttocharr()
+{
+    if(this->first==NULL)
+        return NULL;
+    
+    char* arr;
+    arr=new char[tmpcntr*lnodesz +1];
+    listnode* t=this->first;
+    for(int i=0;i<tmpcntr;i++,t=t->next)
+    {
+        memcpy(arr+i*lnodesz,t->content,lnodesz);
+    }
+    return arr;
+}
 
 listnode::listnode(int sz)
 {

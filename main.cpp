@@ -5,7 +5,7 @@
 
 int main(void)
 {
-    srand(time(NULL));uint64_t** r, **s;
+    /*srand(time(NULL));uint64_t** r, **s;
     int rxnum,rynum,sxnum,synum;
     rxnum=4;rynum=3;
     sxnum=3;synum=5;
@@ -96,7 +96,7 @@ int main(void)
         delete[] fnl;
     }*/
     
-    delete new_rel_R;
+    /*delete new_rel_R;
     delete new_rel_S;
     for(int i=0;i<rxnum;i++)
     {
@@ -125,4 +125,16 @@ int main(void)
     // ro_R->print();
 
     // delete ro_R;
+
+
+
+    int lines;
+    char** arr=readbatch(lines);
+    std::cout<<std::endl;
+    for(int i=0;i<lines;i++)
+    {
+        //std::cout<<arr[i]<<std::endl;
+        handlequery(makeparts(arr[i]));
+    }
+
 }
