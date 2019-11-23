@@ -59,6 +59,7 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 uint64_t** create_hist(relation*, int);
 uint64_t** create_psum(uint64_t**);
 relation* re_ordered(relation*,relation*, int);
+relation* re_ordered_2(relation*,relation*, int); //temporary
 
 // functions for bucket sort
 void swap(tuple* tuple1, tuple* tuple2);
