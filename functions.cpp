@@ -142,14 +142,15 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
 uint64_t** create_hist(relation *rel, int shift)
 {
     int x = pow(2,8);
-    uint64_t **hist = new uint64_t*[2];
-    for(int i = 0; i < 2; i++)
+    uint64_t **hist = new uint64_t*[3];
+    for(int i = 0; i < 3; i++)
         hist[i] = new uint64_t[x];
     uint64_t payload, mid;
     for(int i = 0; i < x; i++)
     {
         hist[0][i]= i;
         hist[1][i]= 0;
+        hist[2][i]= shift;
     }
 
     for (int i = 0; i < rel->num_tuples; i++)
@@ -171,17 +172,262 @@ uint64_t** create_psum(uint64_t** hist)
 {
     int count = 0;
     int x = pow(2,8);
-    uint64_t **psum = new uint64_t*[2];
-    for(int i = 0; i < 2; i++)
+    uint64_t **psum = new uint64_t*[3];
+    for(int i = 0; i < 3; i++)
         psum[i] = new uint64_t[x];
 
     for (int i = 0; i < x; i++)
     {
         psum[0][i] = hist[0][i];
         psum[1][i] = (uint64_t)count;
+        psum[2][i] = 0;     //make combine easy
         count+=hist[1][i];
     }
     return psum;
+}
+
+relation* create_rel(relation *rel, relation* new_rel, _vector* hist, _vector* psum, int shift)
+{   //rel to new_rel using hist and psum
+    int i;
+    uint64_t payload;
+    bool *flag = new bool[rel->num_tuples];
+    for (i = 0; i < rel->num_tuples; i++)
+        flag[i] = false;
+
+    i = 0;
+    while(i < rel->num_tuples)  //create relation
+    {
+        //hash
+        //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
+        payload = hashFunction(rel->tuples[i].payload, 7 - shift);
+        //find hash in psum = pos in new relation
+        
+        int next_i = psum[payload].value;
+
+        //key++ until their is an empty place
+        while ((next_i < rel->num_tuples) && flag[next_i])
+            next_i++;
+
+        if (next_i < rel->num_tuples)
+        {
+            new_rel->tuples[next_i].payload = rel->tuples[i].payload;
+            new_rel->tuples[next_i].key = rel->tuples[i].key;
+            flag[next_i] = true;
+        }
+        i++;
+    }
+    delete [] flag;
+    return new_rel;
+}
+
+void pr(uint64_t** a, int array_size)
+{
+    int i;
+    uint64_t last = -1;
+    for (i = 0; i < array_size; i++)
+    {
+        if (last != a[1][i])
+        {
+            std::cout << a[0][i] << ". " << a[1][i] << " - " << a[2][i] << std::endl;
+            last = a[1][i];
+        }
+    }
+}
+
+uint64_t** combine (uint64_t** a, uint64_t** b, int index, int array_size)
+{
+    std::cout << std::endl << "a:"<< std::endl;
+    pr(a, array_size);
+    std::cout << std::endl << "b:"<< std::endl;
+    pr(b, pow(2,8));
+
+    int i, j;
+    int x = pow(2,8);
+    uint64_t **c = new uint64_t*[3];
+    for (i = 0; i < 3; i++)
+        c[i] = new uint64_t[x + array_size];
+
+    for (i = 0; i < index; i++)
+    {
+        c[0][i] = a[0][i];
+        c[1][i] = a[1][i];
+        c[2][i] = a[2][i];
+    }
+
+    j = 0;
+    for (i = index; i < index + x; i++)
+    {
+        c[0][i] = b[0][j];
+        c[1][i] = b[1][j];
+        c[2][i] = a[2][index] + 1;
+        j++;
+    }
+
+    for (i = index + 1; i < array_size; i++)
+    {
+        c[0][i + x] = a[0][i];
+        c[1][i + x] = a[1][i];
+        c[2][i + x] = a[2][i];
+    }
+    delete [] a[0];
+    delete [] a[1];
+    delete [] a[2];
+    delete [] a;
+    delete [] b[0];
+    delete [] b[1];
+    delete [] b[2];
+    delete [] b;
+    std::cout << std::endl << "c:"<< std::endl;
+    pr(c, array_size + pow(2,8));
+    return c;
+}
+
+_vector* get_last_hist(_vector* hist, uint64_t value)
+{
+    int i, array_size = pow(2, 8), count = 0;
+    while (count <= 7)
+    {
+        i = 0;
+        while (i < array_size)
+        {
+            if (hist[i].value == value)
+                break;
+            i++;
+        }
+        if (i == array_size)
+            std::cout << "ERROR" << std::endl;
+        if (hist[i].vptr != NULL)
+        {
+            hist = hist[i].vptr;
+            count++;
+        }
+        else
+            return hist;        
+    }
+    return NULL;
+}
+
+_vector* get_last_psum(_vector* psum, uint64_t index)
+{
+    int i, array_size = pow(2, 8), count = 0;
+    while (count <= 7)
+    {
+        i = 0;
+        while (i < array_size)
+        {
+            if (psum[i].index == index)
+                break;
+            i++;
+        }
+        if (i == array_size)
+            std::cout << "ERROR" << std::endl;
+        if (psum[i].vptr != NULL)
+        {
+            psum = psum[i].vptr;
+            count++;
+        }
+        else
+            return psum;        
+    }
+    return NULL;
+}
+
+relation* re_ordered_2(relation *rel, relation* new_rel)
+{
+    /*int shift = 0;
+    int i, j, y;
+    int array_size = pow(2, 8);
+    // relation *new_rel = new relation();
+    relation *temp;
+    relation *rtn;
+    uint64_t** temp_array;
+    uint64_t payload;
+    _vector *hist = new _vector(), *psum = new _vector(), *hist_2, *psum_2;
+
+    //create histogram
+    temp_array = create_hist(rel, shift);
+    for (i = 0; i < array_size; i++)
+    {
+        hist[i].index = temp_array[0][i];
+        hist[i].value = temp_array[1][i];
+    }
+    //create psum
+    temp_array = create_psum(temp_array);
+    for (i = 0; i < array_size; i++)
+    {
+        psum[i].index = temp_array[0][i];
+        psum[i].value = temp_array[1][i];
+    }
+    //create new relation
+    new_rel = create_rel(rel, new_rel, hist, psum, shift);
+
+    i = 0;
+    while (i < array_size)  //iterate hist to check for overflow
+    {
+        if (hist[i].value > TUPLES_PER_BUCKET)// && (hist[2][i] < 7))
+        {
+            //find i
+
+            // new rel to re_order
+            temp = new relation();
+            temp->num_tuples = hist[i].value;
+            temp->tuples = (new_rel->tuples + psum[i].value);
+
+            shift = hist[2][i] + 1;
+            //create histogram
+            hist_2 = create_hist(rel, shift);
+            //create psum
+            psum_2 = create_psum(hist_2);
+            //create new relation
+            rtn = create_rel(temp, rel, hist_2, psum_2, shift);
+
+            //rtn = re_ordered_2(temp, rel, shift + 1);
+            j = psum[1][i];
+            y = 0;
+            while (j < array_size)
+            {
+                if (j >= psum[1][i+1])
+                    break;
+                new_rel->tuples[j].payload = rtn->tuples[y].payload;
+                new_rel->tuples[j].key = rtn->tuples[y].key;
+                j++;
+                y++;
+            }
+            std::free(temp); // free only relation's pointer because the tuples are not taking additional space
+            
+            hist = combine(hist, hist_2, i, array_size);
+            psum = combine(psum, psum_2, i, array_size);
+            array_size = array_size + pow(2, 8);
+            i = 0;
+        }
+        else          
+            i++;
+    }
+
+    i = 0;
+    while (i < array_size)
+    {
+        if (hist[1][i] > 0)
+        {
+            if (i + 1 < array_size)
+                sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
+            else
+                sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
+        }
+        i++;
+    }
+
+    delete [] hist[0];
+    delete [] hist[1];
+    delete [] hist[2];
+    delete [] hist;
+    
+    delete [] psum[0];
+    delete [] psum[1];
+    delete [] psum[2];
+    delete [] psum;
+*/
+    return new_rel;
 }
 
 relation* re_ordered(relation *rel, relation* new_rel, int shift)
@@ -318,109 +564,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int shift)
 
     delete [] psum;
     delete [] flag;
-
-    return new_rel;
-}
-
-relation* create_rel(relation *rel, relation* new_rel, uint64_t** hist, uint64_t** psum, int shift)
-{
-    int i;
-    uint64_t payload;
-    bool *flag = new bool[rel->num_tuples];
-    for (i = 0; i < rel->num_tuples; i++)
-        flag[i] = false;
-
-    i = 0;
-    while(i < rel->num_tuples)  //create relation
-    {
-        //hash
-        //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
-        payload = hashFunction(rel->tuples[i].payload, 7 - shift);
-        //find hash in psum = pos in new relation
-        
-        int next_i = psum[1][payload];
-
-        //key++ until their is an empty place
-        while ((next_i < rel->num_tuples) && flag[next_i])
-            next_i++;
-
-        if (next_i < rel->num_tuples)
-        {
-            new_rel->tuples[next_i].payload = rel->tuples[i].payload;
-            new_rel->tuples[next_i].key = rel->tuples[i].key;
-            flag[next_i] = true;
-        }
-        i++;
-    }
-    delete [] flag;
-    return new_rel;
-}
-
-relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
-{
-    // relation *new_rel = new relation();
-    relation *temp;
-    relation *rtn;
-    uint64_t** hist;
-    uint64_t** psum;
-    uint64_t payload;
-
-    //create histogram
-    hist = create_hist(rel, shift);
-    //create psum
-    psum = create_psum(hist);
-    int array_size = pow(2, 8);
-    int i, j, y;
-    //create new relation
-    new_rel = create_rel(rel, new_rel, hist, psum, shift);
-
-    i = 0;
-    while (i < array_size)
-    {
-        if ((hist[1][i] > TUPLES_PER_BUCKET) && (shift  < 7))
-        {
-            // new rel to re_order
-            temp = new relation();
-            temp->num_tuples = hist[1][i];
-            temp->tuples = (new_rel->tuples + psum[1][i]);
-            rtn = re_ordered_2(temp, rel, shift + 1);
-            j = psum[1][i];
-            y = 0;
-            while (j < array_size)
-            {
-                if (j >= psum[1][i+1])
-                    break;
-                new_rel->tuples[j].payload = rtn->tuples[y].payload;
-                new_rel->tuples[j].key = rtn->tuples[y].key;
-                j++;
-                y++;
-            }
-            std::free(temp); // free only relation's pointer because the tuples are not taking additional space
-        }
-        else if (hist[1][i] > 0)
-        {
-            if (i + 1 < array_size)
-            {
-                sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
-            }
-            else
-            {
-                sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
-            }
-        }
-        
-        i++;
-    }
-
-    delete [] hist[0];
-    delete [] hist[1];
-
-    delete [] hist;
-    
-    delete [] psum[0];
-    delete [] psum[1];
-
-    delete [] psum;
 
     return new_rel;
 }

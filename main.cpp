@@ -62,13 +62,13 @@ int main(void)
     relation* new_rel_R = new relation();
     new_rel_R->num_tuples=R.num_tuples;
     new_rel_R->tuples = new tuple[R.num_tuples];
-    relation* ro_R=re_ordered_2(&R,new_rel_R,0);
+    relation* ro_R=re_ordered(&R,new_rel_R,0);
     std::cout<<"\n";
     ro_R->print();
     relation* new_rel_S = new relation();
     new_rel_S->num_tuples=S.num_tuples;
     new_rel_S->tuples = new tuple[S.num_tuples];
-    relation* ro_S=re_ordered_2(&S,new_rel_S, 0);
+    relation* ro_S=re_ordered(&S,new_rel_S,0);
     std::cout<<"\n";
     ro_S->print();
     std::cout<<"\n";
