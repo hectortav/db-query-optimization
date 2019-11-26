@@ -790,41 +790,19 @@ InputArray* handlepredicates(InputArray** relations,char* part,int relationsnum)
     }
     for(int i=0;i<cntr;i++)
     {
-        //std::cout<<"\t"<<preds[i]<<std::endl;
-        //CHANGE THIS AFTER SPLITPREDS IS CHANGED
-        /*int rel1,col1;
-        int rel2,col2;
-        int flag;
-        predsplittoterms(preds[i],rel1,col1,rel2,col2,flag);
-        std::cout<<rel1<<" "<<col1<<"    "<<rel2<<" "<<col2<<"    "<<flag<<std::endl;
-        if(rel2==-1)
-        {
-            //case with comparison with number
-            if(flag==0)
-            {
-                //>
-            }
-            else if(flag==1)
-            {
-                //<
-            }
-            else if(flag==2)
-            {
-                //=
-            }
-        }
-        else
-        {
-            //case with two rels
-            if(rel1==rel2)
-            {
-                //special case
-            }
-            else
-            {
-                //join
-            }
-        }*/
+        /*******TO ANTONIS******************/
+        //kathe grammi edo einai ena predicate olokliro
+        //preds[i][0]=sxesi1
+        //preds[i][1]=stili1
+        //preds[i][2]=praxi opou
+            //0  einai to >
+            //1  einai to <
+            //2  einai to =
+        //preds[i][3]=sxesi2
+            //sigrine me (uint64_t)-1 to opoio bgazei 18446744073709551615 kai theoroume an einai isa tote exoume filtro
+        //preds[i][4]=stili2 
+            //opou an h sxesi 2 einai isi me -1 opos eipa apo pano tote to stili 2 periexei to filtro
+        /***********END***************************/
 
     }
 
