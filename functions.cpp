@@ -719,7 +719,7 @@ char** readbatch(int& lns)
 }
 char** makeparts(char* query)
 {
-    std::cout<<query<<std::endl;
+    //std::cout<<query<<std::endl;
     int start=0;
     char** parts;
     parts=new char*[3];
@@ -769,12 +769,30 @@ InputArray* handlepredicates(InputArray** relations,char* part,int relationsnum)
 {
     std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
     int cntr;
-    char** preds=splitpreds(part,cntr);
-    optimizepredicates(preds);
+    uint64_t** preds=splitpreds(part,cntr);
     for(int i=0;i<cntr;i++)
     {
-        std::cout<<"\t"<<preds[i]<<std::endl;
-        int rel1,col1;
+        for(int j=0;j<5;j++)
+        {
+            std::cout<<"  "<<preds[i][j];
+        }
+        std::cout<<std::endl;
+    }
+    preds=optimizepredicates(preds,cntr,relationsnum);
+    std::cout<<std::endl;
+    for(int i=0;i<cntr;i++)
+    {
+        for(int j=0;j<5;j++)
+        {
+            std::cout<<"  "<<preds[i][j];
+        }
+        std::cout<<std::endl;
+    }
+    for(int i=0;i<cntr;i++)
+    {
+        //std::cout<<"\t"<<preds[i]<<std::endl;
+        //CHANGE THIS AFTER SPLITPREDS IS CHANGED
+        /*int rel1,col1;
         int rel2,col2;
         int flag;
         predsplittoterms(preds[i],rel1,col1,rel2,col2,flag);
@@ -806,7 +824,8 @@ InputArray* handlepredicates(InputArray** relations,char* part,int relationsnum)
             {
                 //join
             }
-        }
+        }*/
+
     }
 
     
@@ -832,7 +851,7 @@ void handleprojection(InputArray* array,char* part)
     }*/
 
 }
-char** splitpreds(char* ch,int& cn)
+uint64_t** splitpreds(char* ch,int& cn)
 {
     int cntr=1;
     for(int i=0;ch[i]!='\0';i++)
@@ -840,32 +859,83 @@ char** splitpreds(char* ch,int& cn)
         if(ch[i]=='&')
             cntr++;
     }
-    char** preds;
-    preds=new char*[cntr];
+    uint64_t** preds;
+    preds=new uint64_t*[cntr];
+    for(int i=0;i<cntr;i++)
+    {
+        preds[i]=new uint64_t[5];
+    }
     cntr=0;
     int start=0;
     for(int i=0;ch[i]!='\0';i++)
     {
         if(ch[i]=='&')
         {
-            preds[cntr]=ch+start;
-            start=i+1;
-            cntr++;
+            //preds[cntr]=ch+start;
+            //start=i+1;
             ch[i]='\0';
+            predsplittoterms(ch+start,preds[cntr][0],preds[cntr][1],preds[cntr][3],preds[cntr][4],preds[cntr][2]);
+            cntr++;
+            start=i+1;
         }
     }
-    preds[cntr]=ch+start;
+    predsplittoterms(ch+start,preds[cntr][0],preds[cntr][1],preds[cntr][3],preds[cntr][4],preds[cntr][2]);
     cntr++;
     cn=cntr;
     return preds;
 }
-void optimizepredicates(char** preds)
+bool notin(uint64_t** check, uint64_t* in, int cntr)
+{
+    
+    for(int j=0;j<cntr;j++)
+    {
+        if(check[j]==in)
+            return false;
+    }
+    
+    return true;
+}
+uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum)
 {
     //filters first
+    uint64_t** result=new uint64_t*[cntr];
+    int place=0;
+    for(int i=0;i<relationsnum;i++)
+    {
+        for(int j=0;j<cntr;j++)
+        {
+            if(preds[j][0]==i&&preds[j][3]==(uint64_t)-1)
+            {
+                if(notin(result,preds[j],cntr))
+                {
+                    result[place]=preds[j];
+                    place++;
+                }
+            }
+        }
+    }
+    for(int i=0;i<relationsnum;i++)
+    {
+        for(int j=0;j<cntr;j++)
+        {
+            if(preds[j][0]==i)
+            {
+                if(notin(result,preds[j],cntr))
+                {
+                    result[place]=preds[j];
+                    place++;
+                }
+            }
+        }
+    }
+    delete[] preds;
+    return result;
+    
 
 
 }
-void predsplittoterms(char* pred,int& rel1,int& col1,int& rel2,int& col2,int& flag)
+
+void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag)
 {
     char buffer[1024];
     rel1=col1=rel2=col2=flag=-1;
@@ -875,12 +945,11 @@ void predsplittoterms(char* pred,int& rel1,int& col1,int& rel2,int& col2,int& fl
         {
             buffer[j]='\0';
             if(term==0)
-                rel1=atoi(buffer);
+                rel1=atoll(buffer);
             else
-                rel2=atoi(buffer);
+                rel2=atoll(buffer);
             j=-1;
             term++;
-
         }
         else if(pred[i]=='>'||pred[i]=='<'||pred[i]=='=')
         {
@@ -891,14 +960,14 @@ void predsplittoterms(char* pred,int& rel1,int& col1,int& rel2,int& col2,int& fl
             else if(pred[i]=='=')
                 flag=2;
             buffer[j]='\0';
-            col1=atoi(buffer);
+            col1=atoll(buffer);
             term++;
             j=-1;
         }
         else if(pred[i]=='\0')
         {
             buffer[j]='\0';
-            col2=atoi(buffer);
+            col2=atoll(buffer);
         }
         else
             buffer[j]=pred[i];
