@@ -1,13 +1,13 @@
 CC=g++
-CFLAGS=-I -g -lm
+CFLAGS=-I -lm -Wall -g
 DEPS=list.h functions.h
 OBJ=main.o functions.o list.o
 
 %.o: %.c $(DEPS)
-	$(CC) -g -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS) 
 
 final: $(OBJ)
-	$(CC) -g -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS) 
 
 .Phony: clean
 

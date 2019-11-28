@@ -168,10 +168,10 @@ uint64_t** create_hist(relation *rel, int shift)
     return hist;
 }
 
-uint64_t** create_psum(uint64_t** hist)
+uint64_t** create_psum(uint64_t** hist, int size)
 {
     int count = 0;
-    int x = pow(2,8);
+    int x = size;
     uint64_t **psum = new uint64_t*[3];
     for(int i = 0; i < 3; i++)
         psum[i] = new uint64_t[x];
@@ -188,7 +188,7 @@ uint64_t** create_psum(uint64_t** hist)
 
 uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_size)   //big_size == size of row in big
 {
-    int x = pow(2,8), i;    //size of small == pow(2,8)
+    int x = pow(2,8), i, j;    //size of small == pow(2,8)
     uint64_t **hist = new uint64_t*[3];
     for(i = 0; i < 3; i++)
         hist[i] = new uint64_t[x + big_size];
@@ -199,23 +199,27 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
         hist[1][i] = big[1][i];
         hist[2][i] = big[2][i];
     }
-    for (int j = 0; j < x; j++)
+    for (j = 0; j < x; j++)
     {
         hist[0][i] = small[0][j];
         hist[1][i] = small[1][j];
         hist[2][i] = small[2][j];
         i++;
     }
-    for (i = position; i < big_size; i++)
+    for (i = position + 1; i < big_size; i++)
     {
-        hist[0][i + x] = small[0][i];
-        hist[1][i + x] = small[1][i];
-        hist[2][i + x] = small[2][i];
+        hist[0][i + x - 1] = small[0][i];
+        hist[1][i + x - 1] = small[1][i];
+        hist[2][i + x - 1] = small[2][i];
     }
     delete [] big[0];
     delete [] big[1];
     delete [] big[2];
     delete [] big;
+    delete [] small[0];
+    delete [] small[1];
+    delete [] small[2];
+    delete [] small;
     return hist;
 }
 
@@ -236,14 +240,14 @@ void pr(uint64_t** a, int array_size)
 relation* re_ordered_2(relation *rel, relation* new_rel)
 {
     int shift = 0;
-    // relation *new_rel = new relation();
-    relation *temp;
-    relation *rtn;
-    //create histogram
-    uint64_t** hist = create_hist(rel, shift), **temp_hist;
-    //create psum
-    uint64_t** psum = create_psum(hist), **temp_psum;
     int x = pow(2, 8), array_size = x;
+    // relation *new_rel = new relation();
+    relation *temp = NULL;
+    relation *rtn  = NULL;
+    //create histogram
+    uint64_t** hist = create_hist(rel, shift), **temp_hist = NULL;
+    //create psum
+    uint64_t** psum = create_psum(hist, x), **temp_psum = NULL;
     uint64_t payload;
     int i, j, y;
 
@@ -283,15 +287,20 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
     i = 0;
     while (i < array_size)
     {
-        std::cout << i << ": " << array_size << std::endl;
+        if (i == array_size-1 || psum[1][i] != psum[1][i+1])
+            std::cout << ">> " << i << ": " << psum[0][i] << " " << psum[1][i] << " " << psum[2][i] << std::endl;
         if ((hist[1][i] > TUPLES_PER_BUCKET) && (hist[2][i]  < 7))
         {
             //new relation from psum[1][i] to psum[1][i+1]
+            if (rel == NULL)
+                rel = new relation();
             int first = psum[1][i];
             int last = new_rel->num_tuples;
             if (i != array_size - 1)
                 last = psum[1][i+1];
             rel->num_tuples = last - first;
+            if(rel->tuples == NULL)
+                rel->tuples = new tuple[rel->num_tuples];
             y = 0;
             for (j = first; j < last; j++)
             {
@@ -299,9 +308,8 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
                 y++;
             }
             temp_hist = create_hist(rel, hist[2][i] + 1);
-            temp_psum = create_psum(temp_hist);
+            temp_psum = create_psum(temp_hist, x);
 
-            /*
             for (j = 0; j < rel->num_tuples; j++)
                 flag[j] = false;
 
@@ -327,44 +335,51 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
                 }
                 j++;
             }
-            */
 
             //testing
-            /*for (int i = 0; i < array_size; i++)
+            /*std::cout << "<<<<<<<" << std::endl;
+            for (int i = 0; i < array_size; i++)
                 if (i == x-1 || temp_psum[1][i] != temp_psum[1][i+1])
                     std::cout << temp_psum[0][i] << " " << temp_psum[1][i] << " - " << temp_hist[2][i] << std::endl;
             std::cout << "<<<<<<<" << std::endl;*/
 
             hist = combine_hist(hist, temp_hist, i, array_size);
             array_size+=x;
-            psum = create_psum(hist);
-            delete [] temp_hist[0];
-            delete [] temp_hist[1];
-            delete [] temp_hist[2];
-            delete [] temp_hist;
+            array_size-=1; //??????????????????????
+            delete [] psum[0];
+            delete [] psum[1];
+            delete [] psum[2];
+            delete [] psum;
+            psum = create_psum(hist, array_size);
             delete [] temp_psum[0];
             delete [] temp_psum[1];
             delete [] temp_psum[2];
             delete [] temp_psum;
         }
         
-        if (hist[1][i] > 0 && ((hist[1][i] < TUPLES_PER_BUCKET) || (hist[2][i] >= 7)))
+        if (hist[1][i] < TUPLES_PER_BUCKET || hist[2][i] >= 7)
         {
-            if (i + 1 < x)
-                sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
-            else
-                sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
+            if (hist[1][i] > 0)
+            {
+                std::cout << "HERE\n";
+                if (i + 1 < x)
+                    sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
+                else
+                    sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
+            }
         }
         i++;
     }
 
     delete [] hist[0];
     delete [] hist[1];
+    delete [] hist[2];
 
     delete [] hist;
     
     delete [] psum[0];
     delete [] psum[1];
+    delete [] psum[2];
 
     delete [] psum;
     delete [] flag;
@@ -374,14 +389,14 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
 
 relation* re_ordered(relation *rel, relation* new_rel, int shift)
 {
+    int x = pow(2, 8);
     // relation *new_rel = new relation();
     relation *temp;
     relation *rtn;
     //create histogram
     uint64_t** hist = create_hist(rel, shift);
     //create psum
-    uint64_t** psum = create_psum(hist);
-    int x = pow(2, 8);
+    uint64_t** psum = create_psum(hist, x);
     uint64_t payload;
     int i, j, y;
 
