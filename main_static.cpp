@@ -4,13 +4,19 @@
 int main(void)
 {
     relation *new_rel_R = new relation(), *R = new relation();
-    R->num_tuples = 10;
+    R->num_tuples = 4;
+    R->tuples = new tuple[R->num_tuples]
+    {
+        {5, 0xBFF}, {6, 0xAFF},
+        {0, 0xBAA}, {1, 0xBAA}
+    };
+    /*R->num_tuples = 10;
     R->tuples = new tuple[R->num_tuples]
     {
         {5, 0xBFF}, {6, 0xAFF},
         {0, 0xBAA}, {1, 0xBAA}, {2, 0xAAA}, {3, 0xCAA}, {4, 0xCAA},
         {7, 0xCCC}, {8, 0xBCC}, {9, 0xACC}
-    };
+    };*/
     std::cout << "before" << std::endl;
     R->print();
     new_rel_R->num_tuples=R->num_tuples;

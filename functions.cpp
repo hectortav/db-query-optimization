@@ -186,12 +186,35 @@ uint64_t** create_psum(uint64_t** hist, int size)
     return psum;
 }
 
+void pr(uint64_t** a, int array_size)
+{
+    int i;
+    for (i = 0; i < array_size; i++)
+    {
+        if (a[1][i] != 0)
+            std::cout << a[0][i] << ". " << a[1][i] << " - " << a[2][i] << std::endl;
+    }
+}
+
 uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_size)   //big_size == size of row in big
 {
     int x = pow(2,8), i, j;    //size of small == pow(2,8)
+    std::cout << "Small: " << std::endl;
+    pr(small, x);
+    std::cout << "----------" << std::endl;
+
+    std::cout << "Big: " << std::endl;
+    pr(big, big_size);
+    std::cout << "----------" << std::endl;
+
+
     uint64_t **hist = new uint64_t*[3];
     for(i = 0; i < 3; i++)
         hist[i] = new uint64_t[x + big_size];
+    
+    //std::memcpy(hist, big, sizeof(*big) * position);
+    //std::memcpy(&hist[position], small, sizeof(*small)*x);
+    //std::memcpy(&hist[position+x], &big[position], sizeof(*big)*(big_size-position-1));
 
     for (i = 0; i < position; i++)
     {
@@ -206,12 +229,16 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
         hist[2][i] = small[2][j];
         i++;
     }
+    std::cout << "Mid: " << std::endl;
+    pr(hist, x);
+    std::cout << "----------" << std::endl;
     for (i = position + 1; i < big_size; i++)
     {
-        hist[0][i + x - 1] = small[0][i];
-        hist[1][i + x - 1] = small[1][i];
-        hist[2][i + x - 1] = small[2][i];
+        hist[0][i + x - 1] = big[0][i];
+        hist[1][i + x - 1] = big[1][i];
+        hist[2][i + x - 1] = big[2][i];
     }
+
     delete [] big[0];
     delete [] big[1];
     delete [] big[2];
@@ -220,21 +247,10 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
     delete [] small[1];
     delete [] small[2];
     delete [] small;
+    std::cout << "Hist: " << std::endl;
+    pr(hist, big_size + x - 1);
+    std::cout << "----------" << std::endl;
     return hist;
-}
-
-void pr(uint64_t** a, int array_size)
-{
-    int i;
-    uint64_t last = -1;
-    for (i = 0; i < array_size; i++)
-    {
-        if (last != a[1][i])
-        {
-            std::cout << a[0][i] << ". " << a[1][i] << " - " << a[2][i] << std::endl;
-            last = a[1][i];
-        }
-    }
 }
 
 relation* re_ordered_2(relation *rel, relation* new_rel)
@@ -250,6 +266,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
     uint64_t** psum = create_psum(hist, x), **temp_psum = NULL;
     uint64_t payload;
     int i, j, y;
+    bool clear;
 
     bool *flag = new bool[rel->num_tuples];
     for (i = 0; i < rel->num_tuples; i++)
@@ -284,13 +301,13 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
             std::cout << psum[0][i] << " " << psum[1][i] << std::endl;
     std::cout << "<<<<<<<" << std::endl;*/
 
+    clear = false; //make a full loop with clear == false to end
     i = 0;
     while (i < array_size)
     {
-        if (i == array_size-1 || psum[1][i] != psum[1][i+1])
-            std::cout << ">> " << i << ": " << psum[0][i] << " " << psum[1][i] << " " << psum[2][i] << std::endl;
         if ((hist[1][i] > TUPLES_PER_BUCKET) && (hist[2][i]  < 7))
         {
+            clear = true;
             //new relation from psum[1][i] to psum[1][i+1]
             if (rel == NULL)
                 rel = new relation();
@@ -310,7 +327,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
             temp_hist = create_hist(rel, hist[2][i] + 1);
             temp_psum = create_psum(temp_hist, x);
 
-            for (j = 0; j < rel->num_tuples; j++)
+            /*for (j = 0; j < rel->num_tuples; j++)
                 flag[j] = false;
 
             j = 0;
@@ -335,14 +352,16 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
                 }
                 j++;
             }
+            */
 
             //testing
-            /*std::cout << "<<<<<<<" << std::endl;
-            for (int i = 0; i < array_size; i++)
-                if (i == x-1 || temp_psum[1][i] != temp_psum[1][i+1])
-                    std::cout << temp_psum[0][i] << " " << temp_psum[1][i] << " - " << temp_hist[2][i] << std::endl;
-            std::cout << "<<<<<<<" << std::endl;*/
-
+            /*
+            std::cout << "------" << std::endl;
+            for (int k = 0; k < x; k++)
+            if (k == x-1 || temp_psum[1][k] != temp_psum[1][k+1])
+                std::cout << temp_hist[0][k] << " " << temp_hist[1][k] << " " << temp_hist[2][k] << std::endl;
+            std::cout << "------" << std::endl;
+            */
             hist = combine_hist(hist, temp_hist, i, array_size);
             array_size+=x;
             array_size-=1; //??????????????????????
@@ -361,7 +380,6 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
         {
             if (hist[1][i] > 0)
             {
-                std::cout << "HERE\n";
                 if (i + 1 < x)
                     sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
                 else
@@ -369,6 +387,11 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
             }
         }
         i++;
+        if (i == array_size && clear)
+        {
+            i = 0;
+            clear = false;
+        }
     }
 
     delete [] hist[0];
