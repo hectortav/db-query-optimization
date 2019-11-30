@@ -282,23 +282,10 @@ void pr(uint64_t** a, int array_size)
 uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_size)   //big_size == size of row in big
 {
     int x = pow(2,8), i, j;    //size of small == pow(2,8)
-    /*
-    std::cout << "Small: " << std::endl;
-    pr(small, x);
-    std::cout << "----------" << std::endl;
-
-    std::cout << "Big: " << std::endl;
-    pr(big, big_size);
-    std::cout << "----------" << std::endl;
-    */
 
     uint64_t **hist = new uint64_t*[3];
     for(i = 0; i < 3; i++)
         hist[i] = new uint64_t[x + big_size];
-    
-    //std::memcpy(hist, big, sizeof(*big) * position);
-    //std::memcpy(&hist[position], small, sizeof(*small)*x);
-    //std::memcpy(&hist[position+x], &big[position], sizeof(*big)*(big_size-position-1));
 
     for (i = 0; i < position; i++)
     {
@@ -313,9 +300,6 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
         hist[2][i] = small[2][j];
         i++;
     }
-    /*std::cout << "Mid: " << std::endl;
-    pr(hist, x);
-    std::cout << "----------" << std::endl;*/
     for (i = position + 1; i < big_size; i++)
     {
         hist[0][i + x - 1] = big[0][i];
@@ -331,9 +315,6 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
     delete [] small[1];
     delete [] small[2];
     delete [] small;
-    /*std::cout << "Hist: " << std::endl;
-    pr(hist, big_size + x - 1);
-    std::cout << "----------" << std::endl;*/
     return hist;
 }
 
@@ -345,7 +326,6 @@ int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
     {
         if (hashFunction(payload, 7 - hist[2][i]) == hist[0][i] && hist[1][i] != 0)
         {
-            //std::cout << hist[0][i] << " " << hist[1][i] << " " << hist[2][i] << " " << std::endl;
             return hist[2][i];
         }
     }
@@ -355,7 +335,6 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
 {
     int shift = 0;
     int x = pow(2, 8), array_size = x;
-    // relation *new_rel = new relation();
     relation *temp = NULL;
     relation *rtn  = NULL;
     //create histogram

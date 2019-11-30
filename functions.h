@@ -73,16 +73,6 @@ class IntermediateArray {
     bool shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId);
 };
 
-class _vector
-{
-    public:
-    uint64_t index, value;
-    _vector *vptr;
-
-    _vector();
-    ~_vector();
-};
-
 unsigned char hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 uint64_t** create_hist(relation*, int);
