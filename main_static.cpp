@@ -7,8 +7,8 @@ int main(void)
     R->num_tuples = 4;
     R->tuples = new tuple[R->num_tuples]
     {
-        {5, 0xBFF}, {6, 0xAFF},
-        {0, 0xBAA}, {1, 0xBAA}
+        {5, 0x00A}, {6, 0x0B1},
+        {0, 0x01A}, {1, 0x0B0}
     };
     /*R->num_tuples = 10;
     R->tuples = new tuple[R->num_tuples]
