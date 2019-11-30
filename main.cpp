@@ -137,15 +137,20 @@ int main(void)
 
     // delete ro_R;
 
+    InputArray** inputArrays = readArrays();
+    for (int i = 0; i < MAX_INPUT_ARRAYS_NUM; i++) {
+        if (inputArrays[i] != NULL) {
+            inputArrays[i]->print();
+        }
+    }
 
-    InputArray** allrelations;
     int lines;
     char** arr=readbatch(lines);
     std::cout<<std::endl;
     for(int i=0;i<lines;i++)
     {
         std::cout<<arr[i]<<std::endl;
-        handlequery(makeparts(arr[i]),allrelations);
+        handlequery(makeparts(arr[i]), inputArrays);
     }
 
 }

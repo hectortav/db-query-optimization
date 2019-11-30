@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <math.h>
 
-#define MAX_INPUT_FILE_NAME_SIZE 20
+#define MAX_INPUT_FILE_NAME_SIZE 30
 #define MAX_INPUT_ARRAYS_NUM 20
 
 typedef class list list;
@@ -52,6 +52,8 @@ class InputArray
 
     InputArray(uint64_t rowsNum, uint64_t columnsNum);
     ~InputArray();
+
+    void print();
 };
 
 class IntermediateArray {
@@ -59,8 +61,8 @@ class IntermediateArray {
     uint64_t** results; // contains columns of rowIds: one column per used input array
     int* inputArrayIds; // size = columnsNum
                         // contains ids of input arrays that correspond to each column
-    uint64_t columnsNum; // = [number of non-filter predicates] + 1
-    uint64_t rowsNum; // = number of rows
+    uint64_t columnsNum;
+    uint64_t rowsNum;
     uint64_t sortedByFieldId;
     int sortedByInputArrayId;
 
@@ -68,9 +70,10 @@ class IntermediateArray {
     ~IntermediateArray();
 
     void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId);
-    void populate(uint64_t (* intermediateResult)[2], uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArrayId);
+    void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id);
     bool hasInputArrayId(int inputArrayId);
     bool shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId);
+    void print();
 };
 
 class _vector
@@ -101,8 +104,9 @@ InputArray** readArrays();
 char** readbatch(int& lns);
 char** makeparts(char* query);
 void handlequery(char** parts,InputArray** allrelations);
-InputArray** loadrelations(char* part,InputArray** allrelations,int& relationsnum);
-InputArray* handlepredicates(InputArray** relations,char* part,int relationsnum);
+void loadrelationIds(int* relationIds, char* part, int& relationsnum);
+// InputArray** loadrelations(char* part,InputArray** allrelations,int& relationsnum);
+InputArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds);
 void handleprojection(InputArray* array,char* part);
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum);
