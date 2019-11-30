@@ -282,6 +282,7 @@ void pr(uint64_t** a, int array_size)
 uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_size)   //big_size == size of row in big
 {
     int x = pow(2,8), i, j;    //size of small == pow(2,8)
+    /*
     std::cout << "Small: " << std::endl;
     pr(small, x);
     std::cout << "----------" << std::endl;
@@ -289,7 +290,7 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
     std::cout << "Big: " << std::endl;
     pr(big, big_size);
     std::cout << "----------" << std::endl;
-
+    */
 
     uint64_t **hist = new uint64_t*[3];
     for(i = 0; i < 3; i++)
@@ -312,9 +313,9 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
         hist[2][i] = small[2][j];
         i++;
     }
-    std::cout << "Mid: " << std::endl;
+    /*std::cout << "Mid: " << std::endl;
     pr(hist, x);
-    std::cout << "----------" << std::endl;
+    std::cout << "----------" << std::endl;*/
     for (i = position + 1; i < big_size; i++)
     {
         hist[0][i + x - 1] = big[0][i];
@@ -330,10 +331,24 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
     delete [] small[1];
     delete [] small[2];
     delete [] small;
-    std::cout << "Hist: " << std::endl;
+    /*std::cout << "Hist: " << std::endl;
     pr(hist, big_size + x - 1);
-    std::cout << "----------" << std::endl;
+    std::cout << "----------" << std::endl;*/
     return hist;
+}
+
+int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
+{
+    int i, shift = -1;
+    uint64_t hash;
+    for (i = 0; i < hist_size; i++)
+    {
+        if (hashFunction(payload, 7 - hist[2][i]) == hist[0][i] && hist[1][i] != 0)
+        {
+            //std::cout << hist[0][i] << " " << hist[1][i] << " " << hist[2][i] << " " << std::endl;
+            return hist[2][i];
+        }
+    }
 }
 
 relation* re_ordered_2(relation *rel, relation* new_rel)
@@ -400,7 +415,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
                 last = psum[1][i+1];
             rel->num_tuples = last - first;
             if(rel->tuples == NULL)
-                rel->tuples = new tuple[rel->num_tuples];
+                rel->tuples = new tuple[new_rel->num_tuples];
             y = 0;
             for (j = first; j < last; j++)
             {
@@ -410,33 +425,8 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
             temp_hist = create_hist(rel, hist[2][i] + 1);
             temp_psum = create_psum(temp_hist, x);
 
-            /*for (j = 0; j < rel->num_tuples; j++)
+            for (j = 0; j < rel->num_tuples; j++)
                 flag[j] = false;
-
-            j = 0;
-            while(j < rel->num_tuples)
-            {
-                //hash
-                //payload = (0xFFFFFFFF & rel->tuples[j].payload) >> (8*shift) & 0xFF;
-                payload = hashFunction(rel->tuples[j].payload, 7 - hist[2][i] + 1);
-                //find hash in temp_psum = pos in new relation
-                
-                int next_i = temp_psum[1][payload];
-
-                //key++ until their is an empty place
-                while ((next_i < rel->num_tuples) && flag[next_i])
-                    next_i++;
-
-                if (next_i < rel->num_tuples)
-                {
-                    new_rel->tuples[next_i + first].payload = rel->tuples[j].payload;
-                    new_rel->tuples[next_i + first].key = rel->tuples[j].key;
-                    flag[next_i] = true;
-                }
-                j++;
-            }
-            */
-
             //testing
             /*
             std::cout << "------" << std::endl;
@@ -457,6 +447,46 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
             delete [] temp_psum[1];
             delete [] temp_psum[2];
             delete [] temp_psum;
+
+            for (j = 0; j < new_rel->num_tuples; j++)
+                flag[j] = false;
+
+            j = 0;
+            if (rel == NULL)
+                rel = new relation();
+            if (sizeof(*rel->tuples) != sizeof(*new_rel->tuples))
+            {
+                delete [] rel->tuples;
+                rel->tuples = new tuple[new_rel->num_tuples];
+            }
+            rel->num_tuples = new_rel->num_tuples;
+            while(j < new_rel->num_tuples)
+            {
+                //hash
+                //payload = (0xFFFFFFFF & rel->tuples[j].payload) >> (8*shift) & 0xFF;
+                payload = hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[i].payload));
+                //find hash in psum = pos in new relation
+                
+                int next_i = psum[1][payload];
+
+                //key++ until their is an empty place
+                while ((next_i < new_rel->num_tuples) && flag[next_i])
+                    next_i++;
+
+                if (next_i < new_rel->num_tuples)
+                {
+                    rel->tuples[next_i].payload = new_rel->tuples[j].payload;
+                    rel->tuples[next_i].key = new_rel->tuples[j].key;
+                    flag[next_i] = true;
+                }
+                j++;
+            }
+            tuple *temp_tuple = rel->tuples;
+            rel->tuples = new_rel->tuples;
+            new_rel->tuples = temp_tuple;
+            j = rel->num_tuples;
+            rel->num_tuples = new_rel->num_tuples;
+            new_rel->num_tuples = j;
         }
         
         if (hist[1][i] < TUPLES_PER_BUCKET || hist[2][i] >= 7)
