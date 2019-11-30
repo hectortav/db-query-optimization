@@ -54,6 +54,25 @@ class InputArray
     ~InputArray();
 };
 
+class IntermediateArray {
+    public:
+    uint64_t** results; // contains columns of rowIds: one column per used input array
+    int* inputArrayIds; // size = columnsNum
+                        // contains ids of input arrays that correspond to each column
+    uint64_t columnsNum; // = [number of non-filter predicates] + 1
+    uint64_t rowsNum; // = number of rows
+    uint64_t sortedByFieldId;
+    int sortedByInputArrayId;
+
+    IntermediateArray(uint64_t columnsNum, uint64_t sortedByInputArrayId, uint64_t sortedByFieldId);
+    ~IntermediateArray();
+
+    void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId);
+    void populate(uint64_t (* intermediateResult)[2], uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArrayId);
+    bool hasInputArrayId(int inputArrayId);
+    bool shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId);
+};
+
 class _vector
 {
     public:

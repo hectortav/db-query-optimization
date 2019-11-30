@@ -36,6 +36,89 @@ InputArray::~InputArray() {
     delete[] this->columns;
 }
 
+IntermediateArray::IntermediateArray(uint64_t columnsNum, uint64_t sortedByInputArrayId, uint64_t sortedByFieldId) {
+    this->rowsNum = 0;
+    this->sortedByFieldId = sortedByFieldId;
+    this->sortedByInputArrayId = sortedByInputArrayId;
+    this->columnsNum = columnsNum;
+    this->results = new uint64_t*[columnsNum];
+    for (int j = 0; j < columnsNum; j++) {
+        this->results[j] = NULL;
+    }
+    this->inputArrayIds = new int[columnsNum];
+}
+
+IntermediateArray::~IntermediateArray() {
+    for (int i = 0; i < columnsNum; i++) {
+        if (this->results[i] != NULL) {
+            delete[] this->results[i];
+        }
+    }
+    delete[] this->results;
+    delete[] this->inputArrayIds;
+}
+
+void IntermediateArray::extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId) {
+    resultRelation->tuples = new tuple[rowsNum];
+
+    uint64_t columnIndex = 0;
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        if (inputArrayIds[j] == inputArrayId) {
+            columnIndex = j;
+            break;
+        }
+    }
+
+    for (uint64_t i = 0; i < rowsNum; i++) {
+        uint64_t inputArrayRowId = this->results[columnIndex][i];
+        
+        resultRelation->tuples[i].key = i; // row id of this intermediate array
+        resultRelation->tuples[i].payload = inputArray->columns[fieldId][inputArrayRowId];
+    }
+}
+
+// by convention the 1st column of intermediateResult contains row ids of this IntermediateArray and the 2nd column contains row ids of the first-time-used input array
+void IntermediateArray::populate(uint64_t (*intermediateResult)[2], uint64_t resultRowsNum, IntermediateArray* prevIntermediateArray, int inputArrayId) {
+    this->rowsNum = resultRowsNum;
+
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        results[j] = new uint64_t[resultRowsNum];
+    }
+
+    if (prevIntermediateArray == NULL) {
+        // first time creating an IntermediateArray
+        for (uint64_t i = 0; i < resultRowsNum; i++) {
+            results[0][i] = intermediateResult[0][i];
+            results[1][i] = intermediateResult[1][i];
+        }
+        return;
+    }
+
+    for (uint64_t i = 0; i < resultRowsNum; i++) {
+        uint64_t prevIntermediateArrayRowId = intermediateResult[0][i];
+        uint64_t inputArrayRowId = intermediateResult[1][i];
+        for (uint64_t j = 0; j < prevIntermediateArray->columnsNum; j++) {
+            inputArrayIds[j] = prevIntermediateArray->inputArrayIds[j];
+            results[j][i] = prevIntermediateArray->results[j][prevIntermediateArrayRowId];
+        }
+        inputArrayIds[columnsNum - 1] = inputArrayId;
+        results[columnsNum - 1][i] = inputArrayRowId;
+    }
+}
+
+bool IntermediateArray::hasInputArrayId(int inputArrayId) {
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        if (inputArrayIds[j] == inputArrayId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool IntermediateArray::shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId) {
+    return ! (this->sortedByInputArrayId == nextQueryInputArrayId && this->sortedByFieldId == nextQueryFieldId);
+}
+
 unsigned char hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
