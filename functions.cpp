@@ -76,6 +76,27 @@ InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t n
     return newInputArrayRowIds;
 }
 
+InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, InputArray* pureInputArray) {
+    InputArray* newInputArrayRowIds = new InputArray(rowsNum);
+    uint64_t newInputArrayRowIndex = 0;
+
+    for (uint64_t i = 0; i < rowsNum; i++) {
+        uint64_t inputArrayRowId = columns[0][i];
+        uint64_t inputArrayField1Value = pureInputArray->columns[field1Id][inputArrayRowId];
+        uint64_t inputArrayField2Value = pureInputArray->columns[field2Id][inputArrayRowId];
+        bool filterApplies = inputArrayField1Value == inputArrayField2Value;
+
+        if (!filterApplies)
+            continue;
+
+        newInputArrayRowIds->columns[0][newInputArrayRowIndex++] = inputArrayRowId;
+    }
+
+    newInputArrayRowIds->rowsNum = newInputArrayRowIndex; // update rowsNum because the other rows are useless
+
+    return newInputArrayRowIds;
+}
+
 void InputArray::extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputArray* pureInputArray) {
     // printf("gg\n");
     rel.num_tuples = rowsNum;
@@ -1000,6 +1021,8 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     }
 
     IntermediateArray* curIntermediateArray = NULL;
+
+    // filters and inner-joins are first and regular joins follow
     for(int i=0;i<cntr;i++)
     {
         bool isFilter = preds[i][3] == (uint64_t) - 1;
@@ -1035,9 +1058,17 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 //     InputArray* filteredInputArrayRowIds = inputarra
                 // }
 
+                if (inputArray1Id == inputArray2Id) {
+                    // self join - filter
+                    InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
+                    delete inputArray1RowIds;
+                    inputArraysRowIds[inputArray1Id] = filteredInputArrayRowIds;
+                    continue;
+                }
+
                 if ((curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id))
                     && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id)) {
-                    // handle as self-join (similar to filter)
+                    // handle as self-join of IntermediateArray (similar to filter)
                     // insert code here
                     break;
                 }

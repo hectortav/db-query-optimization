@@ -55,6 +55,7 @@ class InputArray
     ~InputArray();
 
     InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, InputArray* pureInputArray); // filtering when storing row ids
+    InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id, InputArray* pureInputArray); // inner join
     void extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
     void print();
 };
