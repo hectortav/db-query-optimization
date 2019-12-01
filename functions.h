@@ -51,8 +51,11 @@ class InputArray
     uint64_t** columns;
 
     InputArray(uint64_t rowsNum, uint64_t columnsNum);
+    InputArray(uint64_t rowsNum);  // initialization for storing row ids
     ~InputArray();
 
+    InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, InputArray* pureInputArray); // filtering when storing row ids
+    void extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
     void print();
 };
 
