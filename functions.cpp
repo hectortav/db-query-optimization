@@ -879,8 +879,8 @@ void handlequery(char** parts,InputArray** allrelations)
     int relationIds[MAX_INPUT_ARRAYS_NUM];
     int relationsnum;
     loadrelationIds(relationIds, parts[0], relationsnum);
-    InputArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds);
-    handleprojection(result,parts[2]);
+    IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds);
+    handleprojection(result,allrelations,parts[2]);
     std::cout<<std::endl;
     
 
@@ -912,7 +912,7 @@ void loadrelationIds(int* relationIds, char* part, int& relationsnum)
     //std::cout<<cntr<<" relations"<<std::endl;
 }
 
-InputArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
+IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
 {
     std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
     int cntr;
@@ -1081,31 +1081,52 @@ InputArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnu
         //preds[i][4]=stili2 
             //opou an h sxesi 2 einai isi me -1 opos eipa apo pano tote to stili 2 periexei to filtro
         /***********END***************************/
-
     }
 
-    
+    return curIntermediateArray;
+
 
 
 }
-void handleprojection(InputArray* array,char* part)
+void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part)
 {
     std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
-    int keep=1;
-    for(int i=0;part[i]!='\0';i++)
+    int projarray,projcolumn;
+    for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
     {
-        if(part[i]==' ')
-            keep++;
-    }
-    //InputArray* fnl=new InputArray(keep,array->columnsNum);
-    /*for(int i=0,newcol=0;i<array->columnsNum;i++)
-    {
-        for(int j=0;j<array->rowsNum;j++)
+        if(part[i]=='.')
         {
-            //dostuff
+            part[i]='\0';
+            projarray=atoi(part+start);
+            part[i]='.';
+            start=i+1;
         }
-    }*/
-
+        if(part[i]==' '||part[i]=='\0')
+        {
+            int flg=0;
+            if(part[i]==' ')
+            {
+                part[i]='\0';
+                flg=1;
+            }
+            projcolumn=atoi(part+start);
+            if(flg)
+                part[i]=' ';
+            start=i+1;
+            int key;
+            for(int i=0;i<rowarr->columnsNum;i++)
+            {
+                if(rowarr->inputArrayIds[i]==projarray)
+                    key=i;
+            }
+            int sum=0;
+            for(uint64_t i =0;i<rowarr->rowsNum;i++)
+            {
+                sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
+            }
+            std::cout<<projarray<<"."<<projcolumn<<": "<<sum<<std::endl;
+        }
+    }
 }
 uint64_t** splitpreds(char* ch,int& cn)
 {
@@ -1160,7 +1181,7 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum)
     {
         for(int j=0;j<cntr;j++)
         {
-            if(preds[j][0]==i&&preds[j][3]==(uint64_t)-1)
+            if(preds[j][0]==i&&(preds[j][3]==(uint64_t)-1||preds[j][3]==i))
             {
                 if(notin(result,preds[j],cntr))
                 {
