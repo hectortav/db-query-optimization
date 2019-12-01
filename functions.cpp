@@ -1287,11 +1287,18 @@ void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part)
                     key=i;
             }
             int sum=0;
-            for(uint64_t i =0;i<rowarr->rowsNum;i++)
+            if(rowarr!=NULL)
             {
-                sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
+                for(uint64_t i =0;i<rowarr->rowsNum;i++)
+                {
+                    sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
+                }
             }
-            std::cout<<projarray<<"."<<projcolumn<<": "<<sum<<std::endl;
+            std::cout<<projarray<<"."<<projcolumn<<": ";
+            if(sum!=0)
+                std::cout<<sum<<std::endl;
+            else
+                std::cout<<"NULL"<<std::endl;
         }
     }
 }
