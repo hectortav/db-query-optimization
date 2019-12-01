@@ -77,6 +77,8 @@ class IntermediateArray {
     void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id);
     bool hasInputArrayId(int inputArrayId);
     bool shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId);
+    int findColumnIndexByInputArrayId(int inputArrayId);
+    IntermediateArray* selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, InputArray* inputArray1, InputArray* inputArray2);
     void print();
 };
 
