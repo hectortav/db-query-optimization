@@ -1232,15 +1232,16 @@ void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part)
             if(flg)
                 part[i]=' ';
             start=i+1;
-            int key;
-            for(int i=0;i<rowarr->columnsNum;i++)
-            {
-                if(rowarr->inputArrayIds[i]==projarray)
-                    key=i;
-            }
+            
             int sum=0;
             if(rowarr!=NULL)
             {
+                int key;
+                for(int i=0;i<rowarr->columnsNum;i++)
+                {
+                    if(rowarr->inputArrayIds[i]==projarray)
+                        key=i;
+                }
                 for(uint64_t i =0;i<rowarr->rowsNum;i++)
                 {
                     sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
