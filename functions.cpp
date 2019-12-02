@@ -214,6 +214,52 @@ void IntermediateArray::print() {
     }
 }
 
+int IntermediateArray::findColumnIndexByInputArrayId(int inputArrayId) {
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        if (inputArrayIds[j] == inputArrayId)
+            return j;
+    }
+    return -1;
+}
+
+IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, InputArray* inputArray1, InputArray* inputArray2) {
+    IntermediateArray* newIntermediateArray = new IntermediateArray(columnsNum, 0, 0);
+
+    newIntermediateArray->rowsNum = rowsNum;
+    for (uint64_t j = 0; j < newIntermediateArray->columnsNum; j++) {
+        newIntermediateArray->results[j] = new uint64_t[newIntermediateArray->rowsNum];
+    }
+
+    for (uint64_t j = 0; j < newIntermediateArray->columnsNum; j++) {
+        newIntermediateArray->inputArrayIds[j] = inputArrayIds[j];
+    }
+
+    int columnIndexArray1 = findColumnIndexByInputArrayId(inputArray1Id);
+    int columnIndexArray2 = findColumnIndexByInputArrayId(inputArray2Id);
+
+    uint64_t newIntermediateArrayRowIndex = 0;
+    for (uint64_t i = 0; i < rowsNum; i++) {
+        uint64_t inputArray1RowId = results[columnIndexArray1][i];
+        uint64_t inputArray2RowId = results[columnIndexArray2][i];
+        uint64_t inputArray1FieldValue = inputArray1->columns[field1Id][inputArray1RowId];
+        uint64_t inputArray2FieldValue = inputArray2->columns[field2Id][inputArray2RowId];
+
+        bool filterApplies = inputArray1FieldValue == inputArray2FieldValue;
+
+        if (!filterApplies)
+            continue;
+
+        for (uint64_t j = 0; j < columnsNum; j++) {
+            newIntermediateArray->results[j][newIntermediateArrayRowIndex] = results[j][i];
+        }
+        newIntermediateArrayRowIndex++;
+    }
+
+    newIntermediateArray->rowsNum = newIntermediateArrayRowIndex; // update rowsNum because the other rows are useless
+    newIntermediateArray->print();
+    return newIntermediateArray;
+}
+
 unsigned char hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
@@ -1059,7 +1105,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 // }
 
                 if (inputArray1Id == inputArray2Id) {
-                    // self join - filter
+                    // self-join of InputArray
                     InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
                     delete inputArray1RowIds;
                     inputArraysRowIds[inputArray1Id] = filteredInputArrayRowIds;
@@ -1068,9 +1114,11 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
                 if ((curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id))
                     && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id)) {
-                    // handle as self-join of IntermediateArray (similar to filter)
-                    // insert code here
-                    break;
+                    // self-join of IntermediateArray
+                    IntermediateArray* filteredIntermediateArray = curIntermediateArray->selfJoin(inputArray1Id, inputArray2Id, field1Id, field2Id, inputArray1, inputArray2);
+                    delete curIntermediateArray;
+                    curIntermediateArray = filteredIntermediateArray;
+                    continue;
                 }
 
                 {
@@ -1202,7 +1250,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         /***********END***************************/
     }
 
-    return curIntermediateArray;
+    return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
 
 
 
