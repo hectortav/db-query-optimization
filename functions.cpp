@@ -1351,6 +1351,7 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum)
 {
     //filters first
     uint64_t** result=new uint64_t*[cntr];
+    
     int place=0;
     for(int i=0;i<relationsnum;i++)
     {
@@ -1380,6 +1381,7 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum)
             }
         }
     }
+
     delete[] preds;
     return result;
     

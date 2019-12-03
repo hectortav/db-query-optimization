@@ -27,3 +27,10 @@ void testSwap(void);
  * Checks if the payload (uint64_t) given as argument to testHashFunction() is hashed correctly.
  */
 void testHashFunction(void);
+
+void testmakeparts(void);
+void testsplitpreds(void);
+void testoptimizepredicates(void);
+void testpredsplittoterms(void);
+
+

@@ -23,6 +23,10 @@ int main()
    if ((NULL == CU_add_test(pSuite, "test of randomIndex()", testRandomIndex))
      || (NULL == CU_add_test(pSuite, "test of swap()", testSwap))
      || (NULL == CU_add_test(pSuite, "test of hashFunction()", testHashFunction))
+     || (NULL == CU_add_test(pSuite, "test of makeparts()",testmakeparts))
+     || (NULL == CU_add_test(pSuite, "test of splitpreds()",testsplitpreds))
+     || (NULL == CU_add_test(pSuite, "test of optimizepredicates()",testoptimizepredicates))
+     || (NULL == CU_add_test(pSuite, "test of predsplittoterms()",testpredsplittoterms))
     )
    {
       CU_cleanup_registry();
