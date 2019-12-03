@@ -1,0 +1,4 @@
+input/rel2x2.bin
+input/rel3x3.bin
+input/rel2x2A.bin
+Done

@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <math.h>
 
-#define MAX_INPUT_FILE_NAME_SIZE 20
+#define MAX_INPUT_FILE_NAME_SIZE 30
 #define MAX_INPUT_ARRAYS_NUM 20
 
 typedef class list list;
@@ -51,7 +51,13 @@ class InputArray
     uint64_t** columns;
 
     InputArray(uint64_t rowsNum, uint64_t columnsNum);
+    InputArray(uint64_t rowsNum);  // initialization for storing row ids
     ~InputArray();
+
+    InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, InputArray* pureInputArray); // filtering when storing row ids
+    InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id, InputArray* pureInputArray); // inner join
+    void extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
+    void print();
 };
 
 class IntermediateArray {
@@ -59,8 +65,8 @@ class IntermediateArray {
     uint64_t** results; // contains columns of rowIds: one column per used input array
     int* inputArrayIds; // size = columnsNum
                         // contains ids of input arrays that correspond to each column
-    uint64_t columnsNum; // = [number of non-filter predicates] + 1
-    uint64_t rowsNum; // = number of rows
+    uint64_t columnsNum;
+    uint64_t rowsNum;
     uint64_t sortedByFieldId;
     int sortedByInputArrayId;
 
@@ -68,9 +74,12 @@ class IntermediateArray {
     ~IntermediateArray();
 
     void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId);
-    void populate(uint64_t (* intermediateResult)[2], uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArrayId);
+    void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id);
     bool hasInputArrayId(int inputArrayId);
     bool shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId);
+    int findColumnIndexByInputArrayId(int inputArrayId);
+    IntermediateArray* selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, InputArray* inputArray1, InputArray* inputArray2);
+    void print();
 };
 
 unsigned char hashFunction(uint64_t payload, int shift);
@@ -91,9 +100,10 @@ InputArray** readArrays();
 char** readbatch(int& lns);
 char** makeparts(char* query);
 void handlequery(char** parts,InputArray** allrelations);
-InputArray** loadrelations(char* part,InputArray** allrelations,int& relationsnum);
-InputArray* handlepredicates(InputArray** relations,char* part,int relationsnum);
-void handleprojection(InputArray* array,char* part);
+void loadrelationIds(int* relationIds, char* part, int& relationsnum);
+// InputArray** loadrelations(char* part,InputArray** allrelations,int& relationsnum);
+IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds);
+void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part);
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum);
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);
