@@ -415,7 +415,7 @@ void pr(uint64_t** a, int array_size)
     int i;
     for (i = 0; i < array_size; i++)
     {
-        if (a[1][i] != 0)
+        if (a[1][i] != 0 || (i < array_size -1 && a[2][i] < a[2][i+1]))
             std::cout << a[0][i] << ". " << a[1][i] << " - " << a[2][i] << std::endl;
     }
 }
@@ -434,6 +434,10 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
         hist[1][i] = big[1][i];
         hist[2][i] = big[2][i];
     }
+    hist[0][i] = big[0][i];
+    hist[1][i] = 0;//big[1][i];
+    hist[2][i] = big[2][i];
+    i++;
     for (j = 0; j < x; j++)
     {
         hist[0][i] = small[0][j];
@@ -443,9 +447,9 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
     }
     for (i = position + 1; i < big_size; i++)
     {
-        hist[0][i + x - 1] = big[0][i];
-        hist[1][i + x - 1] = big[1][i];
-        hist[2][i + x - 1] = big[2][i];
+        hist[0][i + x] = big[0][i];
+        hist[1][i + x] = big[1][i];
+        hist[2][i + x] = big[2][i];
     }
 
     delete [] big[0];
@@ -461,15 +465,32 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
 
 int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
 {
-    int i, shift = -1;
+    int i, shift, j, flag;
     uint64_t hash;
     for (i = 0; i < hist_size; i++)
     {
-        if (hashFunction(payload, 7 - hist[2][i]) == hist[0][i] && hist[1][i] != 0)
+        if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
         {
-            return hist[2][i];
+            j = i;
+            shift = hist[2][i];
+            flag = 1;
+            while (j >= 0 && shift != 0)
+            {
+                if (hist[2][j] == shift-1)
+                {
+                    if (hashFunction(payload, 7 - hist[2][j]) != hist[0][j])
+                        flag = 0;
+                    shift--;
+                }   
+                j--;
+            }
+            if (flag)
+                return hist[2][i];
         }
     }
+    //pr(hist, hist_size);
+    //std::cout << "NOT FOUND: " << payload << std::endl;
+    return 0;
 }
 
 relation* re_ordered_2(relation *rel, relation* new_rel)
@@ -513,12 +534,6 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
         i++;
     }
 
-    //testing
-    /*for (int i = 0; i < x; i++)
-        if (i == x-1 || psum[1][i] != psum[1][i+1])
-            std::cout << psum[0][i] << " " << psum[1][i] << std::endl;
-    std::cout << "<<<<<<<" << std::endl;*/
-
     clear = false; //make a full loop with clear == false to end
     i = 0;
     while (i < array_size)
@@ -547,17 +562,10 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
 
             for (j = 0; j < rel->num_tuples; j++)
                 flag[j] = false;
-            //testing
-            /*
-            std::cout << "------" << std::endl;
-            for (int k = 0; k < x; k++)
-            if (k == x-1 || temp_psum[1][k] != temp_psum[1][k+1])
-                std::cout << temp_hist[0][k] << " " << temp_hist[1][k] << " " << temp_hist[2][k] << std::endl;
-            std::cout << "------" << std::endl;
-            */
+
             hist = combine_hist(hist, temp_hist, i, array_size);
             array_size+=x;
-            array_size-=1; //??????????????????????
+            //array_size-=1; //??????????????????????
             delete [] psum[0];
             delete [] psum[1];
             delete [] psum[2];
@@ -583,8 +591,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
             while(j < new_rel->num_tuples)
             {
                 //hash
-                //payload = (0xFFFFFFFF & rel->tuples[j].payload) >> (8*shift) & 0xFF;
-                payload = hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[i].payload));
+                payload = hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
                 //find hash in psum = pos in new relation
                 
                 int next_i = psum[1][payload];
