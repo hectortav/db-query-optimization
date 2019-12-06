@@ -496,7 +496,7 @@ int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
     return 0;
 }
 
-relation* re_ordered_2(relation *rel, relation* new_rel)
+relation* re_ordered(relation *rel, relation* new_rel, int no_used)
 {
     int shift = 0;
     int x = pow(2, 8), array_size = x;
@@ -653,7 +653,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
     return new_rel;
 }
 
-relation* re_ordered(relation *rel, relation* new_rel, int shift)
+relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
 {
     int x = pow(2, 8);
     // relation *new_rel = new relation();
