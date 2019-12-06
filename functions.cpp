@@ -261,7 +261,7 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
 }
 
 unsigned char hashFunction(uint64_t payload, int shift) {
-    return (payload >> (8 * shift)) & 0xFF;
+    return (payload >> (8 * shift)) & 0xFF || 0;
 }
 
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
@@ -479,7 +479,9 @@ int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
                 if (hist[2][j] == shift-1)
                 {
                     if (hashFunction(payload, 7 - hist[2][j]) != hist[0][j])
+                    {
                         flag = 0;
+                    }
                     shift--;
                 }   
                 j--;
@@ -488,6 +490,7 @@ int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
                 return hist[2][i];
         }
     }
+
     //pr(hist, hist_size);
     //std::cout << "NOT FOUND: " << payload << std::endl;
     return 0;
