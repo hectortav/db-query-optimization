@@ -145,12 +145,20 @@ int main(void)
     }
 
     int lines;
-    char** arr=readbatch(lines);
-    std::cout<<std::endl;
-    for(int i=0;i<lines;i++)
+    while(1)
     {
-        std::cout<<arr[i]<<std::endl;
-        handlequery(makeparts(arr[i]), inputArrays);
+        lines=0;
+        char** arr=readbatch(lines);
+        std::cout<<std::endl;
+        for(int i=0;i<lines;i++)
+        {
+            std::cout<<arr[i]<<std::endl;
+            handlequery(makeparts(arr[i]), inputArrays);
+        }
+        for(int i=0;i<lines;i++)
+            delete[] arr[i];
+        delete[] arr;
+        arr=NULL;
     }
 
 }
