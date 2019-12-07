@@ -18,9 +18,9 @@ public:
   listnode* last;
   int lnodesz;
   int rowsz;
-  int rows;
-  int tmpcntr;
-  list(int lnodesz,int rowsz);
+  uint64_t rows;
+  uint64_t tmpcntr;
+  list(int lnodesz,uint64_t rowsz);
   ~list();
   bool insert(uint64_t num);
   bool insert(char ch);

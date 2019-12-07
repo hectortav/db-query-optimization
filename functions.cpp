@@ -2,7 +2,7 @@
 
 void relation::print()
 {
-    for(int i=0;i<this->num_tuples;i++)
+    for(uint64_t i=0;i<this->num_tuples;i++)
     {
         std::cout<<this->tuples[i].key<<". "<<this->tuples[i].payload<<std::endl;
     }
@@ -24,7 +24,7 @@ InputArray::InputArray(uint64_t rowsNum, uint64_t columnsNum) {
     this->rowsNum = rowsNum;
     this->columnsNum = columnsNum;
     this->columns = new uint64_t*[columnsNum];
-    for (int i = 0; i < columnsNum; i++) {
+    for (uint64_t i = 0; i < columnsNum; i++) {
         this->columns[i] = new uint64_t[rowsNum];
     }
 }
@@ -36,7 +36,7 @@ InputArray::InputArray(uint64_t rowsNum) : InputArray(rowsNum, 1) {
 }
 
 InputArray::~InputArray() {
-    for (int i = 0; i < columnsNum; i++) {
+    for (uint64_t i = 0; i < columnsNum; i++) {
         delete[] this->columns[i];
     }
     delete[] this->columns;
@@ -117,14 +117,14 @@ IntermediateArray::IntermediateArray(uint64_t columnsNum, uint64_t sortedByInput
     this->sortedByInputArrayId = sortedByInputArrayId;
     this->columnsNum = columnsNum;
     this->results = new uint64_t*[columnsNum];
-    for (int j = 0; j < columnsNum; j++) {
+    for (uint64_t j = 0; j < columnsNum; j++) {
         this->results[j] = NULL;
     }
     this->inputArrayIds = new int[columnsNum];
 }
 
 IntermediateArray::~IntermediateArray() {
-    for (int i = 0; i < columnsNum; i++) {
+    for (uint64_t i = 0; i < columnsNum; i++) {
         if (this->results[i] != NULL) {
             delete[] this->results[i];
         }
@@ -214,7 +214,7 @@ void IntermediateArray::print() {
     }
 }
 
-int IntermediateArray::findColumnIndexByInputArrayId(int inputArrayId) {
+uint64_t IntermediateArray::findColumnIndexByInputArrayId(int inputArrayId) {
     for (uint64_t j = 0; j < columnsNum; j++) {
         if (inputArrayIds[j] == inputArrayId)
             return j;
@@ -234,8 +234,8 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
         newIntermediateArray->inputArrayIds[j] = inputArrayIds[j];
     }
 
-    int columnIndexArray1 = findColumnIndexByInputArrayId(inputArray1Id);
-    int columnIndexArray2 = findColumnIndexByInputArrayId(inputArray2Id);
+    uint64_t columnIndexArray1 = findColumnIndexByInputArrayId(inputArray1Id);
+    uint64_t columnIndexArray2 = findColumnIndexByInputArrayId(inputArray2Id);
 
     uint64_t newIntermediateArrayRowIndex = 0;
     for (uint64_t i = 0; i < rowsNum; i++) {
@@ -270,10 +270,10 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
     int lstsize=1024*1024;
     //list* lst=new list(lstsize,rsz+ssz-1);
     list*lst=new list(lstsize,2);
-    for(int r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
+    for(uint64_t r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
     {
         //std::cout<<"checking: R:"<<R->tuples[r].payload<<" S:"<<S->tuples[s].payload<<std::endl;
-        int dec=R->tuples[r].payload-S->tuples[s].payload;
+        uint64_t dec=R->tuples[r].payload-S->tuples[s].payload;
         if(dec==0)
         {
             //std::cout<<R->tuples[r].payload<<" same"<<std::endl; 
@@ -377,7 +377,7 @@ uint64_t** create_hist(relation *rel, int shift)
         hist[2][i]= shift;
     }
 
-    for (int i = 0; i < rel->num_tuples; i++)
+    for (uint64_t i = 0; i < rel->num_tuples; i++)
     {
         //mid = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift);
         payload = hashFunction(rel->tuples[i].payload, 7-shift);
@@ -392,15 +392,15 @@ uint64_t** create_hist(relation *rel, int shift)
     return hist;
 }
 
-uint64_t** create_psum(uint64_t** hist, int size)
+uint64_t** create_psum(uint64_t** hist, uint64_t size)
 {
-    int count = 0;
-    int x = size;
+    uint64_t count = 0;
+    uint64_t x = size;
     uint64_t **psum = new uint64_t*[3];
     for(int i = 0; i < 3; i++)
         psum[i] = new uint64_t[x];
 
-    for (int i = 0; i < x; i++)
+    for (uint64_t i = 0; i < x; i++)
     {
         psum[0][i] = hist[0][i];
         psum[1][i] = (uint64_t)count;
@@ -410,9 +410,9 @@ uint64_t** create_psum(uint64_t** hist, int size)
     return psum;
 }
 
-void pr(uint64_t** a, int array_size)
+void pr(uint64_t** a, uint64_t array_size)
 {
-    int i;
+    uint64_t i;
     for (i = 0; i < array_size; i++)
     {
         if (a[1][i] != 0 || (i < array_size -1 && a[2][i] < a[2][i+1]))
@@ -420,9 +420,9 @@ void pr(uint64_t** a, int array_size)
     }
 }
 
-uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_size)   //big_size == size of row in big
+uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uint64_t big_size)   //big_size == size of row in big
 {
-    int x = pow(2,8), i, j;    //size of small == pow(2,8)
+    uint64_t x = pow(2,8), i, j;    //size of small == pow(2,8)
 
     uint64_t **hist = new uint64_t*[3];
     for(i = 0; i < 3; i++)
@@ -463,9 +463,9 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, int position, int big_
     return hist;
 }
 
-int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
+uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
 {
-    int i, shift, j, flag;
+    uint64_t i, shift, j, flag;
     uint64_t hash;
     for (i = 0; i < hist_size; i++)
     {
@@ -499,7 +499,7 @@ int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
 relation* re_ordered(relation *rel, relation* new_rel, int no_used)
 {
     int shift = 0;
-    int x = pow(2, 8), array_size = x;
+    uint64_t x = pow(2, 8), array_size = x;
     relation *temp = NULL;
     relation *rtn  = NULL;
     //create histogram
@@ -507,7 +507,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     //create psum
     uint64_t** psum = create_psum(hist, x), **temp_psum = NULL;
     uint64_t payload;
-    int i, j, y;
+    uint64_t i, j, y;
     bool clear;
 
     bool *flag = new bool[rel->num_tuples];
@@ -522,7 +522,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
         payload = hashFunction(rel->tuples[i].payload, 7 - shift);
         //find hash in psum = pos in new relation
         
-        int next_i = psum[1][payload];
+        uint64_t next_i = psum[1][payload];
 
         //key++ until their is an empty place
         while ((next_i < rel->num_tuples) && flag[next_i])
@@ -547,8 +547,8 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             //new relation from psum[1][i] to psum[1][i+1]
             if (rel == NULL)
                 rel = new relation();
-            int first = psum[1][i];
-            int last = new_rel->num_tuples;
+            uint64_t first = psum[1][i];
+            uint64_t last = new_rel->num_tuples;
             if (i != array_size - 1)
                 last = psum[1][i+1];
             rel->num_tuples = last - first;
@@ -597,7 +597,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                 payload = hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
                 //find hash in psum = pos in new relation
                 
-                int next_i = psum[1][payload];
+                uint64_t next_i = psum[1][payload];
 
                 //key++ until their is an empty place
                 while ((next_i < new_rel->num_tuples) && flag[next_i])
@@ -664,7 +664,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
     //create psum
     uint64_t** psum = create_psum(hist, x);
     uint64_t payload;
-    int i, j, y;
+    uint64_t i, j, y;
 
     bool *flag = new bool[rel->num_tuples];
     for (i = 0; i < rel->num_tuples; i++)
@@ -678,7 +678,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
         payload = hashFunction(rel->tuples[i].payload, 7 - shift);
         //find hash in psum = pos in new relation
         
-        int next_i = psum[1][payload];
+        uint64_t next_i = psum[1][payload];
 
         //key++ until their is an empty place
         while ((next_i < rel->num_tuples) && flag[next_i])
@@ -851,7 +851,7 @@ void sortBucket(relation* rel, int startIndex, int stopIndex) {
     quickSort(rel->tuples, startIndex, stopIndex);
 }
 
-void extractcolumn(relation& rel,uint64_t **array, int column)
+void extractcolumn(relation& rel,uint64_t **array, uint64_t column)
 {
     // printf("gg\n");
     rel.tuples=new tuple[rel.num_tuples];
@@ -1174,7 +1174,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
                     
                     result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
-                    rslt->lst->print();
+                    // rslt->lst->print();
                     std::cout<<"\n";
                     uint64_t** resultArray=rslt->lst->lsttoarr();
                     // int fnlx=rslt->lst->rowsz;
@@ -1205,18 +1205,18 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         curIntermediateArray = new IntermediateArray(2, 0, 0);
                         curIntermediateArray->populate(resultArray, rslt->lst->rows, NULL, inputArray1Id, inputArray2Id);
                         // printf("haaa\n");
-                        printf("new IntermediateArray:\n");
-                        curIntermediateArray->print();
+                        // printf("new IntermediateArray:\n");
+                        // curIntermediateArray->print();
 
                     } else {
-                        printf("previous IntermediateArray:\n");
-                        curIntermediateArray->print();
+                        // printf("previous IntermediateArray:\n");
+                        // curIntermediateArray->print();
                         IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1, 0, 0);
                         newIntermediateArray->populate(resultArray, rslt->lst->rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id);
                         delete curIntermediateArray;
                         curIntermediateArray = newIntermediateArray;
-                        printf("new IntermediateArray:\n");
-                        curIntermediateArray->print();
+                        // printf("new IntermediateArray:\n");
+                        // curIntermediateArray->print();
                     }
                 //}
                 //else
@@ -1249,7 +1249,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part)
 {
     std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
-    int projarray,projcolumn;
+    uint64_t projarray,projcolumn;
     for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
     {
         if(part[i]=='.')
@@ -1272,11 +1272,11 @@ void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part)
                 part[i]=' ';
             start=i+1;
             
-            int sum=0;
+            uint64_t sum=0;
             if(rowarr!=NULL)
             {
-                int key;
-                for(int i=0;i<rowarr->columnsNum;i++)
+                uint64_t key;
+                for(uint64_t i=0;i<rowarr->columnsNum;i++)
                 {
                     if(rowarr->inputArrayIds[i]==projarray)
                         key=i;

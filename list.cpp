@@ -1,7 +1,7 @@
 #include "list.h"
 
 
-list::list(int lnodesz,int rowsz)
+list::list(int lnodesz,uint64_t rowsz)
 {
     this->first=NULL;
     this->last=NULL;
@@ -75,7 +75,7 @@ uint64_t** list::lsttoarr()
     
     listnode* t=this->first;
     int cntr=0;
-    int row=0;
+    uint64_t row=0;
     while(t!=NULL)
     {
         uint64_t n;
@@ -119,7 +119,7 @@ char* list::lsttocharr()
     char* arr;
     arr=new char[tmpcntr*lnodesz +1];
     listnode* t=this->first;
-    for(int i=0;i<tmpcntr;i++,t=t->next)
+    for(uint64_t i=0;i<tmpcntr;i++,t=t->next)
     {
         memcpy(arr+i*lnodesz,t->content,lnodesz);
     }
