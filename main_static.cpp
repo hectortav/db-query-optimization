@@ -21,7 +21,7 @@ int main(void)
     R->print();
     new_rel_R->num_tuples=R->num_tuples;
     new_rel_R->tuples = new tuple[R->num_tuples];
-    new_rel_R = re_ordered_2(R, new_rel_R);
+    new_rel_R = re_ordered(R, new_rel_R, 999);
     std::cout << "\nafter" << std::endl;
     new_rel_R->print();
     new_rel_R->~relation();

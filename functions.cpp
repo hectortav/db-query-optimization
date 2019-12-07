@@ -261,7 +261,7 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
 }
 
 unsigned char hashFunction(uint64_t payload, int shift) {
-    return (payload >> (8 * shift)) & 0xFF;
+    return (payload >> (8 * shift)) & 0xFF || 0;
 }
 
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
@@ -479,7 +479,9 @@ int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
                 if (hist[2][j] == shift-1)
                 {
                     if (hashFunction(payload, 7 - hist[2][j]) != hist[0][j])
+                    {
                         flag = 0;
+                    }
                     shift--;
                 }   
                 j--;
@@ -488,12 +490,13 @@ int find_shift(uint64_t **hist, int hist_size, uint64_t payload)
                 return hist[2][i];
         }
     }
+
     //pr(hist, hist_size);
     //std::cout << "NOT FOUND: " << payload << std::endl;
     return 0;
 }
 
-relation* re_ordered_2(relation *rel, relation* new_rel)
+relation* re_ordered(relation *rel, relation* new_rel, int no_used)
 {
     int shift = 0;
     int x = pow(2, 8), array_size = x;
@@ -650,7 +653,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel)
     return new_rel;
 }
 
-relation* re_ordered(relation *rel, relation* new_rel, int shift)
+relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
 {
     int x = pow(2, 8);
     // relation *new_rel = new relation();
@@ -1058,14 +1061,16 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     for(int i=0;i<cntr;i++)
     {
         bool isFilter = preds[i][3] == (uint64_t) - 1;
-        int inputArray1Id = relationIds[preds[i][0]];
-        int inputArray2Id = isFilter ? -1 : relationIds[preds[i][3]];
+        int predicateArray1Id = preds[i][0];
+        int predicateArray2Id = preds[i][3];
+        int inputArray1Id = relationIds[predicateArray1Id];
+        int inputArray2Id = isFilter ? -1 : relationIds[predicateArray2Id];
         InputArray* inputArray1 = inputArrays[inputArray1Id];
         InputArray* inputArray2 = isFilter ? NULL : inputArrays[inputArray2Id];
         // InputArray* inputArray1RowIds = new InputArray(inputArray1->rowsNum, 1);
         // InputArray* inputArray2RowIds = new InputArray(inputArray2->rowsNum, 1);
-        InputArray* inputArray1RowIds = inputArraysRowIds[inputArray1Id];
-        InputArray* inputArray2RowIds = isFilter ? NULL : inputArraysRowIds[inputArray2Id];
+        InputArray* inputArray1RowIds = inputArraysRowIds[predicateArray1Id];
+        InputArray* inputArray2RowIds = isFilter ? NULL : inputArraysRowIds[predicateArray2Id];
 
         uint64_t field1Id = preds[i][1];
         uint64_t field2Id = preds[i][4];
@@ -1077,7 +1082,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
             uint64_t numToCompare = field2Id;
             InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, operation, numToCompare, inputArray1);
             delete inputArray1RowIds;
-            inputArraysRowIds[inputArray1Id] = filteredInputArrayRowIds;
+            inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
             continue;
         }
 
@@ -1094,7 +1099,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     // self-join of InputArray
                     InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
                     delete inputArray1RowIds;
-                    inputArraysRowIds[inputArray1Id] = filteredInputArrayRowIds;
+                    inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
                     continue;
                 }
 
