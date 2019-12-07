@@ -261,7 +261,7 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
 }
 
 unsigned char hashFunction(uint64_t payload, int shift) {
-    return (payload >> (8 * shift)) & 0xFF || 0;
+    return (payload >> (8 * shift)) & 0xFF;
 }
 
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
@@ -1052,7 +1052,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     InputArray** inputArraysRowIds = new InputArray*[relationsnum];
     for (int i = 0; i < relationsnum; i++) {
         // printf("................ %d\n", inputArrays[i]->rowsNum);
-        inputArraysRowIds[i] = new InputArray(inputArrays[i]->rowsNum);
+        inputArraysRowIds[i] = new InputArray(inputArrays[relationIds[i]]->rowsNum);
     }
 
     IntermediateArray* curIntermediateArray = NULL;
@@ -1241,6 +1241,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         /***********END***************************/
     }
 
+    printf("Results rows number: %lu\n", curIntermediateArray->rowsNum);
     if (curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0) {
         curIntermediateArray->print();
     }
