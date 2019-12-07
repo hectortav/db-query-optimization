@@ -708,7 +708,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
             temp = new relation();
             temp->num_tuples = hist[1][i];
             temp->tuples = (new_rel->tuples + psum[1][i]);
-            rtn = re_ordered(temp, rel, shift + 1);
+            rtn = re_ordered_2(temp, rel, shift + 1);
             j = psum[1][i];
             y = 0;
             while (j < x)
@@ -1161,13 +1161,13 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     relation* newRel1 = new relation();
                     newRel1->num_tuples = rel1.num_tuples;
                     newRel1->tuples = new tuple[rel1.num_tuples];
-                    relation* reorderedRel1 = re_ordered(&rel1, newRel1, 0);
+                    relation* reorderedRel1 = re_ordered_2(&rel1, newRel1, 0);
                     // std::cout<<"\n";
                     // ro_R->print();
                     relation* newRel2 = new relation();
                     newRel2->num_tuples = rel2.num_tuples;
                     newRel2->tuples = new tuple[rel2.num_tuples];
-                    relation* reorderedRel2 = re_ordered(&rel2, newRel2, 0);
+                    relation* reorderedRel2 = re_ordered_2(&rel2, newRel2, 0);
                     // std::cout<<"\n";
                     // ro_S->print();
                     // std::cout<<"\n";
@@ -1239,6 +1239,10 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         //preds[i][4]=stili2 
             //opou an h sxesi 2 einai isi me -1 opos eipa apo pano tote to stili 2 periexei to filtro
         /***********END***************************/
+    }
+
+    if (curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0) {
+        curIntermediateArray->print();
     }
 
     return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
