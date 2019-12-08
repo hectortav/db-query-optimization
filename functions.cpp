@@ -1391,7 +1391,7 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* re
 {
     //filters first
     uint64_t** result=new uint64_t*[cntr];
-    for(int i=0;i<relationsnum;i++)
+    /*for(int i=0;i<relationsnum;i++)
     {
         for(int j=i+1;j<relationsnum;j++)
         {
@@ -1407,7 +1407,7 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* re
                 }
             }
         }
-    }    
+    }    */
     int place=0;
     for(int i=0;i<relationsnum;i++)
     {
