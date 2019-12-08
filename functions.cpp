@@ -262,7 +262,7 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
     }
 
     newIntermediateArray->rowsNum = newIntermediateArrayRowIndex; // update rowsNum because the other rows are useless
-    newIntermediateArray->print();
+    //newIntermediateArray->print();
     return newIntermediateArray;
 }
 
@@ -1069,7 +1069,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     //     }
     //     std::cout<<std::endl;
     // }
-    preds=optimizepredicates(preds,cntr,relationsnum);
+    preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
     // std::cout<<std::endl;
     // for(int i=0;i<cntr;i++)
     // {
@@ -1127,7 +1127,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 //     uint64_t numToCompare = field2Id;
                 //     InputArray* filteredInputArrayRowIds = inputarra
                 // }
-
+                //std::cout<<"case 2 1"<<std::endl;
                 if (inputArray1Id == inputArray2Id) {
                     // self-join of InputArray
                     InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
@@ -1135,6 +1135,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
                     continue;
                 }
+                                //std::cout<<"case 2 2"<<std::endl;
 
                 if ((curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id))
                     && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id)) {
@@ -1146,6 +1147,8 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 }
 
                 {
+                                    //std::cout<<"case 2 3"<<std::endl;
+
                     // printf("hi %d\n", inputArray1Id);
                     // InputArray* inputArray1 = inputArrays[inputArray1Id];
                     // InputArray* inputArray2 = inputArrays[inputArray2Id];
@@ -1174,6 +1177,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, inputArray1Id, field1Id);
                         // rel1.print();
                     }
+                //std::cout<<"case 2 4"<<std::endl;
 
                     // fill rel2
                     if (curIntermediateArray == NULL || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
@@ -1190,17 +1194,22 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // rel2.num_tuples = curIntermediateArray->rowsNum;
                         curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, inputArray2Id, field2Id);
                     }
+                                    //std::cout<<"case 2 5"<<std::endl;
 
                     relation* newRel1 = new relation();
                     newRel1->num_tuples = rel1.num_tuples;
                     newRel1->tuples = new tuple[rel1.num_tuples];
-                    relation* reorderedRel1 = re_ordered(&rel1, newRel1, 0);
+                    relation* reorderedRel1 = re_ordered_2(&rel1, newRel1, 0);
+                                    //std::cout<<"case 2 6"<<std::endl;
+
                     // std::cout<<"\n";
                     // ro_R->print();
                     relation* newRel2 = new relation();
                     newRel2->num_tuples = rel2.num_tuples;
                     newRel2->tuples = new tuple[rel2.num_tuples];
-                    relation* reorderedRel2 = re_ordered(&rel2, newRel2, 0);
+                    relation* reorderedRel2 = re_ordered_2(&rel2, newRel2, 0);
+                                    //std::cout<<"case 2 7"<<std::endl;
+
                     // std::cout<<"\n";
                     // ro_S->print();
                     // std::cout<<"\n";
@@ -1378,11 +1387,27 @@ bool notin(uint64_t** check, uint64_t* in, int cntr)
     
     return true;
 }
-uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum)
+uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds)
 {
     //filters first
     uint64_t** result=new uint64_t*[cntr];
-    
+    for(int i=0;i<relationsnum;i++)
+    {
+        for(int j=i+1;j<relationsnum;j++)
+        {
+            if(relationIds[i]==relationIds[j])
+            {
+                for(int k=0;k<relationsnum;k++)
+                {
+                    for(int l=0;l<5;l++)
+                    {
+                        if(preds[k][l]==j)
+                            preds[k][l]=i;
+                    }
+                }
+            }
+        }
+    }    
     int place=0;
     for(int i=0;i<relationsnum;i++)
     {
@@ -1412,7 +1437,6 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum)
             }
         }
     }
-
     delete[] preds;
     return result;
     
