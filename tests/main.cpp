@@ -27,6 +27,7 @@ int main()
      || (NULL == CU_add_test(pSuite, "test of splitpreds()",testsplitpreds))
      || (NULL == CU_add_test(pSuite, "test of optimizepredicates()",testoptimizepredicates))
      || (NULL == CU_add_test(pSuite, "test of predsplittoterms()",testpredsplittoterms))
+     || (NULL == CU_add_test(pSuite, "test of sortBucket()", testQuickSort))
     )
    {
       CU_cleanup_registry();

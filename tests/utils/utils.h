@@ -32,5 +32,7 @@ void testmakeparts(void);
 void testsplitpreds(void);
 void testoptimizepredicates(void);
 void testpredsplittoterms(void);
-
+void populateRelationRandomly(relation &rel);
+bool isRelationOrdered(relation &rel);
+void testQuickSort(void);
 

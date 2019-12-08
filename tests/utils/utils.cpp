@@ -179,3 +179,40 @@ void testpredsplittoterms(void)
     predsplittoterms(str,r1,c1,r2,c2,op);
     CU_ASSERT(r1==1 && c1==0 && op==2 && r2==2 && c2==2);
 }
+
+void populateRelationRandomly(relation &rel) {
+    rel.num_tuples = rand()%100000;
+    rel.tuples = new tuple[rel.num_tuples];
+    for (int i = 0; i < rel.num_tuples; i++) {
+        rel.tuples[i].key = rand();
+        rel.tuples[i].payload = rand();
+    }
+}
+
+bool isRelationOrdered(relation &rel) {
+    for (int i = 0; i < rel.num_tuples - 1; i++) {
+        if (rel.tuples[i].payload > rel.tuples[i + 1].payload)
+            return false;
+    }
+
+    return true;
+}
+
+void testQuickSort(void) {
+    srand(time(NULL));
+
+    relation rel1, rel2, rel3, rel4, rel5;
+    populateRelationRandomly(rel1);
+    populateRelationRandomly(rel2);
+    populateRelationRandomly(rel3);
+    populateRelationRandomly(rel4);
+    populateRelationRandomly(rel5);
+
+    quickSort(rel1.tuples, 0, rel1.num_tuples - 1);
+    quickSort(rel2.tuples, 0, rel2.num_tuples - 1);
+    quickSort(rel3.tuples, 0, rel3.num_tuples - 1);
+    quickSort(rel4.tuples, 0, rel4.num_tuples - 1);
+    quickSort(rel5.tuples, 0, rel5.num_tuples - 1);
+    
+    CU_ASSERT(isRelationOrdered(rel1) && isRelationOrdered(rel2) && isRelationOrdered(rel3) && isRelationOrdered(rel4) && isRelationOrdered(rel5));
+}
