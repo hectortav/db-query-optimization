@@ -149,10 +149,10 @@ int main(void)
     {
         lines=0;
         char** arr=readbatch(lines);
-        std::cout<<std::endl;
+        // std::cout<<std::endl;
         for(int i=0;i<lines;i++)
         {
-            std::cout<<arr[i]<<std::endl;
+            // std::cout<<arr[i]<<std::endl;
             handlequery(makeparts(arr[i]), inputArrays);
         }
         for(int i=0;i<lines;i++)

@@ -272,14 +272,14 @@ uint64_t hashFunction(uint64_t payload, int shift) {
 
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
 {
-    int samestart=-1;
+    int64_t samestart=-1;
     int lstsize=1024*1024;
     //list* lst=new list(lstsize,rsz+ssz-1);
     list*lst=new list(lstsize,2);
     for(uint64_t r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
     {
         //std::cout<<"checking: R:"<<R->tuples[r].payload<<" S:"<<S->tuples[s].payload<<std::endl;
-        uint64_t dec=R->tuples[r].payload-S->tuples[s].payload;
+        int64_t dec=R->tuples[r].payload-S->tuples[s].payload;
         if(dec==0)
         {
             //std::cout<<R->tuples[r].payload<<" same"<<std::endl; 
@@ -359,7 +359,7 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
             break;
         std::cout<<i<<". "<<array[i][0]<<" "<<array[i][1]<<std::endl;
     }*/
-    std::cout<<std::endl;
+    // std::cout<<std::endl;
     result* rslt=new result;
     rslt->lst=lst;
     return rslt;
@@ -1006,19 +1006,19 @@ void handlequery(char** parts,InputArray** allrelations)
     {
         std::cout<<parts[i]<<std::endl;
     }*/
-    std::cout<<std::endl;
+    // std::cout<<std::endl;
     int relationIds[MAX_INPUT_ARRAYS_NUM];
     int relationsnum;
     loadrelationIds(relationIds, parts[0], relationsnum);
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds);
     handleprojection(result,allrelations,parts[2], relationIds);
-    std::cout<<std::endl;
+    // std::cout<<std::endl;
     
 
 }
 void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 {
-    std::cout<<"LOADRELATIONS: "<<part<<std::endl;
+    // std::cout<<"LOADRELATIONS: "<<part<<std::endl;
     int cntr=1;
     uint64_t*** relations;
     for(int i=0;part[i]!='\0';i++)
@@ -1045,27 +1045,27 @@ void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 
 IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
 {
-    std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
+    // std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
     int cntr;
     uint64_t** preds=splitpreds(part,cntr);
-    for(int i=0;i<cntr;i++)
-    {
-        for(int j=0;j<5;j++)
-        {
-            std::cout<<"  "<<preds[i][j];
-        }
-        std::cout<<std::endl;
-    }
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<"  "<<preds[i][j];
+    //     }
+    //     std::cout<<std::endl;
+    // }
     preds=optimizepredicates(preds,cntr,relationsnum);
-    std::cout<<std::endl;
-    for(int i=0;i<cntr;i++)
-    {
-        for(int j=0;j<5;j++)
-        {
-            std::cout<<"  "<<preds[i][j];
-        }
-        std::cout<<std::endl;
-    }
+    // std::cout<<std::endl;
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<"  "<<preds[i][j];
+    //     }
+    //     std::cout<<std::endl;
+    // }
 
     // InputArray* inputArray1RowIds = new InputArray(inputArray1->rowsNum, 1);
     // InputArray* inputArray2RowIds = new InputArray(inputArray2->rowsNum, 1);
@@ -1095,10 +1095,10 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         uint64_t field1Id = preds[i][1];
         uint64_t field2Id = preds[i][4];
         int operation = preds[i][2];
-        printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
+        // printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
 
         if (isFilter) {
-            printf("filter\n");
+            // printf("filter\n");
             uint64_t numToCompare = field2Id;
             InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, operation, numToCompare, inputArray1);
             delete inputArray1RowIds;
@@ -1261,7 +1261,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         /***********END***************************/
     }
 
-    printf("Results rows number: %lu\n", curIntermediateArray->rowsNum);
+    // printf("Results rows number: %lu\n", curIntermediateArray->rowsNum);
     // if (curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0) {
     //     curIntermediateArray->print();
     // }
@@ -1273,7 +1273,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 }
 void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds)
 {
-    std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
+    // std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
     uint64_t projarray,projcolumn;
     for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
     {
