@@ -260,8 +260,8 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
     return newIntermediateArray;
 }
 
-unsigned char hashFunction(uint64_t payload, int shift) {
-    return (payload >> (8 * shift)) & 0xFF;
+uint64_t hashFunction(uint64_t payload, int shift) {
+    return (uint64_t)((payload >> (8 * shift)) & 0xFF);
 }
 
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
@@ -416,7 +416,11 @@ void pr(uint64_t** a, uint64_t array_size)
     for (i = 0; i < array_size; i++)
     {
         if (a[1][i] != 0 || (i < array_size -1 && a[2][i] < a[2][i+1]))
+        {
+            for (int l = 0; l < a[2][i]; l++)
+                std::cout << "  ";
             std::cout << a[0][i] << ". " << a[1][i] << " - " << a[2][i] << std::endl;
+        }
     }
 }
 
@@ -469,6 +473,7 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
     uint64_t hash;
     for (i = 0; i < hist_size; i++)
     {
+        //std::cout << payload << ": " << hashFunction(payload, 7 - hist[2][i]) << " : " << hist[0][i] << std::endl;
         if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
         {
             j = i;
@@ -487,13 +492,26 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
                 j--;
             }
             if (flag)
-                return hist[2][i];
+                return i;
+                //return hist[2][i];
         }
     }
 
-    //pr(hist, hist_size);
-    //std::cout << "NOT FOUND: " << payload << std::endl;
+    pr(hist, hist_size);
+    std::cout << "NOT FOUND: " << payload << " HASH: " << hashFunction(payload, 7 - 7) << std::endl;
     return 0;
+}
+
+void print_psum_hist(uint64_t** psum, uint64_t** hist, int array_size)
+{
+    int i;
+    std::cout << "<<<<<<<" << std::endl;
+    for (int i = 0; i < array_size; i++)
+        if (i == array_size-1 || psum[1][i] != psum[1][i+1])
+            std::cout << psum[0][i] << " " << psum[1][i] << " " << psum[2][i] << std::endl;
+    std::cout << "<<<<<<<" << std::endl;
+    pr(hist, array_size);
+    std::cout << "<<<<<<<" << std::endl;
 }
 
 relation* re_ordered(relation *rel, relation* new_rel, int no_used)
@@ -541,7 +559,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     i = 0;
     while (i < array_size)
     {
-        if ((hist[1][i] > TUPLES_PER_BUCKET) && (hist[2][i]  < 7))
+        if ((hist[1][i] > TUPLES_PER_BUCKET) && (hist[2][i] < 7))
         {
             clear = true;
             //new relation from psum[1][i] to psum[1][i+1]
@@ -594,7 +612,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             while(j < new_rel->num_tuples)
             {
                 //hash
-                payload = hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
+                payload = find_shift(hist, array_size, new_rel->tuples[j].payload);//hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
                 //find hash in psum = pos in new relation
                 
                 uint64_t next_i = psum[1][payload];
@@ -619,11 +637,11 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             new_rel->num_tuples = j;
         }
         
-        if (hist[1][i] < TUPLES_PER_BUCKET || hist[2][i] >= 7)
+        if (hist[1][i] <= TUPLES_PER_BUCKET || hist[2][i] > 7)
         {
             if (hist[1][i] > 0)
             {
-                if (i + 1 < x)
+                if (i + 1 < array_size)
                     sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
                 else
                     sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
@@ -636,7 +654,9 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             clear = false;
         }
     }
-
+    //testing
+    //print_psum_hist(psum, hist, array_size);
+    
     delete [] hist[0];
     delete [] hist[1];
     delete [] hist[2];

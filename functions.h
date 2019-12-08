@@ -82,7 +82,7 @@ class IntermediateArray {
     void print();
 };
 
-unsigned char hashFunction(uint64_t payload, int shift);
+uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 uint64_t** create_hist(relation*, int);
 uint64_t** create_psum(uint64_t**);
