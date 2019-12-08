@@ -1181,13 +1181,13 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     relation* newRel1 = new relation();
                     newRel1->num_tuples = rel1.num_tuples;
                     newRel1->tuples = new tuple[rel1.num_tuples];
-                    relation* reorderedRel1 = re_ordered_2(&rel1, newRel1, 0);
+                    relation* reorderedRel1 = re_ordered(&rel1, newRel1, 0);
                     // std::cout<<"\n";
                     // ro_R->print();
                     relation* newRel2 = new relation();
                     newRel2->num_tuples = rel2.num_tuples;
                     newRel2->tuples = new tuple[rel2.num_tuples];
-                    relation* reorderedRel2 = re_ordered_2(&rel2, newRel2, 0);
+                    relation* reorderedRel2 = re_ordered(&rel2, newRel2, 0);
                     // std::cout<<"\n";
                     // ro_S->print();
                     // std::cout<<"\n";
