@@ -580,9 +580,12 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             }
             temp_hist = create_hist(rel, hist[2][i] + 1);
             temp_psum = create_psum(temp_hist, x);
+            
+            memset(flag,0,new_rel->num_tuples*sizeof(bool));
 
-            for (j = 0; j < rel->num_tuples; j++)
+            /*for (j = 0; j < rel->num_tuples; j++)
                 flag[j] = false;
+            */
 
             hist = combine_hist(hist, temp_hist, i, array_size);
             array_size+=x;
@@ -596,10 +599,11 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             delete [] temp_psum[1];
             delete [] temp_psum[2];
             delete [] temp_psum;
-
-            for (j = 0; j < new_rel->num_tuples; j++)
+            /*for (j = 0; j < new_rel->num_tuples; j++)
+            {
                 flag[j] = false;
-
+            }*/
+            memset(flag,0,new_rel->num_tuples*sizeof(bool));
             j = 0;
             if (rel == NULL)
                 rel = new relation();
@@ -1199,15 +1203,20 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     relation* newRel1 = new relation();
                     newRel1->num_tuples = rel1.num_tuples;
                     newRel1->tuples = new tuple[rel1.num_tuples];
-                    relation* reorderedRel1 = re_ordered_2(&rel1, newRel1, 0);
+                    //std::cout<<"before"<<std::endl;
+                    relation* reorderedRel1 = re_ordered(&rel1, newRel1, 0);
+                    //std::cout<<"after"<<std::endl;
                                     //std::cout<<"case 2 6"<<std::endl;
 
                     // std::cout<<"\n";
                     // ro_R->print();
                     relation* newRel2 = new relation();
                     newRel2->num_tuples = rel2.num_tuples;
-                    newRel2->tuples = new tuple[rel2.num_tuples];
-                    relation* reorderedRel2 = re_ordered_2(&rel2, newRel2, 0);
+                    newRel2->tuples = new tuple[rel2.num_tuples];                    
+                    //std::cout<<"before"<<std::endl;
+                    relation* reorderedRel2 = re_ordered(&rel2, newRel2, 0);
+                    //std::cout<<"after"<<std::endl;
+
                                     //std::cout<<"case 2 7"<<std::endl;
 
                     // std::cout<<"\n";
