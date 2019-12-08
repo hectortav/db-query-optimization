@@ -576,32 +576,45 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     uint64_t i, j, y;
     bool clear;
 
-    bool *flag = new bool[rel->num_tuples];
-    for (i = 0; i < rel->num_tuples; i++)
+    /*for (i = 0; i < rel->num_tuples; i++)
         flag[i] = false;
-
+    */
+    uint64_t** tempPsum = new uint64_t*[3];
+    for (uint64_t i = 0; i < 3; i++) {
+        tempPsum[i] = new uint64_t[x];
+        memcpy(tempPsum[i], psum[i], x);
+    }
+    
     i = 0;
     while(i < rel->num_tuples)
     {
+        // if (i%10000==0) {
+        //     std::cout<<"loop1 i: "<<i<<std::endl;
+        // }
         //hash
         //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
         payload = hashFunction(rel->tuples[i].payload, 7 - shift);
         //find hash in psum = pos in new relation
         
-        uint64_t next_i = psum[1][payload];
+        // uint64_t next_i = psum[1][payload];
 
         //key++ until their is an empty place
-        while ((next_i < rel->num_tuples) && flag[next_i])
-            next_i++;
+        // while ((next_i < rel->num_tuples) && flag[next_i])
+        //     next_i++;
 
-        if (next_i < rel->num_tuples)
-        {
-            new_rel->tuples[next_i].payload = rel->tuples[i].payload;
-            new_rel->tuples[next_i].key = rel->tuples[i].key;
-            flag[next_i] = true;
-        }
+        // if (next_i < rel->num_tuples)
+        // {
+            new_rel->tuples[tempPsum[1][payload]].payload = rel->tuples[i].payload;
+            new_rel->tuples[tempPsum[1][payload]++].key = rel->tuples[i].key;
+            // flag[next_i] = true;
+        // }
         i++;
     }
+
+    for (uint64_t i = 0; i < 3; i++) {
+        delete[] tempPsum[i];
+    }
+    delete[] tempPsum;
 
     clear = false; //make a full loop with clear == false to end
     i = 0;
@@ -629,8 +642,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             temp_hist = create_hist(rel, hist[2][i] + 1);
             temp_psum = create_psum(temp_hist, x);
             
-            memset(flag,0,new_rel->num_tuples*sizeof(bool));
-
             /*for (j = 0; j < rel->num_tuples; j++)
                 flag[j] = false;
             */
@@ -651,7 +662,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             {
                 flag[j] = false;
             }*/
-            memset(flag,0,new_rel->num_tuples*sizeof(bool));
             j = 0;
             if (rel == NULL)
                 rel = new relation();
@@ -661,26 +671,41 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                 rel->tuples = new tuple[new_rel->num_tuples];
             }
             rel->num_tuples = new_rel->num_tuples;
+
+            uint64_t** tempPsum = new uint64_t*[3];
+            for (uint64_t i = 0; i < 3; i++) {
+                tempPsum[i] = new uint64_t[array_size];
+                memcpy(tempPsum[i], psum[i], array_size);
+            }
+            
             while(j < new_rel->num_tuples)
             {
+                // if (j%10000==0) {
+                //     std::cout<<"loop2 i: "<<j<<std::endl;
+                // }
                 //hash
                 payload = find_shift(hist, array_size, new_rel->tuples[j].payload);//hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
                 //find hash in psum = pos in new relation
                 
-                uint64_t next_i = psum[1][payload];
+                // uint64_t next_i = psum[1][payload];
 
                 //key++ until their is an empty place
-                while ((next_i < new_rel->num_tuples) && flag[next_i])
-                    next_i++;
+                // while ((next_i < new_rel->num_tuples) && flag[next_i])
+                //     next_i++;
 
-                if (next_i < new_rel->num_tuples)
-                {
-                    rel->tuples[next_i].payload = new_rel->tuples[j].payload;
-                    rel->tuples[next_i].key = new_rel->tuples[j].key;
-                    flag[next_i] = true;
-                }
+                // if (next_i < new_rel->num_tuples)
+                // {
+                rel->tuples[tempPsum[1][payload]].payload = new_rel->tuples[j].payload;
+                rel->tuples[tempPsum[1][payload]++].key = new_rel->tuples[j].key;
+                //     flag[next_i] = true;
+                // }
                 j++;
             }
+            for (uint64_t i = 0; i < 3; i++) {
+                delete[] tempPsum[i];
+            }
+            delete[] tempPsum;
+
             tuple *temp_tuple = rel->tuples;
             rel->tuples = new_rel->tuples;
             new_rel->tuples = temp_tuple;
@@ -720,7 +745,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     delete [] psum[2];
 
     delete [] psum;
-    delete [] flag;
 
     return new_rel;
 }
