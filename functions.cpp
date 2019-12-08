@@ -529,9 +529,10 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     bool clear;
 
     bool *flag = new bool[rel->num_tuples];
-    for (i = 0; i < rel->num_tuples; i++)
+    memset(flag,0,rel->num_tuples*sizeof(bool));
+    /*for (i = 0; i < rel->num_tuples; i++)
         flag[i] = false;
-
+    */
     i = 0;
     while(i < rel->num_tuples)
     {
@@ -581,7 +582,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             temp_hist = create_hist(rel, hist[2][i] + 1);
             temp_psum = create_psum(temp_hist, x);
             
-            memset(flag,0,new_rel->num_tuples*sizeof(bool));
+            memset(flag,0,rel->num_tuples*sizeof(bool));
 
             /*for (j = 0; j < rel->num_tuples; j++)
                 flag[j] = false;
@@ -603,7 +604,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             {
                 flag[j] = false;
             }*/
-            memset(flag,0,new_rel->num_tuples*sizeof(bool));
+            memset(flag,0,rel->num_tuples*sizeof(bool));
             j = 0;
             if (rel == NULL)
                 rel = new relation();
