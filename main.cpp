@@ -152,9 +152,10 @@ int main(void)
         if(arr==NULL)
             break;
         // std::cout<<std::endl;
+        //std::cout<<lines<<std::endl;
         for(int i=0;i<lines;i++)
         {
-            // std::cout<<arr[i]<<std::endl;
+            //std::cout<<arr[i]<<std::endl;
             handlequery(makeparts(arr[i]), inputArrays);
             std::cout<<std::endl;
         }

@@ -937,6 +937,7 @@ void InputArray::print() {
 
 char** readbatch(int& lns)
 {
+    lns=0;
     char ch;
     list* l=new list(1024,0);
     int flag=0;
@@ -950,7 +951,17 @@ char** readbatch(int& lns)
             continue;
         l->insert(ch);
         if(ch=='F'&&flag)
+        {
+            while(1)
+            {
+                ch=getchar();
+                if(ch=='\n')
+                    break;
+                if(ch==EOF)
+                    break;
+            }
             break;
+        }
         if(ch=='\n')
         {
             flag=1;
