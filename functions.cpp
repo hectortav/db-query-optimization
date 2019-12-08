@@ -432,29 +432,23 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uin
     for(i = 0; i < 3; i++)
         hist[i] = new uint64_t[x + big_size];
 
-    for (i = 0; i < position; i++)
-    {
-        hist[0][i] = big[0][i];
-        hist[1][i] = big[1][i];
-        hist[2][i] = big[2][i];
-    }
+    /*for (i = 0; i < position; i++) { hist[0][i] = big[0][i]; hist[1][i] = big[1][i]; hist[2][i] = big[2][i]; }*/
+    memcpy(hist[0], big[0], sizeof(big[0][0]) * position);
+    memcpy(hist[1], big[1], sizeof(big[1][0]) * position);
+    memcpy(hist[2], big[2], sizeof(big[2][0]) * position);
+    i = position;
     hist[0][i] = big[0][i];
     hist[1][i] = 0;//big[1][i];
     hist[2][i] = big[2][i];
     i++;
-    for (j = 0; j < x; j++)
-    {
-        hist[0][i] = small[0][j];
-        hist[1][i] = small[1][j];
-        hist[2][i] = small[2][j];
-        i++;
-    }
-    for (i = position + 1; i < big_size; i++)
-    {
-        hist[0][i + x] = big[0][i];
-        hist[1][i + x] = big[1][i];
-        hist[2][i + x] = big[2][i];
-    }
+    memcpy(&hist[0][i], small[0], sizeof(small[0][0]) * x);
+    memcpy(&hist[1][i], small[1], sizeof(small[1][0]) * x);
+    memcpy(&hist[2][i], small[2], sizeof(small[2][0]) * x);
+    /*for (j = 0; j < x; j++) { hist[0][i] = small[0][j]; hist[1][i] = small[1][j]; hist[2][i] = small[2][j]; i++; }*/
+    memcpy(&hist[0][position + 1 + x], &big[0][position + 1], sizeof(big[0][0]) * (big_size - position));
+    memcpy(&hist[1][position + 1 + x], &big[1][position + 1], sizeof(big[1][0]) * (big_size - position));
+    memcpy(&hist[2][position + 1 + x], &big[2][position + 1], sizeof(big[2][0]) * (big_size - position));
+    /*for (i = position + 1; i < big_size; i++) { hist[0][i + x] = big[0][i]; hist[1][i + x] = big[1][i]; hist[2][i + x] = big[2][i]; }*/
 
     delete [] big[0];
     delete [] big[1];
