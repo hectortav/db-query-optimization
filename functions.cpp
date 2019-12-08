@@ -1011,7 +1011,7 @@ void handlequery(char** parts,InputArray** allrelations)
     int relationsnum;
     loadrelationIds(relationIds, parts[0], relationsnum);
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds);
-    handleprojection(result,allrelations,parts[2]);
+    handleprojection(result,allrelations,parts[2], relationIds);
     std::cout<<std::endl;
     
 
@@ -1262,16 +1262,16 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     }
 
     printf("Results rows number: %lu\n", curIntermediateArray->rowsNum);
-    if (curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0) {
-        curIntermediateArray->print();
-    }
+    // if (curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0) {
+    //     curIntermediateArray->print();
+    // }
 
     return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
 
 
 
 }
-void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part)
+void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds)
 {
     std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
     uint64_t projarray,projcolumn;
@@ -1280,7 +1280,7 @@ void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part)
         if(part[i]=='.')
         {
             part[i]='\0';
-            projarray=atoi(part+start);
+            projarray=relationIds[atoi(part+start)];
             part[i]='.';
             start=i+1;
         }

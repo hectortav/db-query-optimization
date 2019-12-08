@@ -103,7 +103,7 @@ void handlequery(char** parts,InputArray** allrelations);
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
 // InputArray** loadrelations(char* part,InputArray** allrelations,int& relationsnum);
 IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds);
-void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part);
+void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds);
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum);
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);
