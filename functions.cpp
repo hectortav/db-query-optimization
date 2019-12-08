@@ -471,6 +471,53 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
 {
     uint64_t i, shift, j, flag;
     uint64_t hash;
+    uint64_t **last = new uint64_t*[3];
+    for(i = 0; i < 3; i++)
+        last[i] = new uint64_t[8];
+    shift = 0;
+    for (i = 0; i < hist_size; i++)
+    {
+        //std::cout << payload << ": " << hashFunction(payload, 7 - hist[2][i]) << " : " << hist[0][i] << std::endl;
+        if (i < hist_size - 1 && hist[2][i] < hist[2][i+1])
+        {
+            last[0][shift] = hist[0][i];
+            last[1][shift] = hist[1][i];
+            last[2][shift] = hist[2][i];
+            shift++;
+        }
+        if (i < hist_size - 1 && hist[2][i] > hist[2][i+1])
+            shift--;
+
+        if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
+        {
+            flag = 1;
+            for(j = 0; j < hist[2][i]; j++)
+                if (hashFunction(payload, 7 - last[2][j]) != last[0][j])
+                    flag = 0;
+            if (flag)
+            {
+                delete [] last[0];
+                delete [] last[1];
+                delete [] last[2];
+                delete [] last;
+                return i;
+                //return hist[2][i];
+            }
+        }
+    }
+    delete [] last[0];
+    delete [] last[1];
+    delete [] last[2];
+    delete [] last;
+    pr(hist, hist_size);
+    std::cout << "NOT FOUND: " << payload << " HASH: " << hashFunction(payload, 7 - 7) << std::endl;
+    return 0;
+}
+/*
+uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
+{
+    uint64_t i, shift, j, flag;
+    uint64_t hash;
     for (i = 0; i < hist_size; i++)
     {
         //std::cout << payload << ": " << hashFunction(payload, 7 - hist[2][i]) << " : " << hist[0][i] << std::endl;
@@ -501,6 +548,7 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
     std::cout << "NOT FOUND: " << payload << " HASH: " << hashFunction(payload, 7 - 7) << std::endl;
     return 0;
 }
+*/
 
 void print_psum_hist(uint64_t** psum, uint64_t** hist, int array_size)
 {
