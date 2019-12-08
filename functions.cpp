@@ -944,6 +944,8 @@ char** readbatch(int& lns)
     while(1)
     {
         ch=getchar();
+        if(ch==EOF)
+            return NULL;
         if(ch=='\n'&&flag)
             continue;
         l->insert(ch);
@@ -1195,7 +1197,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
                     // rslt->lst->print();
-                    std::cout<<"\n";
+                    //std::cout<<"\n";
                     uint64_t** resultArray=rslt->lst->lsttoarr();
                     // int fnlx=rslt->lst->rowsz;
                     // int fnly=rslt->lst->rows;
@@ -1311,11 +1313,13 @@ void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, i
                     sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
                 }
             }
-            std::cout<<projarray<<"."<<projcolumn<<": ";
+            //std::cout<<projarray<<"."<<projcolumn<<": ";
             if(sum!=0)
-                std::cout<<sum<<std::endl;
+                std::cout<<sum;
             else
-                std::cout<<"NULL"<<std::endl;
+                std::cout<<"NULL";
+            if(part[i]!='\0')
+                std::cout<<" ";
         }
     }
 }

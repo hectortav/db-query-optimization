@@ -149,11 +149,14 @@ int main(void)
     {
         lines=0;
         char** arr=readbatch(lines);
+        if(arr==NULL)
+            break;
         // std::cout<<std::endl;
         for(int i=0;i<lines;i++)
         {
             // std::cout<<arr[i]<<std::endl;
             handlequery(makeparts(arr[i]), inputArrays);
+            std::cout<<std::endl;
         }
         for(int i=0;i<lines;i++)
             delete[] arr[i];
@@ -161,4 +164,5 @@ int main(void)
         arr=NULL;
     }
 
+    return 0;
 }
