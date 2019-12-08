@@ -1067,7 +1067,7 @@ char** readbatch(int& lns)
     }*/
     delete[] arr;
     delete l;
-    lns=ln;
+    lns=ln;    
     return fnl;
 }
 char** makeparts(char* query)

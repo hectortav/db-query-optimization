@@ -121,7 +121,8 @@ char* list::lsttocharr()
     listnode* t=this->first;
     for(uint64_t i=0;i<tmpcntr;i++,t=t->next)
     {
-        memcpy(arr+i*lnodesz,t->content,lnodesz);
+        memcpy(arr+i*lnodesz,t->content,t->size);
+        arr[i*lnodesz+t->size]='\0';
     }
     return arr;
 }

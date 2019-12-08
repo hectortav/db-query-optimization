@@ -151,11 +151,12 @@ int main(void)
         char** arr=readbatch(lines);
         if(arr==NULL)
             break;
+       // std::cout<<arr<<std::endl;
         // std::cout<<std::endl;
         //std::cout<<lines<<std::endl;
         for(int i=0;i<lines;i++)
         {
-            //std::cout<<arr[i]<<std::endl;
+            //std::cout<<i<<" "<<arr[i]<<std::endl;
             handlequery(makeparts(arr[i]), inputArrays);
             std::cout<<std::endl;
         }
