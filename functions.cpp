@@ -637,11 +637,11 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             new_rel->num_tuples = j;
         }
         
-        if (hist[1][i] < TUPLES_PER_BUCKET || hist[2][i] > 7)
+        if (hist[1][i] <= TUPLES_PER_BUCKET || hist[2][i] > 7)
         {
             if (hist[1][i] > 0)
             {
-                if (i + 1 < x)
+                if (i + 1 < array_size)
                     sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
                 else
                     sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);

@@ -23,7 +23,7 @@ public:
 
 const unsigned long BUCKET_SIZE = 64 * pow(2, 10);  //64KB (I think)
 const unsigned long TUPLE_SIZE = sizeof(tuple);
-const int TUPLES_PER_BUCKET = 4;//(int)(BUCKET_SIZE / TUPLE_SIZE);  
+const int TUPLES_PER_BUCKET = (int)(BUCKET_SIZE / TUPLE_SIZE);  
 //each bucket must be smaller than 64KB 
 //size of bucket = num_tuples * sizeof(tuples)  
 //num_tuples (of each bucket) = 64KB / sizeof(tuple)
