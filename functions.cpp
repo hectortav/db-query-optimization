@@ -174,15 +174,21 @@ void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultR
         return;
     }
 
-    for (uint64_t i = 0; i < resultRowsNum; i++) {
-        uint64_t prevIntermediateArrayRowId = intermediateResult[0][i];
-        uint64_t inputArrayRowId = intermediateResult[1][i];
-        for (uint64_t j = 0; j < prevIntermediateArray->columnsNum; j++) {
-            inputArrayIds[j] = prevIntermediateArray->inputArrayIds[j];
-            results[j][i] = prevIntermediateArray->results[j][prevIntermediateArrayRowId];
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        for (uint64_t i = 0; i < resultRowsNum; i++) {
+            if (j == columnsNum - 1) {
+                uint64_t inputArrayRowId = intermediateResult[1][i];
+                results[j][i] = inputArrayRowId;
+            } else {
+                uint64_t prevIntermediateArrayRowId = intermediateResult[0][i];
+                results[j][i] = prevIntermediateArray->results[j][prevIntermediateArrayRowId];
+            }
         }
-        inputArrayIds[columnsNum - 1] = inputArray2Id;
-        results[columnsNum - 1][i] = inputArrayRowId;
+        if (j == columnsNum - 1) {
+            inputArrayIds[j] = inputArray2Id;
+        } else {
+            inputArrayIds[j] = prevIntermediateArray->inputArrayIds[j];
+        }
     }
 }
 
