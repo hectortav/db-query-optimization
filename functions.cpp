@@ -582,7 +582,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     uint64_t** tempPsum = new uint64_t*[3];
     for (uint64_t i = 0; i < 3; i++) {
         tempPsum[i] = new uint64_t[x];
-        memcpy(tempPsum[i], psum[i], x);
+        memcpy(tempPsum[i], psum[i], x*sizeof(uint64_t));
     }
     
     i = 0;
@@ -675,16 +675,19 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             uint64_t** tempPsum = new uint64_t*[3];
             for (uint64_t i = 0; i < 3; i++) {
                 tempPsum[i] = new uint64_t[array_size];
-                memcpy(tempPsum[i], psum[i], array_size);
+                memcpy(tempPsum[i], psum[i], array_size*sizeof(uint64_t));
             }
+            // std::cout<<"array size: "<<array_size<<std::endl;
             
             while(j < new_rel->num_tuples)
             {
-                // if (j%10000==0) {
-                //     std::cout<<"loop2 i: "<<j<<std::endl;
-                // }
+                
+                    // std::cout<<"loop2 1 j: "<<j<<std::endl;
+                
                 //hash
                 payload = find_shift(hist, array_size, new_rel->tuples[j].payload);//hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
+                                    // std::cout<<"loop2 1 payload: "<<payload<<", psum value: "<<tempPsum[1][payload]<<std::endl;
+
                 //find hash in psum = pos in new relation
                 
                 // uint64_t next_i = psum[1][payload];
@@ -697,6 +700,8 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                 // {
                 rel->tuples[tempPsum[1][payload]].payload = new_rel->tuples[j].payload;
                 rel->tuples[tempPsum[1][payload]++].key = new_rel->tuples[j].key;
+                                    // std::cout<<"loop2 2 payload: "<<payload<<std::endl;
+
                 //     flag[next_i] = true;
                 // }
                 j++;
