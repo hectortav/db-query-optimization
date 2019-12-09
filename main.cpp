@@ -136,7 +136,6 @@ int main(void)
     // ro_R->print();
 
     // delete ro_R;
-
     InputArray** inputArrays = readArrays();
     // for (int i = 0; i < MAX_INPUT_ARRAYS_NUM; i++) {
     //     if (inputArrays[i] != NULL) {

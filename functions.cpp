@@ -929,7 +929,7 @@ InputArray** readArrays() {
         inputArrays[inputArraysIndex] = new InputArray(rowsNum, columnsNum);
 
         for (uint64_t i = 0; i < columnsNum; i++) {
-            for (uint16_t j = 0; j < rowsNum; j++) {
+            for (uint64_t j = 0; j < rowsNum; j++) {
                 if ((rtn = fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP)) < 0)
                 {
                     printf("fread for file <%s> returned %ld\n", fileName, rtn);
