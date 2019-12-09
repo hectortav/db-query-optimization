@@ -7,6 +7,9 @@ default: final
 final:  main.o functions.o list.o 
 	$(CC) $(CFLAGS) -o final main.o functions.o list.o
 
+static:	main_static.o functions.o list.o
+	$(CC) $(CFLAGS) -g -pg -o final main_static.o functions.o list.o
+
 main.o:  main.cpp list.h functions.h 
 	$(CC) $(CFLAGS) -c main.cpp
 

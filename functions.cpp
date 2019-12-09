@@ -266,7 +266,7 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
     return newIntermediateArray;
 }
 
-uint64_t hashFunction(uint64_t payload, int shift) {
+inline uint64_t hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
 
@@ -375,7 +375,7 @@ uint64_t** create_hist(relation *rel, int shift)
     uint64_t **hist = new uint64_t*[3];
     for(int i = 0; i < 3; i++)
         hist[i] = new uint64_t[x];
-    uint64_t payload, mid;
+    uint64_t payload;
     for(int i = 0; i < x; i++)
     {
         hist[0][i]= i;
@@ -416,7 +416,7 @@ void pr(uint64_t** a, uint64_t array_size)
     {
         if (a[1][i] != 0 || (i < array_size -1 && a[2][i] < a[2][i+1]))
         {
-            for (int l = 0; l < a[2][i]; l++)
+            for (uint64_t l = 0; l < a[2][i]; l++)
                 std::cout << "  ";
             std::cout << a[0][i] << ". " << a[1][i] << " - " << a[2][i] << std::endl;
         }
@@ -425,7 +425,7 @@ void pr(uint64_t** a, uint64_t array_size)
 
 uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uint64_t big_size)   //big_size == size of row in big
 {
-    uint64_t x = pow(2,8), i, j;    //size of small == pow(2,8)
+    uint64_t x = pow(2,8), i;    //size of small == pow(2,8)
 
     uint64_t **hist = new uint64_t*[3];
     for(i = 0; i < 3; i++)
@@ -463,7 +463,6 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uin
 uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint64_t **last)
 {
     uint64_t i, shift, j, flag;
-    uint64_t hash;
     uint64_t x = pow(2, 8);
     
     for (i = 0; i < hist_size; i++)
@@ -471,11 +470,32 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
         //std::cout << payload << ": " << hashFunction(payload, 7 - hist[2][i]) << " : " << hist[0][i] << std::endl;
         if (i < hist_size - 1 && hist[2][i] < hist[2][i+1])
         {
-            last[0][hist[2][i]] = hist[0][i];
-            last[1][hist[2][i]] = hist[2][i];
+            last[0][hist[2][i]] = hist[0][i];   //hash
+            last[1][hist[2][i]] = hist[2][i];   //shift
+            last[2][hist[2][i]] = (uint64_t)hashFunction(payload, 7 - hist[2][i]) != hist[0][i]; //true or false for hashFunction(payload, 7 - hist[2][i]) != hist[0][i]
             shift = hist[2][i];
-            if (hashFunction(payload, 7 - hist[2][i]) != hist[0][i])
+            if (last[2][hist[2][i]] != 0)
+            {
+                if (hist[1][i] != 0)
+                {
+                    flag = 1;
+                    for(j = 0; j < hist[2][i]; j++)
+                    {
+                        if (last[2][hist[2][j]] != 0)//hashFunction(payload, 7 - last[1][j]) != last[0][j])    //last[1] == shift
+                        {
+                            flag = 0;
+                            break;
+                        }
+                    }
+                    if (flag)
+                        return i;
+                    continue;
+                }
                 i+=(x-1);
+                while (hist[2][i+1] > shift)
+                    i++;
+                
+            }
         }
 
         if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
@@ -483,7 +503,7 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
             flag = 1;
             for(j = 0; j < hist[2][i]; j++)
             {
-                if (hashFunction(payload, 7 - last[1][j]) != last[0][j])    //last[1] == shift
+                if (last[2][hist[2][j]] != 0)//hashFunction(payload, 7 - last[1][j]) != last[0][j])    //last[1] == shift
                 {
                     flag = 0;
                     break;
@@ -500,7 +520,6 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
 
 void print_psum_hist(uint64_t** psum, uint64_t** hist, int array_size)
 {
-    int i;
     std::cout << "<<<<<<<" << std::endl;
     for (int i = 0; i < array_size; i++)
         if (i == array_size-1 || psum[1][i] != psum[1][i+1])
@@ -514,8 +533,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
 {
     int shift = 0;
     uint64_t x = pow(2, 8), array_size = x;
-    relation *temp = NULL;
-    relation *rtn  = NULL;
     //create histogram
     uint64_t** hist = create_hist(rel, shift), **temp_hist = NULL;
     //create psum
@@ -524,7 +541,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     uint64_t i, j, y;
     bool clear;
     uint64_t** arr = new uint64_t*[3];
-    for(i = 0; i < 2; i++)
+    for(i = 0; i < 3; i++)
         arr[i] = new uint64_t[8];
 
     uint64_t** tempPsum = new uint64_t*[3];
@@ -542,11 +559,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
         new_rel->tuples[tempPsum[1][payload]++].key = rel->tuples[i].key;
         i++;
     }
-
-    for (uint64_t i = 0; i < 3; i++) {
-        delete[] tempPsum[i];
-    }
-    delete[] tempPsum;
 
     clear = false; //make a full loop with clear == false to end
     i = 0;
@@ -592,8 +604,8 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             }
             rel->num_tuples = new_rel->num_tuples;
 
-            uint64_t** tempPsum = new uint64_t*[3];
             for (uint64_t i = 0; i < 3; i++) {
+                delete[] tempPsum[i];
                 tempPsum[i] = new uint64_t[array_size];
                 memcpy(tempPsum[i], psum[i], array_size*sizeof(uint64_t));
             }
@@ -607,10 +619,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                 rel->tuples[tempPsum[1][payload]++].key = new_rel->tuples[j].key;
                 j++;
             }
-            for (uint64_t i = 0; i < 3; i++) {
-                delete[] tempPsum[i];
-            }
-            delete[] tempPsum;
 
             tuple *temp_tuple = rel->tuples;
             rel->tuples = new_rel->tuples;
@@ -642,6 +650,11 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     }
     //testing
     //print_psum_hist(psum, hist, array_size);
+
+    for (uint64_t i = 0; i < 3; i++) {
+        delete[] tempPsum[i];
+    }
+    delete[] tempPsum;
     
     delete [] hist[0];
     delete [] hist[1];
@@ -655,6 +668,8 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
 
     delete [] arr[0];
     delete [] arr[1];
+    delete [] arr[2];
+
     delete [] arr;
 
     return new_rel;
@@ -880,7 +895,7 @@ InputArray** readArrays() {
             break;
 
         // printf("loop 1\n");
-        uint64_t rowsNum, columnsNum, cellValue;
+        uint64_t rowsNum, columnsNum;
         FILE *fileP;
         // printf("loop 2\n");
 
@@ -892,12 +907,12 @@ InputArray** readArrays() {
         }
         // printf("loop 3\n");
 
-        if (rtn = fread(&rowsNum, sizeof(uint64_t), 1, fileP) < 0) 
+        if ((rtn = fread(&rowsNum, sizeof(uint64_t), 1, fileP)) < 0) 
         {
             printf("fread for file <%s> returned %ld\n", fileName, rtn);
             return NULL;
         }
-        if (rtn = fread(&columnsNum, sizeof(uint64_t), 1, fileP) < 0)
+        if ((rtn = fread(&columnsNum, sizeof(uint64_t), 1, fileP)) < 0)
         {
             printf("fread for file <%s> returned %ld\n", fileName, rtn);
             return NULL;
@@ -908,7 +923,7 @@ InputArray** readArrays() {
 
         for (uint64_t i = 0; i < columnsNum; i++) {
             for (uint16_t j = 0; j < rowsNum; j++) {
-                if (rtn = fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP) < 0)
+                if ((rtn = fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP)) < 0)
                 {
                     printf("fread for file <%s> returned %ld\n", fileName, rtn);
                     return NULL;
@@ -1329,7 +1344,7 @@ void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, i
                 uint64_t key;
                 for(uint64_t i=0;i<rowarr->columnsNum;i++)
                 {
-                    if(rowarr->inputArrayIds[i]==projarray)
+                    if(rowarr->inputArrayIds[i]==(uint64_t)projarray)
                         key=i;
                 }
                 for(uint64_t i =0;i<rowarr->rowsNum;i++)
@@ -1414,9 +1429,9 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* re
         }
     }    */
     int place=0;
-    for(int i=0;i<relationsnum;i++)
+    for(uint64_t i=0;i<relationsnum;i++)
     {
-        for(int j=0;j<cntr;j++)
+        for(uint64_t j=0;j<cntr;j++)
         {
             if(preds[j][0]==i&&(preds[j][3]==(uint64_t)-1||preds[j][3]==i))
             {
