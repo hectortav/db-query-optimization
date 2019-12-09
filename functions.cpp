@@ -475,7 +475,7 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
             last[1][hist[2][i]] = hist[2][i];
             shift = hist[2][i];
             if (hashFunction(payload, 7 - hist[2][i]) != hist[0][i])
-                i+=x;
+                i+=(x-1);
         }
 
         if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
@@ -871,6 +871,7 @@ InputArray** readArrays() {
     // printf("1\n");
     size_t fileNameSize = MAX_INPUT_FILE_NAME_SIZE;
     char fileName[fileNameSize];
+    ssize_t rtn;
 
     unsigned int inputArraysIndex = 0;
     while (fgets(fileName, fileNameSize, stdin) != NULL) {
@@ -891,15 +892,27 @@ InputArray** readArrays() {
         }
         // printf("loop 3\n");
 
-        if (fread(&rowsNum, sizeof(uint64_t), 1, fileP) < 0) return NULL;
-        if (fread(&columnsNum, sizeof(uint64_t), 1, fileP) < 0) return NULL;
+        if (rtn = fread(&rowsNum, sizeof(uint64_t), 1, fileP) < 0) 
+        {
+            printf("fread for file <%s> returned %ld\n", fileName, rtn);
+            return NULL;
+        }
+        if (rtn = fread(&columnsNum, sizeof(uint64_t), 1, fileP) < 0)
+        {
+            printf("fread for file <%s> returned %ld\n", fileName, rtn);
+            return NULL;
+        }
         // printf("rows num: %lu, columns num: %lu\n", rowsNum, columnsNum);
 
         inputArrays[inputArraysIndex] = new InputArray(rowsNum, columnsNum);
 
         for (uint64_t i = 0; i < columnsNum; i++) {
             for (uint16_t j = 0; j < rowsNum; j++) {
-                if (fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP) < 0) return NULL;
+                if (rtn = fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP) < 0)
+                {
+                    printf("fread for file <%s> returned %ld\n", fileName, rtn);
+                    return NULL;
+                }
             }
         }
 
