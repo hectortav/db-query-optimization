@@ -65,6 +65,8 @@ class IntermediateArray {
     uint64_t** results; // contains columns of rowIds: one column per used input array
     int* inputArrayIds; // size = columnsNum
                         // contains ids of input arrays that correspond to each column
+    int* predicateArrayIds; // size = columnsNum
+                            // contains ids of predicate arrays that correspond to each column
     uint64_t columnsNum;
     uint64_t rowsNum;
     uint64_t sortedByFieldId;
@@ -74,7 +76,7 @@ class IntermediateArray {
     ~IntermediateArray();
 
     void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId);
-    void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id);
+    void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id, int predicateArray1Id, int predicateArray2Id);
     bool hasInputArrayId(int inputArrayId);
     bool shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId);
     uint64_t findColumnIndexByInputArrayId(int inputArrayId);
