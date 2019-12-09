@@ -316,7 +316,7 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
                     if(s+1<S->num_tuples&&S->tuples[s].payload==S->tuples[s+1].payload)
                         samestart=s;
                 default:
-                    if(S->tuples[samestart].payload!=S->tuples[s].payload)
+                    if(S->tuples[samestart].payload!=S->tuples[s].payload)  //S->tuples[samestart].payload invalid read
                         samestart=-1;
             }
             if(s+1<S->num_tuples&&S->tuples[s].payload==S->tuples[s+1].payload)
@@ -451,9 +451,9 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uin
     memcpy(&hist[1][i], small[1], sizeof(small[1][0]) * x);
     memcpy(&hist[2][i], small[2], sizeof(small[2][0]) * x);
     /*for (j = 0; j < x; j++) { hist[0][i] = small[0][j]; hist[1][i] = small[1][j]; hist[2][i] = small[2][j]; i++; }*/
-    memcpy(&hist[0][position + 1 + x], &big[0][position + 1], sizeof(big[0][0]) * (big_size - position));
-    memcpy(&hist[1][position + 1 + x], &big[1][position + 1], sizeof(big[1][0]) * (big_size - position));
-    memcpy(&hist[2][position + 1 + x], &big[2][position + 1], sizeof(big[2][0]) * (big_size - position));
+    memcpy(&hist[0][position + 1 + x], &big[0][position + 1], sizeof(big[0][0]) * (big_size - position-1)); //added -1 and solved some valgrind errors
+    memcpy(&hist[1][position + 1 + x], &big[1][position + 1], sizeof(big[1][0]) * (big_size - position-1));
+    memcpy(&hist[2][position + 1 + x], &big[2][position + 1], sizeof(big[2][0]) * (big_size - position-1));
     /*for (i = position + 1; i < big_size; i++) { hist[0][i + x] = big[0][i]; hist[1][i + x] = big[1][i]; hist[2][i + x] = big[2][i]; }*/
 
     delete [] big[0];
@@ -467,88 +467,46 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uin
     return hist;
 }
 
-uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
+uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint64_t **last)
 {
     uint64_t i, shift, j, flag;
     uint64_t hash;
-    uint64_t **last = new uint64_t*[3];
-    for(i = 0; i < 3; i++)
-        last[i] = new uint64_t[8];
-    shift = 0;
+    uint64_t x = pow(2, 8);
+    
     for (i = 0; i < hist_size; i++)
     {
         //std::cout << payload << ": " << hashFunction(payload, 7 - hist[2][i]) << " : " << hist[0][i] << std::endl;
         if (i < hist_size - 1 && hist[2][i] < hist[2][i+1])
         {
-            last[0][shift] = hist[0][i];
-            last[1][shift] = hist[1][i];
-            last[2][shift] = hist[2][i];
-            shift++;
+            last[0][hist[2][i]] = hist[0][i];
+            last[1][hist[2][i]] = hist[1][i];
+            last[2][hist[2][i]] = hist[2][i];
+            if (hashFunction(payload, 7 - hist[2][i]) != hist[0][i])
+                i+=x;
         }
-        if (i < hist_size - 1 && hist[2][i] > hist[2][i+1])
-            shift--;
 
         if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
         {
             flag = 1;
             for(j = 0; j < hist[2][i]; j++)
+            {
                 if (hashFunction(payload, 7 - last[2][j]) != last[0][j])
-                    flag = 0;
-            if (flag)
-            {
-                delete [] last[0];
-                delete [] last[1];
-                delete [] last[2];
-                delete [] last;
-                return i;
-                //return hist[2][i];
-            }
-        }
-    }
-    delete [] last[0];
-    delete [] last[1];
-    delete [] last[2];
-    delete [] last;
-    pr(hist, hist_size);
-    std::cout << "NOT FOUND: " << payload << " HASH: " << hashFunction(payload, 7 - 7) << std::endl;
-    return 0;
-}
-/*
-uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload)
-{
-    uint64_t i, shift, j, flag;
-    uint64_t hash;
-    for (i = 0; i < hist_size; i++)
-    {
-        //std::cout << payload << ": " << hashFunction(payload, 7 - hist[2][i]) << " : " << hist[0][i] << std::endl;
-        if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
-        {
-            j = i;
-            shift = hist[2][i];
-            flag = 1;
-            while (j >= 0 && shift != 0)
-            {
-                if (hist[2][j] == shift-1)
                 {
-                    if (hashFunction(payload, 7 - hist[2][j]) != hist[0][j])
-                    {
-                        flag = 0;
-                    }
-                    shift--;
-                }   
-                j--;
+                    flag = 0;
+                    break;
+                }
             }
             if (flag)
+            {
                 return i;
                 //return hist[2][i];
+            }
         }
     }
-
     pr(hist, hist_size);
     std::cout << "NOT FOUND: " << payload << " HASH: " << hashFunction(payload, 7 - 7) << std::endl;
     return 0;
 }
-*/
 
 void print_psum_hist(uint64_t** psum, uint64_t** hist, int array_size)
 {
@@ -575,6 +533,9 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     uint64_t payload;
     uint64_t i, j, y;
     bool clear;
+    uint64_t** arr = new uint64_t*[3];
+    for(i = 0; i < 3; i++)
+        arr[i] = new uint64_t[8];
 
     /*for (i = 0; i < rel->num_tuples; i++)
         flag[i] = false;
@@ -588,26 +549,10 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     i = 0;
     while(i < rel->num_tuples)
     {
-        // if (i%10000==0) {
-        //     std::cout<<"loop1 i: "<<i<<std::endl;
-        // }
-        //hash
-        //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
         payload = hashFunction(rel->tuples[i].payload, 7 - shift);
         //find hash in psum = pos in new relation
-        
-        // uint64_t next_i = psum[1][payload];
-
-        //key++ until their is an empty place
-        // while ((next_i < rel->num_tuples) && flag[next_i])
-        //     next_i++;
-
-        // if (next_i < rel->num_tuples)
-        // {
-            new_rel->tuples[tempPsum[1][payload]].payload = rel->tuples[i].payload;
-            new_rel->tuples[tempPsum[1][payload]++].key = rel->tuples[i].key;
-            // flag[next_i] = true;
-        // }
+        new_rel->tuples[tempPsum[1][payload]].payload = rel->tuples[i].payload;
+        new_rel->tuples[tempPsum[1][payload]++].key = rel->tuples[i].key;
         i++;
     }
 
@@ -642,13 +587,9 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             temp_hist = create_hist(rel, hist[2][i] + 1);
             temp_psum = create_psum(temp_hist, x);
             
-            /*for (j = 0; j < rel->num_tuples; j++)
-                flag[j] = false;
-            */
-
             hist = combine_hist(hist, temp_hist, i, array_size);
             array_size+=x;
-            //array_size-=1; //??????????????????????
+
             delete [] psum[0];
             delete [] psum[1];
             delete [] psum[2];
@@ -658,10 +599,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             delete [] temp_psum[1];
             delete [] temp_psum[2];
             delete [] temp_psum;
-            /*for (j = 0; j < new_rel->num_tuples; j++)
-            {
-                flag[j] = false;
-            }*/
+
             j = 0;
             if (rel == NULL)
                 rel = new relation();
@@ -681,29 +619,11 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             
             while(j < new_rel->num_tuples)
             {
-                
-                    // std::cout<<"loop2 1 j: "<<j<<std::endl;
-                
                 //hash
-                payload = find_shift(hist, array_size, new_rel->tuples[j].payload);//hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
-                                    // std::cout<<"loop2 1 payload: "<<payload<<", psum value: "<<tempPsum[1][payload]<<std::endl;
-
+                payload = find_shift(hist, array_size, new_rel->tuples[j].payload, arr);//hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
                 //find hash in psum = pos in new relation
-                
-                // uint64_t next_i = psum[1][payload];
-
-                //key++ until their is an empty place
-                // while ((next_i < new_rel->num_tuples) && flag[next_i])
-                //     next_i++;
-
-                // if (next_i < new_rel->num_tuples)
-                // {
                 rel->tuples[tempPsum[1][payload]].payload = new_rel->tuples[j].payload;
                 rel->tuples[tempPsum[1][payload]++].key = new_rel->tuples[j].key;
-                                    // std::cout<<"loop2 2 payload: "<<payload<<std::endl;
-
-                //     flag[next_i] = true;
-                // }
                 j++;
             }
             for (uint64_t i = 0; i < 3; i++) {
@@ -742,14 +662,17 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     delete [] hist[0];
     delete [] hist[1];
     delete [] hist[2];
-
     delete [] hist;
     
     delete [] psum[0];
     delete [] psum[1];
     delete [] psum[2];
-
     delete [] psum;
+
+    delete [] arr[0];
+    delete [] arr[1];
+    delete [] arr[2];
+    delete [] arr;
 
     return new_rel;
 }
@@ -974,7 +897,6 @@ InputArray** readArrays() {
     unsigned int inputArraysIndex = 0;
     while (fgets(fileName, fileNameSize, stdin) != NULL) {
         fileName[strlen(fileName) - 1] = '\0'; // remove newline character
-        
         if (strcmp(fileName, "Done") == 0)
             break;
 
@@ -984,6 +906,11 @@ InputArray** readArrays() {
         // printf("loop 2\n");
 
         fileP = fopen(fileName, "rb");
+        if (fileP == NULL)
+        {
+            printf("Could Not Open File (%s)\n", fileName);
+            return NULL;
+        }
         // printf("loop 3\n");
 
         fread(&rowsNum, sizeof(uint64_t), 1, fileP);
@@ -1464,10 +1391,11 @@ uint64_t** splitpreds(char* ch,int& cn)
 }
 bool notin(uint64_t** check, uint64_t* in, int cntr)
 {
-    
+    if (check==NULL || in==NULL)
+        return true;
     for(int j=0;j<cntr;j++)
     {
-        if(check[j]==in)
+        if(check[j] && check[j]==in)
             return false;
     }
     

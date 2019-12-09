@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-I -lm -Wall -g
+CFLAGS=-I -lm -Wall -g -pg
 DEPS=list.h functions.h
 OBJ=main.o functions.o list.o
 
