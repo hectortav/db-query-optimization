@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <math.h>
 
-#define MAX_INPUT_FILE_NAME_SIZE 30
+#define MAX_INPUT_FILE_NAME_SIZE 100
 #define MAX_INPUT_ARRAYS_NUM 20
 
 typedef class list list;
