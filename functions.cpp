@@ -267,7 +267,7 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
 }
 
 uint64_t hashFunction(uint64_t payload, int shift) {
-    return (uint64_t)((payload >> (8 * shift)) & 0xFF);
+    return (payload >> (8 * shift)) & 0xFF;
 }
 
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
@@ -385,14 +385,7 @@ uint64_t** create_hist(relation *rel, int shift)
 
     for (uint64_t i = 0; i < rel->num_tuples; i++)
     {
-        //mid = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift);
         payload = hashFunction(rel->tuples[i].payload, 7-shift);
-
-        if (payload > 0xFF)
-        {
-            std::cout << "ERROR " << payload << std::endl;
-            return NULL;
-        }
         hist[1][payload]++;
     }
     return hist;
@@ -456,14 +449,14 @@ uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uin
     memcpy(&hist[2][position + 1 + x], &big[2][position + 1], sizeof(big[2][0]) * (big_size - position-1));
     /*for (i = position + 1; i < big_size; i++) { hist[0][i + x] = big[0][i]; hist[1][i + x] = big[1][i]; hist[2][i + x] = big[2][i]; }*/
 
-    delete [] big[0];
-    delete [] big[1];
-    delete [] big[2];
+    for(i = 0; i < 3; i++)
+    {
+        delete [] big[i];
+        delete [] small[i];
+    }
     delete [] big;
-    delete [] small[0];
-    delete [] small[1];
-    delete [] small[2];
     delete [] small;
+
     return hist;
 }
 
@@ -479,8 +472,8 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
         if (i < hist_size - 1 && hist[2][i] < hist[2][i+1])
         {
             last[0][hist[2][i]] = hist[0][i];
-            last[1][hist[2][i]] = hist[1][i];
-            last[2][hist[2][i]] = hist[2][i];
+            last[1][hist[2][i]] = hist[2][i];
+            shift = hist[2][i];
             if (hashFunction(payload, 7 - hist[2][i]) != hist[0][i])
                 i+=x;
         }
@@ -490,20 +483,17 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
             flag = 1;
             for(j = 0; j < hist[2][i]; j++)
             {
-                if (hashFunction(payload, 7 - last[2][j]) != last[0][j])
+                if (hashFunction(payload, 7 - last[1][j]) != last[0][j])    //last[1] == shift
                 {
                     flag = 0;
                     break;
                 }
             }
             if (flag)
-            {
                 return i;
-                //return hist[2][i];
-            }
         }
     }
-    pr(hist, hist_size);
+    //pr(hist, hist_size);
     std::cout << "NOT FOUND: " << payload << " HASH: " << hashFunction(payload, 7 - 7) << std::endl;
     return 0;
 }
@@ -529,17 +519,14 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
     //create histogram
     uint64_t** hist = create_hist(rel, shift), **temp_hist = NULL;
     //create psum
-    uint64_t** psum = create_psum(hist, x), **temp_psum = NULL;
+    uint64_t** psum = create_psum(hist, x);
     uint64_t payload;
     uint64_t i, j, y;
     bool clear;
     uint64_t** arr = new uint64_t*[3];
-    for(i = 0; i < 3; i++)
+    for(i = 0; i < 2; i++)
         arr[i] = new uint64_t[8];
 
-    /*for (i = 0; i < rel->num_tuples; i++)
-        flag[i] = false;
-    */
     uint64_t** tempPsum = new uint64_t*[3];
     for (uint64_t i = 0; i < 3; i++) {
         tempPsum[i] = new uint64_t[x];
@@ -585,7 +572,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                 y++;
             }
             temp_hist = create_hist(rel, hist[2][i] + 1);
-            temp_psum = create_psum(temp_hist, x);
             
             hist = combine_hist(hist, temp_hist, i, array_size);
             array_size+=x;
@@ -595,10 +581,6 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             delete [] psum[2];
             delete [] psum;
             psum = create_psum(hist, array_size);
-            delete [] temp_psum[0];
-            delete [] temp_psum[1];
-            delete [] temp_psum[2];
-            delete [] temp_psum;
 
             j = 0;
             if (rel == NULL)
@@ -615,12 +597,11 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                 tempPsum[i] = new uint64_t[array_size];
                 memcpy(tempPsum[i], psum[i], array_size*sizeof(uint64_t));
             }
-            // std::cout<<"array size: "<<array_size<<std::endl;
             
             while(j < new_rel->num_tuples)
             {
                 //hash
-                payload = find_shift(hist, array_size, new_rel->tuples[j].payload, arr);//hashFunction(new_rel->tuples[j].payload, 7 - find_shift(hist, array_size, new_rel->tuples[j].payload));
+                payload = find_shift(hist, array_size, new_rel->tuples[j].payload, arr);
                 //find hash in psum = pos in new relation
                 rel->tuples[tempPsum[1][payload]].payload = new_rel->tuples[j].payload;
                 rel->tuples[tempPsum[1][payload]++].key = new_rel->tuples[j].key;
@@ -637,6 +618,8 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             j = rel->num_tuples;
             rel->num_tuples = new_rel->num_tuples;
             new_rel->num_tuples = j;
+
+            i+=(x-1);   //NOT SURE
         }
         
         if (hist[1][i] <= TUPLES_PER_BUCKET || hist[2][i] > 7)
@@ -649,6 +632,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                     sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
             }
         }
+
         i++;
         if (i == array_size && clear)
         {
@@ -671,13 +655,12 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
 
     delete [] arr[0];
     delete [] arr[1];
-    delete [] arr[2];
     delete [] arr;
 
     return new_rel;
 }
 
-relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
+/*relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
 {
     int x = pow(2, 8);
     // relation *new_rel = new relation();
@@ -717,11 +700,6 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
         i++;
     }
 
-    //testing
-    /*for (int i = 0; i < x; i++)
-        if (i == x-1 || psum[1][i] != psum[1][i+1])
-            std::cout << psum[0][i] << " " << psum[1][i] << std::endl;
-    std::cout << "<<<<<<<" << std::endl;*/
 
     i = 0;
     while (i < x)
@@ -748,20 +726,20 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
         }
         else if (hist[1][i] > 0)
         {
-                //print bucket before sort
-                /*std::cout << "{" << std::endl;
-                if (i + 1 < x)
-                {
-                    for (int l = psum[1][i]; l < psum[1][i+1]; l++)
-                        std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-                }
-                else
-                {
-                    for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
-                        std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-                }
-                std::cout << "}" << std::endl;
-            std::cout << std::endl;*/
+              //  //print bucket before sort
+              //  std::cout << "{" << std::endl;
+              //  if (i + 1 < x)
+              //  {
+              //      for (int l = psum[1][i]; l < psum[1][i+1]; l++)
+              //          std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
+              //  }
+              //  else
+              // {
+              //      for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
+              //          std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
+              //  }
+              //  std::cout << "}" << std::endl;
+            //std::cout << std::endl;
             if (i + 1 < x)
             {
                 //std::cout << "-sort- " << psum[1][i] << " " << psum[1][i+1] << std::endl;
@@ -775,20 +753,20 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
         }
         
         //print buckets
-        /*if (hist[1][i] > 0)
-        {
-            if (i + 1 < x)
-            {
-                for (int l = psum[1][i]; l < psum[1][i+1]; l++)
-                    std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-            }
-            else
-            {
-                for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
-                    std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-            }
-            std::cout << std::endl;
-        }*/
+        //if (hist[1][i] > 0)
+        //{
+        //    if (i + 1 < x)
+        //    {
+        //        for (int l = psum[1][i]; l < psum[1][i+1]; l++)
+        //            std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
+        //    }
+        //    else
+        //    {
+        //        for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
+        //            std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
+        //    }
+        //    std::cout << std::endl;
+        //}
         
         i++;
     }
@@ -813,7 +791,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
     delete [] flag;
 
     return new_rel;
-}
+}*/
 
 void swap(tuple* tuple1, tuple* tuple2)
 {
@@ -913,15 +891,15 @@ InputArray** readArrays() {
         }
         // printf("loop 3\n");
 
-        fread(&rowsNum, sizeof(uint64_t), 1, fileP);
-        fread(&columnsNum, sizeof(uint64_t), 1, fileP);
+        if (fread(&rowsNum, sizeof(uint64_t), 1, fileP) < 0) return NULL;
+        if (fread(&columnsNum, sizeof(uint64_t), 1, fileP) < 0) return NULL;
         // printf("rows num: %lu, columns num: %lu\n", rowsNum, columnsNum);
 
         inputArrays[inputArraysIndex] = new InputArray(rowsNum, columnsNum);
 
         for (uint64_t i = 0; i < columnsNum; i++) {
             for (uint16_t j = 0; j < rowsNum; j++) {
-                fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP);
+                if (fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP) < 0) return NULL;
             }
         }
 
