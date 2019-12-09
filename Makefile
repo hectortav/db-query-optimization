@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS  = -O3 #-g -pg
+CFLAGS  = #-g -pg
 DEPS=list.h functions.h
 
 default: final
@@ -21,3 +21,15 @@ list.o:  list.cpp list.h
 
 clean: 
 	$(RM) final *.o
+
+finalo: maino.o functionso.o listo.o
+	$(CC) $(CFLAGS) -O3 -o final maino.o functionso.o listo.o
+
+maino.o:  main.cpp list.h functions.h 
+	$(CC) $(CFLAGS) -O3 -c main.cpp
+
+functionso.o:  functions.cpp functions.h 
+	$(CC) $(CFLAGS) -O3 -lm -c functions.cpp
+
+listo.o:  list.cpp list.h 
+	$(CC) $(CFLAGS) -O3 -c list.cpp
