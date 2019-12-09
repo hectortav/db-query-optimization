@@ -23,7 +23,7 @@ clean:
 	$(RM) final *.o
 
 finalo: maino.o functionso.o listo.o
-	$(CC) $(CFLAGS) -O3 -o final maino.o functionso.o listo.o
+	$(CC) $(CFLAGS) -O3 -o final main.o functions.o list.o
 
 maino.o:  main.cpp list.h functions.h 
 	$(CC) $(CFLAGS) -O3 -c main.cpp
