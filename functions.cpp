@@ -1315,7 +1315,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds)
 {
     // std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
-    uint64_t projarray,projcolumn,predicatearray;
+    int projarray,projcolumn,predicatearray;
     for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
     {
         if(part[i]=='.')
