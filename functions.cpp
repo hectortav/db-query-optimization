@@ -121,6 +121,7 @@ IntermediateArray::IntermediateArray(uint64_t columnsNum, uint64_t sortedByInput
         this->results[j] = NULL;
     }
     this->inputArrayIds = new int[columnsNum];
+    this->predicateArrayIds = new int[columnsNum];
 }
 
 IntermediateArray::~IntermediateArray() {
@@ -131,19 +132,14 @@ IntermediateArray::~IntermediateArray() {
     }
     delete[] this->results;
     delete[] this->inputArrayIds;
+    delete[] this->predicateArrayIds;
 }
 
 void IntermediateArray::extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId) {
     resultRelation->num_tuples = rowsNum;
     resultRelation->tuples = new tuple[resultRelation->num_tuples];
 
-    uint64_t columnIndex = 0;
-    for (uint64_t j = 0; j < columnsNum; j++) {
-        if (inputArrayIds[j] == inputArrayId) {
-            columnIndex = j;
-            break;
-        }
-    }
+    uint64_t columnIndex = findColumnIndexByInputArrayId(inputArrayId);
 
     for (uint64_t i = 0; i < rowsNum; i++) {
         uint64_t inputArrayRowId = this->results[columnIndex][i];
@@ -156,7 +152,7 @@ void IntermediateArray::extractFieldToRelation(relation* resultRelation, InputAr
 // intermediateResult has always 2 columns and by convention: 
 // - if prevIntermediateArray != NULL, then the 1st column of intermediateResult contains row ids of this IntermediateArray and the 2nd column contains row ids of the first-time-used input array
 // - if prevIntermediateArray == NULL, then both the 1st and 2nd column of intermediateResult contains row ids of 2 first-time-used input arrays
-void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultRowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id) {
+void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultRowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id, int predicateArray1Id, int predicateArray2Id) {
     this->rowsNum = resultRowsNum;
 
     for (uint64_t j = 0; j < columnsNum; j++) {
@@ -167,6 +163,8 @@ void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultR
         // first time creating an IntermediateArray
         inputArrayIds[0] = inputArray1Id;
         inputArrayIds[1] = inputArray2Id;
+        predicateArrayIds[0] = predicateArray1Id;
+        predicateArrayIds[1] = predicateArray2Id;
         for (uint64_t i = 0; i < resultRowsNum; i++) {
             results[0][i] = intermediateResult[0][i];
             results[1][i] = intermediateResult[1][i];
@@ -186,8 +184,10 @@ void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultR
         }
         if (j == columnsNum - 1) {
             inputArrayIds[j] = inputArray2Id;
+            predicateArrayIds[j] = predicateArray2Id;
         } else {
             inputArrayIds[j] = prevIntermediateArray->inputArrayIds[j];
+            predicateArrayIds[j] = prevIntermediateArray->predicateArrayIds[j];
         }
     }
 }
@@ -209,6 +209,12 @@ void IntermediateArray::print() {
     printf("input array ids: ");
     for (uint64_t j = 0; j < columnsNum; j++) {
         std::cout << inputArrayIds[j] << " ";
+    }
+    std::cout << std::endl;
+    
+    printf("predicate array ids: ");
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        std::cout << predicateArrayIds[j] << " ";
     }
     std::cout << std::endl;
 
@@ -238,6 +244,7 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
 
     for (uint64_t j = 0; j < newIntermediateArray->columnsNum; j++) {
         newIntermediateArray->inputArrayIds[j] = inputArrayIds[j];
+        newIntermediateArray->predicateArrayIds[j] = predicateArrayIds[j];
     }
 
     uint64_t columnIndexArray1 = findColumnIndexByInputArrayId(inputArray1Id);
@@ -1142,7 +1149,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 //     InputArray* filteredInputArrayRowIds = inputarra
                 // }
                 //std::cout<<"case 2 1"<<std::endl;
-                if (inputArray1Id == inputArray2Id) {
+                if (predicateArray1Id == predicateArray2Id) {
                     // self-join of InputArray
                     InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
                     delete inputArray1RowIds;
@@ -1151,8 +1158,9 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 }
                                 //std::cout<<"case 2 2"<<std::endl;
 
-                if ((curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id))
-                    && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id)) {
+                if (inputArray1Id != inputArray2Id && 
+                    (curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id)
+                    && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id))) {
                     // self-join of IntermediateArray
                     IntermediateArray* filteredIntermediateArray = curIntermediateArray->selfJoin(inputArray1Id, inputArray2Id, field1Id, field2Id, inputArray1, inputArray2);
                     delete curIntermediateArray;
@@ -1185,7 +1193,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
                         // rel1.print();
                     } else {
-                        // printf("else\n");
+                        // printf("else1\n");
                         // rel1.num_tuples = curIntermediateArray->rowsNum;
                                                 // printf("rowsNum = %lu\n", rel1.num_tuples);
                         curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, inputArray1Id, field1Id);
@@ -1194,7 +1202,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 //std::cout<<"case 2 4"<<std::endl;
 
                     // fill rel2
-                    if (curIntermediateArray == NULL || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
+                    if (curIntermediateArray == NULL || inputArray1Id == inputArray2Id || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
                                                                         // printf("------------2\n");
 
                         // rel2.num_tuples = inputArray2->rowsNum;
@@ -1203,7 +1211,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // printf("rel2\n");
                         // rel2.print();
                     } else {
-                                                // printf("else\n");
+                                                // std::cout<<"else"<<std::endl;
                         rel2ExistsInIntermediateArray = true;
                         // rel2.num_tuples = curIntermediateArray->rowsNum;
                         curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, inputArray2Id, field2Id);
@@ -1264,7 +1272,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     if (curIntermediateArray == NULL) {
                         // first join
                         curIntermediateArray = new IntermediateArray(2, 0, 0);
-                        curIntermediateArray->populate(resultArray, rslt->lst->rows, NULL, inputArray1Id, inputArray2Id);
+                        curIntermediateArray->populate(resultArray, rslt->lst->rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
                         // printf("haaa\n");
                         // printf("new IntermediateArray:\n");
                         // curIntermediateArray->print();
@@ -1273,7 +1281,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // printf("previous IntermediateArray:\n");
                         // curIntermediateArray->print();
                         IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1, 0, 0);
-                        newIntermediateArray->populate(resultArray, rslt->lst->rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id);
+                        newIntermediateArray->populate(resultArray, rslt->lst->rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
                         delete curIntermediateArray;
                         curIntermediateArray = newIntermediateArray;
                         // printf("new IntermediateArray:\n");
