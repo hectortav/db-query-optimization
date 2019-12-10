@@ -1,5 +1,33 @@
 #!/bin/bash
 
+startProgramAndCalculateTime() {
+    (cat $initFile $workFile | ./final > $outputFile )&
+    
+    while read path action file
+    do
+        # echo "The file '$file' appeared/changed in directory '$path' via '$action'"
+        if [[ $file == "read_arrays_end" ]]; then
+            
+            startTimestamp=$(date +%s%N)
+            # cat $workFile > P
+            exec 3>&-
+        elif [[ $file == $outputFile ]] && [[ $action == "MODIFY" ]]; then
+            # echo "$(wc -l < $outputFile)"
+            # echo "results: $resultsLinesNum"
+            # echo "The file '$file' appeared in directory '$path' via '$action'"
+            if [[ $resultsLinesNum == $(wc -l < $outputFile) ]]; then
+                endTimestamp=$(date +%s%N)
+                elapsedTimeNanoseconds=$((endTimestamp-startTimestamp))
+                elapsedTimeMilliseconds=$(echo "scale=2; $elapsedTimeNanoseconds/1000000" | bc -l)
+                elapsedTimeSeconds=$(echo "scale=2; $elapsedTimeNanoseconds/1000000000" | bc -l)
+                echo "Queries execution time: $elapsedTimeNanoseconds nanoseconds = $elapsedTimeMilliseconds milliseconds = $elapsedTimeSeconds seconds"
+                
+                kill -SIGINT -$$
+            fi
+        fi
+    done < <(inotifywait -qm . -e create,modify -e moved_to)
+}
+
 echo "Compiling program..."
 make finalo
 
@@ -18,7 +46,6 @@ while [[ $inputChar != 's' ]] && [[ $inputChar != 'm' ]]
 do
     echo "Press 's' to run program with \"small\" workload or 'm' to run it with \"medium\" workload" 
     read -n1 inputChar
-    inputChar='s'
     echo
     case $inputChar in
         s)
@@ -56,36 +83,20 @@ do
             # cat ../workloads/small/small.init - | ./final
                     # cat $workFile > P
                     # exec 3>&-
-
-            (cat $initFile $workFile | ./final > $outputFile )&
-            
-            while read path action file
-            do
-                # echo "The file '$file' appeared/changed in directory '$path' via '$action'"
-                if [[ $file == "read_arrays_end" ]]; then
-                    
-                    startTimestamp=$(date +%s%N)
-                    # cat $workFile > P
-                    exec 3>&-
-                elif [[ $file == $outputFile ]] && [[ $action == "MODIFY" ]]; then
-                    # echo "$(wc -l < $outputFile)"
-                    # echo "results: $resultsLinesNum"
-                    # echo "The file '$file' appeared in directory '$path' via '$action'"
-                    if [[ $resultsLinesNum == $(wc -l < $outputFile) ]]; then
-                        endTimestamp=$(date +%s%N)
-                        elapsedTimeNanoseconds=$((endTimestamp-startTimestamp))
-                        elapsedTimeMilliseconds=$(echo "scale=2; $elapsedTimeNanoseconds/1000000" | bc -l)
-                        elapsedTimeSeconds=$(echo "scale=2; $elapsedTimeNanoseconds/1000000000" | bc -l)
-                        echo "Queries execution time: $elapsedTimeNanoseconds nanoseconds = $elapsedTimeMilliseconds milliseconds = $elapsedTimeSeconds seconds"
-                        
-                        exit
-                    fi
-                fi
-            done < <(inotifywait -qm . -e create,modify -e moved_to)
+            startProgramAndCalculateTime
             ;;
         m)
             echo "Running program with \"medium\" workload..."
-            cat $workloadsPath/medium/medium.init $workloadsPath/medium/medium.work | ./final > out.txt
+            
+            initFile="$workloadsPath/medium/medium.init"
+            resultsFile="$workloadsPath/medium/medium.result"
+            workFile="$workloadsPath/medium/medium.work"
+            outputFile="medium_ouput.txt"
+            resultsLinesNum=$(wc -l < $resultsFile)
+
+            startProgramAndCalculateTime
+
+            # cat $workloadsPath/medium/medium.init $workloadsPath/medium/medium.work | ./final > out.txt
             ;;
         *)
             echo -e "\nInvalid character, please try again\n"
