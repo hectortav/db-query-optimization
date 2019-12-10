@@ -136,6 +136,16 @@ int main(void)
     // ro_R->print();
     // delete ro_R;
     InputArray** inputArrays = readArrays();
+
+    FILE * fp = fopen("read_arrays_end", "w");
+
+    if(fp == NULL) {
+        std::cout<<"Unable to create file"<<std::endl;
+        exit(1);
+    }
+
+    fclose(fp);
+    // std::cout<<"Arrays read end"<<std::endl;
     // for (int i = 0; i < MAX_INPUT_ARRAYS_NUM; i++) {
     //     if (inputArrays[i] != NULL) {
     //         inputArrays[i]->print();
@@ -168,5 +178,6 @@ int main(void)
         delete inputArrays[i];
     }
     delete[] inputArrays;
+    remove("read_arrays_end");
     return 0;
 }
