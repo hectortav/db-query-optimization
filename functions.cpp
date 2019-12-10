@@ -1049,7 +1049,9 @@ void handlequery(char** parts,InputArray** allrelations)
     loadrelationIds(relationIds, parts[0], relationsnum);
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds);
     handleprojection(result,allrelations,parts[2], relationIds);
-    delete result;
+    if(result!=NULL)
+        delete result;
+    delete[] parts;
 
     // std::cout<<std::endl;
     
@@ -1250,6 +1252,23 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
                     // rslt->lst->print();
                     //std::cout<<"\n";
+                    if (rslt->lst->rows == 0) {
+                        // no results
+                        std::cout<<"this case"<<std::endl;
+                        for(int i=0;i<cntr;i++)
+                        {
+                            delete[] preds[i];
+                        }
+                        delete[] preds;
+                        for(int i=0;i<relationsnum;i++)
+                            delete inputArraysRowIds[i];
+                        delete[] inputArraysRowIds;
+                        delete newRel1;
+                        delete newRel2;
+                        delete rslt->lst;
+                        delete rslt;
+                        return NULL;
+                    }
                     uint64_t** resultArray=rslt->lst->lsttoarr();
                     delete newRel1;
                     delete newRel2;
@@ -1272,10 +1291,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     //     }
                     //     delete[] resultArray;
                     // }
-                    if (rslt->lst->rows == 0) {
-                        // no results
-                        return NULL;
-                    }
+                    
                     
                     if (curIntermediateArray == NULL) {
                         // first join
@@ -1332,6 +1348,9 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         delete[] preds[i];
     }
     delete[] preds;
+    for(int i=0;i<relationsnum;i++)
+        delete inputArraysRowIds[i];
+    delete[] inputArraysRowIds;
     return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
 
 
