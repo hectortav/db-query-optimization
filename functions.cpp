@@ -93,7 +93,7 @@ InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, Input
     }
 
     newInputArrayRowIds->rowsNum = newInputArrayRowIndex; // update rowsNum because the other rows are useless
-
+    delete[] pureInputArray;
     return newInputArrayRowIds;
 }
 
@@ -967,7 +967,10 @@ char** readbatch(int& lns)
     {
         ch=getchar();
         if(ch==EOF)
+        {
+            delete l;
             return NULL;
+        }
         if(ch=='\n'&&flag)
             continue;
         l->insert(ch);
@@ -1046,6 +1049,8 @@ void handlequery(char** parts,InputArray** allrelations)
     loadrelationIds(relationIds, parts[0], relationsnum);
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds);
     handleprojection(result,allrelations,parts[2], relationIds);
+    delete result;
+
     // std::cout<<std::endl;
     
 
@@ -1246,6 +1251,9 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     // rslt->lst->print();
                     //std::cout<<"\n";
                     uint64_t** resultArray=rslt->lst->lsttoarr();
+                    delete newRel1;
+                    delete newRel2;
+                    
                     // int fnlx=rslt->lst->rowsz;
                     // int fnly=rslt->lst->rows;
                     // if(resultArray!=NULL)
@@ -1268,7 +1276,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // no results
                         return NULL;
                     }
-
+                    
                     if (curIntermediateArray == NULL) {
                         // first join
                         curIntermediateArray = new IntermediateArray(2, 0, 0);
@@ -1287,6 +1295,11 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // printf("new IntermediateArray:\n");
                         // curIntermediateArray->print();
                     }
+                    for(int i=0;i<rslt->lst->rowsz;i++)
+                        delete[] resultArray[i];
+                    delete[] resultArray;
+                    delete rslt->lst;
+                    delete rslt;
                 //}
                 //else
                 }
@@ -1314,7 +1327,11 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     // if (curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0) {
     //     curIntermediateArray->print();
     // }
-
+    for(int i=0;i<cntr;i++)
+    {
+        delete[] preds[i];
+    }
+    delete[] preds;
     return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
 
 

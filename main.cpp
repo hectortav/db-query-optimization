@@ -134,7 +134,6 @@ int main(void)
     // // quickSort(R.tuples, 0, R.num_tuples - 1);
     // std::cout << "\nafter" << std::endl;
     // ro_R->print();
-
     // delete ro_R;
     InputArray** inputArrays = readArrays();
     // for (int i = 0; i < MAX_INPUT_ARRAYS_NUM; i++) {
@@ -164,6 +163,10 @@ int main(void)
         delete[] arr;
         arr=NULL;
     }
-
+    for(int i=0;i<MAX_INPUT_ARRAYS_NUM;i++)
+    {
+        delete inputArrays[i];
+    }
+    delete[] inputArrays;
     return 0;
 }
