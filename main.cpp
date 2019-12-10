@@ -154,7 +154,7 @@ int main(void)
         //std::cout<<lines<<std::endl;
         for(int i=0;i<lines;i++)
         {
-            //std::cout<<i<<" "<<arr[i]<<std::endl;
+            //std::cout<<arr[i]<<std::endl;
             handlequery(makeparts(arr[i]), inputArrays);
             std::cout<<std::endl;
         }

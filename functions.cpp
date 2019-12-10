@@ -1086,7 +1086,7 @@ void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 
 IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
 {
-    // std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
+     //std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
     int cntr;
     uint64_t** preds=splitpreds(part,cntr);
     // for(int i=0;i<cntr;i++)
@@ -1098,7 +1098,6 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     //     std::cout<<std::endl;
     // }
     preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
-    // std::cout<<std::endl;
     // for(int i=0;i<cntr;i++)
     // {
     //     for(int j=0;j<5;j++)
@@ -1121,11 +1120,13 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     // filters and inner-joins are first and regular joins follow
     for(int i=0;i<cntr;i++)
     {
+        //std::cout<<"for "<<i<<std::endl;
         bool isFilter = preds[i][3] == (uint64_t) - 1;
         int predicateArray1Id = preds[i][0];
         int predicateArray2Id = preds[i][3];
         int inputArray1Id = relationIds[predicateArray1Id];
         int inputArray2Id = isFilter ? -1 : relationIds[predicateArray2Id];
+        
         InputArray* inputArray1 = inputArrays[inputArray1Id];
         InputArray* inputArray2 = isFilter ? NULL : inputArrays[inputArray2Id];
         // InputArray* inputArray1RowIds = new InputArray(inputArray1->rowsNum, 1);
@@ -1137,7 +1138,6 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         uint64_t field2Id = preds[i][4];
         int operation = preds[i][2];
         // printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
-
         if (isFilter) {
             // printf("filter\n");
             uint64_t numToCompare = field2Id;
@@ -1254,7 +1254,6 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     //std::cout<<"\n";
                     if (rslt->lst->rows == 0) {
                         // no results
-                        std::cout<<"this case"<<std::endl;
                         for(int i=0;i<cntr;i++)
                         {
                             delete[] preds[i];
@@ -1447,7 +1446,7 @@ bool notin(uint64_t** check, uint64_t* in, int cntr)
         return true;
     for(int j=0;j<cntr;j++)
     {
-        if(check[j] && check[j]==in)
+        if(check[j]!=NULL && check[j]==in)
             return false;
     }
     
@@ -1474,14 +1473,22 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* re
             }
         }
     }    */
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<preds[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
     int place=0;
-    for(uint64_t i=0;i<relationsnum;i++)
+    for(int i=0;i<relationsnum;i++)
     {
-        for(uint64_t j=0;j<cntr;j++)
+        for(int j=0;j<cntr;j++)
         {
             if(preds[j][0]==i&&(preds[j][3]==(uint64_t)-1||preds[j][3]==i))
             {
-                if(notin(result,preds[j],cntr))
+                if(notin(result,preds[j],place))
                 {
                     result[place]=preds[j];
                     place++;
@@ -1495,7 +1502,7 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* re
         {
             if(preds[j][0]==i)
             {
-                if(notin(result,preds[j],cntr))
+                if(notin(result,preds[j],place))
                 {
                     result[place]=preds[j];
                     place++;
@@ -1504,6 +1511,14 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* re
         }
     }
     delete[] preds;
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<result[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
     return result;
     
 
