@@ -28,8 +28,24 @@ startProgramAndCalculateTime() {
     done < <(inotifywait -qm . -e create,modify -e moved_to)
 }
 
-echo "Compiling program..."
-make finalo
+while [[ $inputChar != 'y' ]] && [[ $inputChar != 'n' ]]
+do
+    read -p "Compile program with \"-Ο3\" flag? (y/n) " -n1 inputChar
+    echo
+    case $inputChar in
+        y)
+            echo -e "\nCompiling program with \"-Ο3\" flag..."
+            make finalo
+            ;;
+        n)
+            echo -e "\nCompiling program normally..."
+            make
+            ;;
+        *)
+            echo -e "\nInvalid character.\n"
+            ;;
+    esac
+done
 
 echo
 
@@ -39,9 +55,13 @@ do
     read -p "Workloads path: " workloadsPath
     if [[ $workloadsPath == "" ]]; then
         echo -e "\nEmpty workload path, please try again\n"
+    elif [[ ! -d $workloadsPath ]]; then
+        echo -e "\nDirectory \"$workloadsPath\" does not exist, please try again\n"
+        workloadsPath=""
     fi
 done
 
+inputChar=""
 while [[ $inputChar != 's' ]] && [[ $inputChar != 'm' ]]
 do
     echo "Press 's' to run program with \"small\" workload or 'm' to run it with \"medium\" workload" 
