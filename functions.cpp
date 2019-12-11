@@ -1084,6 +1084,22 @@ void loadrelationIds(int* relationIds, char* part, int& relationsnum)
     //std::cout<<cntr<<" relations"<<std::endl;
 }
 
+bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin) {
+    if (curPredicateIndex <= 0 || prevPredicateWasFilterOrSelfJoin)
+        return true;
+
+    // uint64_t* curPredicate = predicates[curPredicateIndex];
+    uint64_t* prevPredicate = predicates[curPredicateIndex - 1];
+
+    // int curPredicateArray1Id = curPredicate[0], curPredicateArray2Id = curPredicate[3],
+    //      curField1Id = curPredicate[1], curField2Id = curPredicate[4];
+    int prevPredicateArray1Id = prevPredicate[0], prevPredicateArray2Id = prevPredicate[3],
+         prevField1Id = prevPredicate[1], prevField2Id = prevPredicate[4];
+
+    return !((curPredicateArrayId == prevPredicateArray1Id && curFieldId == prevField1Id) ||
+            (curPredicateArrayId == prevPredicateArray2Id && curFieldId == prevField2Id));
+}
+
 IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
 {
      //std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
@@ -1116,6 +1132,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
     }
 
     IntermediateArray* curIntermediateArray = NULL;
+    bool prevPredicateWasFilterOrSelfJoin = false;
 
     // filters and inner-joins are first and regular joins follow
     for(int i=0;i<cntr;i++)
@@ -1144,6 +1161,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
             InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, operation, numToCompare, inputArray1);
             delete inputArray1RowIds;
             inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
+            prevPredicateWasFilterOrSelfJoin = true;
             continue;
         }
 
@@ -1161,6 +1179,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
                     delete inputArray1RowIds;
                     inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
+                    prevPredicateWasFilterOrSelfJoin = true;
                     continue;
                 }
                                 //std::cout<<"case 2 2"<<std::endl;
@@ -1172,6 +1191,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     IntermediateArray* filteredIntermediateArray = curIntermediateArray->selfJoin(inputArray1Id, inputArray2Id, field1Id, field2Id, inputArray1, inputArray2);
                     delete curIntermediateArray;
                     curIntermediateArray = filteredIntermediateArray;
+                    prevPredicateWasFilterOrSelfJoin = true;
                     continue;
                 }
 
@@ -1226,23 +1246,32 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                                     //std::cout<<"case 2 5"<<std::endl;
 
                     relation* newRel1 = new relation();
-                    newRel1->num_tuples = rel1.num_tuples;
-                    newRel1->tuples = new tuple[rel1.num_tuples];
-                    //std::cout<<"before"<<std::endl;
-                    relation* reorderedRel1 = re_ordered(&rel1, newRel1, 0);
-                    //std::cout<<"after"<<std::endl;
-                                    //std::cout<<"case 2 6"<<std::endl;
-
+                    relation* reorderedRel1;
+                    if (shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin)) {
+                        newRel1->num_tuples = rel1.num_tuples;
+                        newRel1->tuples = new tuple[rel1.num_tuples];
+                        //std::cout<<"before"<<std::endl;
+                        reorderedRel1 = re_ordered(&rel1, newRel1, 0);
+                        //std::cout<<"after"<<std::endl;
+                    } else {
+                        // already sorted
+                        reorderedRel1 = &rel1;
+                    }
+                    
                     // std::cout<<"\n";
                     // ro_R->print();
                     relation* newRel2 = new relation();
-                    newRel2->num_tuples = rel2.num_tuples;
-                    newRel2->tuples = new tuple[rel2.num_tuples];                    
-                    //std::cout<<"before"<<std::endl;
-                    relation* reorderedRel2 = re_ordered(&rel2, newRel2, 0);
-                    //std::cout<<"after"<<std::endl;
-
-                                    //std::cout<<"case 2 7"<<std::endl;
+                    relation* reorderedRel2;
+                    if (shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin)) {
+                        newRel2->num_tuples = rel2.num_tuples;
+                        newRel2->tuples = new tuple[rel2.num_tuples];                    
+                        //std::cout<<"before"<<std::endl;
+                        reorderedRel2 = re_ordered(&rel2, newRel2, 0);
+                        //std::cout<<"after"<<std::endl;
+                    } else {
+                        // already sorted
+                        reorderedRel2 = &rel2;
+                    }
 
                     // std::cout<<"\n";
                     // ro_S->print();
@@ -1310,6 +1339,8 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // printf("new IntermediateArray:\n");
                         // curIntermediateArray->print();
                     }
+                    prevPredicateWasFilterOrSelfJoin = false;
+
                     for(int i=0;i<rslt->lst->rowsz;i++)
                         delete[] resultArray[i];
                     delete[] resultArray;

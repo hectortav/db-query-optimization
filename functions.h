@@ -103,7 +103,7 @@ char** readbatch(int& lns);
 char** makeparts(char* query);
 void handlequery(char** parts,InputArray** allrelations);
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
-// InputArray** loadrelations(char* part,InputArray** allrelations,int& relationsnum);
+bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin);
 IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds);
 void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds);
 uint64_t** splitpreds(char* ch,int& cn);
