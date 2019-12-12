@@ -482,6 +482,7 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
                 if (hist[1][i] != 0)
                 {
                     flag = 1;
+                    std::cout<<"ok"<<hist[2][i]<<std::endl;
                     for(j = 0; j < hist[2][i]; j++)
                     {
                         if (last[2][hist[2][j]] != 0)//hashFunction(payload, 7 - last[1][j]) != last[0][j])    //last[1] == shift
@@ -580,12 +581,9 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
             rel->num_tuples = last - first;
             if(rel->tuples == NULL)
                 rel->tuples = new tuple[new_rel->num_tuples];
-            y = 0;
-            for (j = first; j < last; j++)
-            {
-                rel->tuples[y] = new_rel->tuples[j];
-                y++;
-            }
+            
+            memcpy(rel->tuples, new_rel->tuples + first, rel->num_tuples*sizeof(tuple));
+            
             temp_hist = create_hist(rel, hist[2][i] + 1);
             
             hist = combine_hist(hist, temp_hist, i, array_size);
@@ -623,7 +621,9 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                 j++;
             }
 
-            tuple *temp_tuple = rel->tuples;
+
+            tuple *temp_tuple;
+            temp_tuple = rel->tuples;
             rel->tuples = new_rel->tuples;
             new_rel->tuples = temp_tuple;
             j = rel->num_tuples;
