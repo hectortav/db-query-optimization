@@ -165,12 +165,15 @@ void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultR
         inputArrayIds[1] = inputArray2Id;
         predicateArrayIds[0] = predicateArray1Id;
         predicateArrayIds[1] = predicateArray2Id;
-        for (uint64_t i = 0; i < resultRowsNum; i++) {
-            results[0][i] = intermediateResult[0][i];
-            results[1][i] = intermediateResult[1][i];
-        }
+        memcpy(results[0], intermediateResult[0], resultRowsNum*sizeof(uint64_t));
+        memcpy(results[1], intermediateResult[1], resultRowsNum*sizeof(uint64_t));
         return;
     }
+
+    memcpy(inputArrayIds, prevIntermediateArray->inputArrayIds, (columnsNum-1)*sizeof(int));
+    inputArrayIds[columnsNum - 1] = inputArray2Id;
+    memcpy(predicateArrayIds, prevIntermediateArray->predicateArrayIds, (columnsNum-1)*sizeof(int));
+    predicateArrayIds[columnsNum - 1] = predicateArray2Id;
 
     for (uint64_t j = 0; j < columnsNum; j++) {
         for (uint64_t i = 0; i < resultRowsNum; i++) {
@@ -181,13 +184,6 @@ void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultR
                 uint64_t prevIntermediateArrayRowId = intermediateResult[0][i];
                 results[j][i] = prevIntermediateArray->results[j][prevIntermediateArrayRowId];
             }
-        }
-        if (j == columnsNum - 1) {
-            inputArrayIds[j] = inputArray2Id;
-            predicateArrayIds[j] = predicateArray2Id;
-        } else {
-            inputArrayIds[j] = prevIntermediateArray->inputArrayIds[j];
-            predicateArrayIds[j] = prevIntermediateArray->predicateArrayIds[j];
         }
     }
 }
