@@ -29,6 +29,7 @@ int main()
      || (NULL == CU_add_test(pSuite, "test of predsplittoterms()",testpredsplittoterms))
      || (NULL == CU_add_test(pSuite, "test of sortBucket()", testQuickSort))
      || (NULL == CU_add_test(pSuite, "test of histogramTest()", histogramTest))
+     || (NULL == CU_add_test(pSuite, "test of psumTest()", psumTest))
     )
    {
       CU_cleanup_registry();

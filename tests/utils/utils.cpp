@@ -236,3 +236,34 @@ void histogramTest(void) {
     }
     CU_ASSERT(item_count == rel.num_tuples);
 }
+
+void psumTest(void) {
+    relation rel;
+    uint64_t x = pow(2,8);
+    populateRelationRandomly(rel);
+    uint64_t **hist = create_hist(&rel, 0);
+    uint64_t **hist_2 = create_hist(&rel, 0);
+    uint64_t **psum = create_psum(hist, x);
+    uint64_t **psum_2 = create_psum(hist_2, x);
+
+
+    uint64_t item_count = 0;
+
+    for (int i = 0; i < x; i++)
+    {
+        CU_ASSERT(psum[0][i] == psum_2[0][i]);
+        CU_ASSERT(psum[1][i] == psum_2[1][i]);
+        CU_ASSERT(psum[2][i] == psum_2[2][i]);
+        CU_ASSERT(psum[0][i] == hist[0][i]);
+        CU_ASSERT(psum[2][i] == hist[2][i]);
+        if (i < x-1)
+        {
+            CU_ASSERT(psum[1][i+1] - psum[1][i]== hist[1][i]);
+        }
+        else 
+        {
+            CU_ASSERT(psum[1][i] - psum[1][i-1] == hist[1][i]);
+        }
+        
+    }
+}
