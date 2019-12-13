@@ -1232,7 +1232,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         uint64_t field1Id = preds[i][1];
         uint64_t field2Id = preds[i][4];
         int operation = preds[i][2];
-        printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
+        //printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
         if (isFilter) {
             // printf("filter\n");
             uint64_t numToCompare = field2Id;
