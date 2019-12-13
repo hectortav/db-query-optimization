@@ -267,3 +267,17 @@ void psumTest(void) {
         
     }
 }
+
+void find_shiftTest(void) {
+    relation rel;
+    uint64_t x = pow(2,8);
+    populateRelationRandomly(rel);
+    uint64_t **hist = create_hist(&rel, 0);
+    int i = 0;
+    while (hist[1][i] == 0)
+        i++;
+    uint64_t payload = hist[0][i];
+    uint64_t pos = find_shift(hist, x, payload, NULL);
+    CU_ASSERT(pos == payload);
+    
+}
