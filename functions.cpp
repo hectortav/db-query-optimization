@@ -1170,7 +1170,14 @@ bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex,
     return !((curPredicateArrayId == prevPredicateArray1Id && curFieldId == prevField1Id) ||
             (curPredicateArrayId == prevPredicateArray2Id && curFieldId == prevField2Id));
 }
+bool isRelationOrdered(relation &rel) {
+    for (int i = 0; i < rel.num_tuples - 1; i++) {
+        if (rel.tuples[i].payload > rel.tuples[i + 1].payload)
+            return false;
+    }
 
+    return true;
+}
 IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
 {
      //std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
@@ -1225,7 +1232,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         uint64_t field1Id = preds[i][1];
         uint64_t field2Id = preds[i][4];
         int operation = preds[i][2];
-        // printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
+        printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
         if (isFilter) {
             // printf("filter\n");
             uint64_t numToCompare = field2Id;
@@ -1247,6 +1254,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 //std::cout<<"case 2 1"<<std::endl;
                 if (predicateArray1Id == predicateArray2Id) {
                     // self-join of InputArray
+                    //std::cout<<"don't enter here"<<std::endl;
                     InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
                     delete inputArray1RowIds;
                     inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
@@ -1259,6 +1267,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     (curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id)
                     && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id))) {
                     // self-join of IntermediateArray
+                    //std::cout<<" inputarray1 != ar2"<<std::endl;
                     IntermediateArray* filteredIntermediateArray = curIntermediateArray->selfJoin(inputArray1Id, inputArray2Id, field1Id, field2Id, inputArray1, inputArray2);
                     delete curIntermediateArray;
                     curIntermediateArray = filteredIntermediateArray;
@@ -1286,12 +1295,13 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
                         // extractcolumn(rel1, inputArray1->columns, field1Id); ////////////////////////////////////////
                         inputArray1RowIds->extractColumnFromRowIds(rel1, field1Id, inputArray1);
+                        //std::cout<<"num tuples: "<<rel1.num_tuples<<std::endl;
                                                                         // printf("2\n");
                                                                                                 // printf("rel1\n");
 
                         // rel1.print();
                     } else {
-                        // printf("else1\n");
+                         //printf("else1\n");
                         // rel1.num_tuples = curIntermediateArray->rowsNum;
                                                 // printf("rowsNum = %lu\n", rel1.num_tuples);
                         curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, inputArray1Id, field1Id);
@@ -1306,10 +1316,11 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // rel2.num_tuples = inputArray2->rowsNum;
                         // extractcolumn(rel2, inputArray2->columns, field2Id);
                         inputArray2RowIds->extractColumnFromRowIds(rel2, field2Id, inputArray2);
+                        //std::cout<<"num tuples: "<<rel2.num_tuples<<std::endl;
                         // printf("rel2\n");
                         // rel2.print();
                     } else {
-                                                // std::cout<<"else"<<std::endl;
+                                                 //std::cout<<"else"<<std::endl;
                         rel2ExistsInIntermediateArray = true;
                         // rel2.num_tuples = curIntermediateArray->rowsNum;
                         curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, inputArray2Id, field2Id);
@@ -1317,31 +1328,35 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                                     //std::cout<<"case 2 5"<<std::endl;
 
                     relation* newRel1 = new relation();
-                    relation* reorderedRel1;
+                    relation* reorderedRel1=&rel1;
+                    // if(isRelationOrdered(rel1))
+                    //     std::cout<<"is ordered"<<std::endl;
+                    // else std::cout<<"not ordered"<<std::endl;
+                    
                     if (shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin)) {
-                        newRel1->num_tuples = rel1.num_tuples;
-                        newRel1->tuples = new tuple[rel1.num_tuples];
+                        //newRel1->num_tuples = rel1.num_tuples;
+                        //newRel1->tuples = new tuple[rel1.num_tuples];
                         //std::cout<<"before"<<std::endl;
-                        reorderedRel1 = re_ordered(&rel1, newRel1, 0);
-                        //std::cout<<"after"<<std::endl;
-                    } else {
-                        // already sorted
-                        reorderedRel1 = &rel1;
+                        //reorderedRel1 = re_ordered(&rel1, newRel1, 0);
+                        tuplereorder(rel1.tuples,rel1.num_tuples,0);
+                        //std::cout<<"after1"<<std::endl;
                     }
+                    
+                    
                     
                     // std::cout<<"\n";
                     // ro_R->print();
                     relation* newRel2 = new relation();
-                    relation* reorderedRel2;
+                    relation* reorderedRel2=&rel2;
+                    
                     if (shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin)) {
-                        newRel2->num_tuples = rel2.num_tuples;
-                        newRel2->tuples = new tuple[rel2.num_tuples];                    
+                        //newRel2->num_tuples = rel2.num_tuples;
+                        //newRel2->tuples = new tuple[rel2.num_tuples];                    
                         //std::cout<<"before"<<std::endl;
-                        reorderedRel2 = re_ordered(&rel2, newRel2, 0);
-                        //std::cout<<"after"<<std::endl;
-                    } else {
-                        // already sorted
-                        reorderedRel2 = &rel2;
+                        //reorderedRel2 = re_ordered(&rel2, newRel2, 0);
+                        tuplereorder(rel2.tuples,rel2.num_tuples,0);
+
+                        //std::cout<<"after2"<<std::endl;
                     }
 
                     // std::cout<<"\n";
