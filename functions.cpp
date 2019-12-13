@@ -532,8 +532,81 @@ void print_psum_hist(uint64_t** psum, uint64_t** hist, int array_size)
     pr(hist, array_size);
     std::cout << "<<<<<<<" << std::endl;
 }
+uint64_t* psumcreate(uint64_t* hist)
+{
+    uint64_t count = 0;
+    uint64_t *psum = new uint64_t[power]{0};
 
-relation* re_ordered(relation *rel, relation* new_rel, int no_used)
+    for (uint64_t i = 0; i < power; i++)
+    {
+        psum[i] = (uint64_t)count;
+        count+=hist[i];
+    }
+    return psum;
+}
+
+
+uint64_t* histcreate(tuple* array,int offset,int shift)
+{
+    uint64_t *hist = new uint64_t[power]{0};
+    for (uint64_t i = 0; i < offset; i++)
+        hist[hashFunction(array[i].payload, 7-shift)]++;
+
+    return hist;
+}
+
+void tuplereorder(tuple* array,int offset,int shift)
+{
+    uint64_t* hist=histcreate(array,offset,shift);
+    uint64_t* psum=psumcreate(hist);
+    tuple* tups=new tuple[offset];
+    for(int i=0;i<offset;i++)
+    {
+        uint64_t hash=hashFunction(array[i].payload,7-shift);
+        memcpy(tups+psum[hash],array+i,sizeof(tuple));
+        psum[hash]++;
+    }
+    memcpy(array,tups,offset*sizeof(tuple));
+    //switchp(array,tups,offset);
+    delete[] tups;
+    //delete[] psum;
+    //psum=psumcreate(hist);
+    for(int i=0,start=0;i<power;i++)
+    {
+        if(hist[i]==0)
+            continue;
+        if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
+        {
+            int end=psum[i]-start;
+            tuplereorder(array+start,end,shift+1);
+        }
+        else            
+            quickSort(array,start, psum[i]-1);
+
+        start=psum[i];
+    }
+    delete[] psum;
+    delete[] hist;
+}
+relation* re_ordered(relation *rel, relation* new_rel, int shift)
+{
+    tuplereorder(rel->tuples,rel->num_tuples,shift);
+    memcpy(new_rel->tuples,rel->tuples,sizeof(tuple)*rel->num_tuples);
+
+    // tuple** tups=new tuple*[rel->num_tuples];
+    // for(int i=0;i<rel->num_tuples;i++)
+    //     tups[i]=&rel->tuples[i];
+    
+    // tuplereorder(tups,rel->num_tuples,shift);
+    // memcpy(new_rel->tuples,rel->tuples,rel->num_tuples*sizeof(tuple));
+    // delete[] tups;
+
+
+    //sortBucket(rel,0,rel->num_tuples-1);
+    //memcpy(new_rel->tuples,rel->tuples,rel->num_tuples*sizeof(tuple));
+    return new_rel;
+}
+relation* re_orderedd(relation *rel, relation* new_rel, int no_used)
 {
     int shift = 0;
     uint64_t x = pow(2, 8), array_size = x;
@@ -641,6 +714,7 @@ relation* re_ordered(relation *rel, relation* new_rel, int no_used)
                     sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
                 else
                     sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
+                new_rel->print();
             }
         }
 
@@ -868,6 +942,7 @@ void quickSort(tuple* tuples, int startIndex, int stopIndex)
 // (startIndex, stopIndex) -> inclusive
 void sortBucket(relation* rel, int startIndex, int stopIndex) {
     // stopIndex--;
+    //std::cout<<"sort "<<startIndex<<" "<<stopIndex<<std::endl;
     quickSort(rel->tuples, startIndex, stopIndex);
 }
 
