@@ -35,4 +35,5 @@ void testpredsplittoterms(void);
 void populateRelationRandomly(relation &rel);
 bool isRelationOrdered(relation &rel);
 void testQuickSort(void);
+void histogramTest(void);
 

@@ -25,9 +25,10 @@ int main()
      || (NULL == CU_add_test(pSuite, "test of hashFunction()", testHashFunction))
      || (NULL == CU_add_test(pSuite, "test of makeparts()",testmakeparts))
      || (NULL == CU_add_test(pSuite, "test of splitpreds()",testsplitpreds))
-     || (NULL == CU_add_test(pSuite, "test of optimizepredicates()",testoptimizepredicates))
+     //|| (NULL == CU_add_test(pSuite, "test of optimizepredicates()",testoptimizepredicates))
      || (NULL == CU_add_test(pSuite, "test of predsplittoterms()",testpredsplittoterms))
      || (NULL == CU_add_test(pSuite, "test of sortBucket()", testQuickSort))
+     || (NULL == CU_add_test(pSuite, "test of histogramTest()", histogramTest))
     )
    {
       CU_cleanup_registry();
