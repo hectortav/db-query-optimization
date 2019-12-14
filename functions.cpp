@@ -378,6 +378,7 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
     // std::cout<<std::endl;
     result* rslt=new result;
     rslt->lst=lst;
+    //std::cout<<lst->rows<<std::endl;
     return rslt;
     //lst->print();
     //lst->print();
@@ -587,18 +588,15 @@ void tuplereorder(tuple* array,int offset,int shift)
         psum[hash]++;
     }
     memcpy(array,tups,offset*sizeof(tuple));
-    //switchp(array,tups,offset);
     delete[] tups;
-    //delete[] psum;
-    //psum=psumcreate(hist);
     for(int i=0,start=0;i<power;i++)
     {
         if(hist[i]==0)
             continue;
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
-            int end=psum[i]-start;
-            tuplereorder(array+start,end,shift+1);
+            int endoffset=psum[i]-start;
+            tuplereorder(array+start,endoffset,shift+1);
         }
         else            
             quickSort(array,start, psum[i]-1);
