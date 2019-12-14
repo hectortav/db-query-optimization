@@ -759,19 +759,6 @@ void sortBucket(relation* rel, int startIndex, int stopIndex) {
     quickSort(rel->tuples, startIndex, stopIndex);
 }
 
-void extractcolumn(relation& rel,uint64_t **array, uint64_t column)
-{
-    // printf("gg\n");
-    rel.tuples=new tuple[rel.num_tuples];
-    for(uint64_t i=0;i<rel.num_tuples;i++)
-    {
-        // printf("i: %lu\n", i);
-        rel.tuples[i].key=i;
-        rel.tuples[i].payload=array[column][i];
-        // printf("aaaaaa\n", i);
-    }
-}
-
 InputArray** readArrays() {
     InputArray** inputArrays = new InputArray*[MAX_INPUT_ARRAYS_NUM]; // size is fixed
     // printf("1\n");
