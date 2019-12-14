@@ -113,7 +113,7 @@ uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds);
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);
 uint64_t find_shift(uint64_t **, uint64_t , uint64_t , uint64_t **);
-
-
+uint64_t* histcreate(tuple* array,int offset,int shift);
+uint64_t* psumcreate(uint64_t* hist);
 
 #endif
