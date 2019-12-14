@@ -729,10 +729,15 @@ void call_quicksort(bucket *B, relation *rel)
         {
             if (B->hist->hist[i] != 0)
             {
-                if (i < power - 1)
+
+                if (i + 1 < power)
+                {
                     quickSort(rel->tuples, B->hist->psum[i], B->hist->psum[i+1] - 1);
+                }
                 else
-                    quickSort(rel->tuples, B->hist->psum[i], rel->num_tuples - 1);
+                {
+                   quickSort(rel->tuples, B->hist->psum[i], rel->num_tuples - 1);
+                }
             }
         }
         else
