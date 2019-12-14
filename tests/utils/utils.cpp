@@ -324,3 +324,32 @@ void find_shiftTest(void) {
     CU_ASSERT(pos == payload);
     
 }
+
+void tuplesReorderTest(void) {
+    relation rel;
+    uint64_t x = pow(2,8);
+    populateRelationRandomly(rel);
+    tuplereorder(rel.tuples, rel.num_tuples, 0);
+    uint64_t test = rel.tuples[0].payload;
+    for (int i = 1; i < rel.num_tuples; i++)
+    {
+        CU_ASSERT(test <= rel.tuples[i].payload);
+        test = rel.tuples[i].payload;
+    }
+}
+
+void re_orderedTest(void) {
+    relation *rel, *new_rel;
+    uint64_t x = pow(2,8);
+    populateRelationRandomly(*rel);
+    new_rel->num_tuples=rel->num_tuples;
+    new_rel->tuples = new tuple[rel->num_tuples];
+    new_rel = re_ordered(rel, new_rel, 0);
+
+    uint64_t test = rel->tuples[0].payload;
+    for (int i = 1; i < new_rel->num_tuples; i++)
+    {
+        CU_ASSERT(test <= new_rel->tuples[i].payload);
+        test = new_rel->tuples[i].payload;
+    }
+}

@@ -606,6 +606,7 @@ void tuplereorder(tuple* array,int offset,int shift)
     delete[] psum;
     delete[] hist;
 }
+
 relation* re_ordered(relation *rel, relation* new_rel, int shift)
 {
     tuplereorder(rel->tuples,rel->num_tuples,shift);

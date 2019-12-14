@@ -23,7 +23,7 @@ public:
 
 const unsigned long BUCKET_SIZE = 64 * pow(2, 10);  //64KB (I think)
 const unsigned long TUPLE_SIZE = sizeof(tuple);
-const int TUPLES_PER_BUCKET = (int)(BUCKET_SIZE / TUPLE_SIZE);  
+const int TUPLES_PER_BUCKET = 2;//(int)(BUCKET_SIZE / TUPLE_SIZE);  
 //const int TUPLES_PER_BUCKET=10;
 const uint64_t power=pow(2,8);
 //each bucket must be smaller than 64KB 
@@ -115,5 +115,6 @@ void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,ui
 uint64_t find_shift(uint64_t **, uint64_t , uint64_t , uint64_t **);
 uint64_t* histcreate(tuple* array,int offset,int shift);
 uint64_t* psumcreate(uint64_t* hist);
+void tuplereorder(tuple* array,int offset,int shift);
 
 #endif
