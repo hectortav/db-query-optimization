@@ -698,34 +698,20 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift)
 //     return new_rel;
 // }
 
-typedef class bucket bucket;
-
-class histogram
-{
-public:
-    uint64_t *hist;
-    uint64_t *psum;
-    bucket **next;
-};
-
-class bucket
-{
-public:
-    relation *rel;
-    histogram *hist;
-    int shift;
-    bucket *prev;
-    int index;  //keep where i am left
-};
 uint64_t psum_create(bucket *B, uint64_t count)
 {
-    B->hist->psum = new uint64_t[power];
+    B->hist->psum = new uint64_t[power]{0};
     for (uint64_t i = 0; i < power; i++)
     {
+        //if (B->hist->hist[i] != 0)
+        //    std::cout << "hash: " << i << " shift: " << B->shift << " pos: " << count << std::endl;
         if (B->hist->next[i] == NULL)
         {
-            B->hist->psum[i] = count;
-            count+=B->hist->hist[i];
+            if (B->hist->hist[i] != 0)
+            {
+                B->hist->psum[i] = count;
+                count+=B->hist->hist[i];
+            }
         }
         else
         {
@@ -733,6 +719,43 @@ uint64_t psum_create(bucket *B, uint64_t count)
         }
     }
     return count;
+}
+
+void call_quicksort(bucket *B, relation *rel)
+{
+    for (uint64_t i = 0; i < power; i++)
+    {
+        if (B->hist->next[i] == NULL)
+        {
+            if (B->hist->hist[i] != 0)
+            {
+                if (i < power - 1)
+                    quickSort(rel->tuples, B->hist->psum[i], B->hist->psum[i+1] - 1);
+                else
+                    quickSort(rel->tuples, B->hist->psum[i], rel->num_tuples - 1);
+            }
+        }
+        else
+        {
+            call_quicksort(B->hist->next[i], rel);
+        }
+    }
+}
+
+bucket::~bucket() {
+        rel->~relation();
+        hist->~histogram();
+}
+
+histogram::~histogram() {
+    delete [] hist;
+    delete [] psum;
+    for (int i = 0; i < power; i++)
+    {
+        if (next[i] != NULL)
+            next[i]->~bucket();
+    }
+    delete [] next;
 }
 
 relation* re_ordered_2(relation *rel, relation* new_rel, int no_used)
@@ -751,7 +774,6 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int no_used)
     B->index = 0;
     while (B->index < power)
     {
-        //std::cout << "(" << B->shift << ") " << B->index << " " << B->hist->hist[B->index] << std::endl;
         if (B->hist->hist[B->index] > TUPLES_PER_BUCKET && B->shift < 7)
         {
             B->hist->next[B->index] = new bucket();
@@ -768,42 +790,58 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int no_used)
             int pos = 0;
             for (uint64_t j = 0; j < power; j++)
             {
-                if (B->hist->hist[hashFunction(B->rel->tuples[j].payload, 7 - B->shift)] == B->hist->hist[B->index])
+                if (hashFunction(B->rel->tuples[j].payload, 7 - B->shift) == B->index)
                 {
                     B->hist->next[B->index]->rel->tuples[pos] = B->rel->tuples[j];
                     pos++;
-                    if (pos == B->hist->next[B->index]->rel->num_tuples)
+                    if (pos >= B->hist->next[B->index]->rel->num_tuples)
                         break;
                 }
             }
+            B->hist->hist[B->index] == 0;
             B = B->hist->next[B->index];
             //create hist
             for (uint64_t i = 0; i < B->rel->num_tuples; i++)
+            {
                 B->hist->hist[hashFunction(B->rel->tuples[i].payload, 7 - B->shift)]++;
+            }
             continue;
         }
         if (B->index == power - 1 && B->prev != NULL)
             B = B->prev;
          B->index++;
     }
-    
+    B = root;
     psum_create(B, 0); 
     uint64_t hash, payload;
+    B = root;
     for (int i = 0; i < rel->num_tuples; i++)
     {
         payload = rel->tuples[i].payload;
-        hash = hashFunction(payload,7-B->shift);
-        while(B->hist->next[hash] != NULL)
+        while(B->hist->next[hash = hashFunction(payload,7-B->shift)] != NULL)
         {
             B = B->hist->next[hash];
             hash = hashFunction(payload,7-B->shift);
         }
-        std::cout << B->hist->psum[hash] << std::endl;
         new_rel->tuples[B->hist->psum[hash]].key = rel->tuples[i].key;
         new_rel->tuples[B->hist->psum[hash]++].payload = rel->tuples[i].payload;
         B = root;
     }
+    B = root;
+    call_quicksort(B, new_rel);
+    delete root->hist;
     return new_rel;
+}
+
+void mid_func(tuple *t1, tuple *t2, int num, int not_used)
+{
+    relation *new_rel_R = new relation(), *R = new relation();
+    new_rel_R->num_tuples=num;
+    new_rel_R->tuples = t2;
+    new_rel_R->num_tuples=num;
+    new_rel_R->tuples = t1;
+    new_rel_R = re_ordered_2(R, new_rel_R, not_used);
+    t1 = new_rel_R->tuples;
 }
 
 void swap(tuple* tuple1, tuple* tuple2)
@@ -1234,7 +1272,10 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         //reorderedRel1 = re_ordered(&rel1, newRel1, 0);
                         tuple* t=new tuple[rel1.num_tuples];
                         tuplereorder(rel1.tuples,t,rel1.num_tuples,0);
+                        //mid_func(rel1.tuples,t,rel1.num_tuples,0);
+
                         delete[] t;
+                        
                         //std::cout<<"after1"<<std::endl;
                     }
                     
@@ -1252,6 +1293,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         //reorderedRel2 = re_ordered(&rel2, newRel2, 0);
                         tuple* t=new tuple[rel2.num_tuples];
                         tuplereorder(rel2.tuples,t,rel2.num_tuples,0);
+                        //mid_func(rel2.tuples,t,rel2.num_tuples,0);
                         delete[] t;
 
                         //std::cout<<"after2"<<std::endl;
