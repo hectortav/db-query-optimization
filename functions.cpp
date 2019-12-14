@@ -135,11 +135,11 @@ IntermediateArray::~IntermediateArray() {
     delete[] this->predicateArrayIds;
 }
 
-void IntermediateArray::extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId) {
+void IntermediateArray::extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int predicateArrayId, uint64_t fieldId) {
     resultRelation->num_tuples = rowsNum;
     resultRelation->tuples = new tuple[resultRelation->num_tuples];
 
-    uint64_t columnIndex = findColumnIndexByInputArrayId(inputArrayId);
+    uint64_t columnIndex = findColumnIndexByPredicateArrayId(predicateArrayId);
 
     for (uint64_t i = 0; i < rowsNum; i++) {
         uint64_t inputArrayRowId = this->results[columnIndex][i];
@@ -185,6 +185,7 @@ void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultR
                 results[j][i] = prevIntermediateArray->results[j][prevIntermediateArrayRowId];
             }
         }
+        delete[] prevIntermediateArray->results[j];
     }
 }
 
@@ -225,6 +226,14 @@ void IntermediateArray::print() {
 uint64_t IntermediateArray::findColumnIndexByInputArrayId(int inputArrayId) {
     for (uint64_t j = 0; j < columnsNum; j++) {
         if (inputArrayIds[j] == inputArrayId)
+            return j;
+    }
+    return -1;
+}
+
+uint64_t IntermediateArray::findColumnIndexByPredicateArrayId(int predicateArrayId) {
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        if (predicateArrayIds[j] == predicateArrayId)
             return j;
     }
     return -1;
@@ -1232,7 +1241,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         uint64_t field1Id = preds[i][1];
         uint64_t field2Id = preds[i][4];
         int operation = preds[i][2];
-        //printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
+        printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
         if (isFilter) {
             // printf("filter\n");
             uint64_t numToCompare = field2Id;
@@ -1304,7 +1313,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                          //printf("else1\n");
                         // rel1.num_tuples = curIntermediateArray->rowsNum;
                                                 // printf("rowsNum = %lu\n", rel1.num_tuples);
-                        curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, inputArray1Id, field1Id);
+                        curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, predicateArray1Id, field1Id);
                         // rel1.print();
                     }
                 //std::cout<<"case 2 4"<<std::endl;
@@ -1323,7 +1332,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                                                  //std::cout<<"else"<<std::endl;
                         rel2ExistsInIntermediateArray = true;
                         // rel2.num_tuples = curIntermediateArray->rowsNum;
-                        curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, inputArray2Id, field2Id);
+                        curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, predicateArray2Id, field2Id);
                     }
                                     //std::cout<<"case 2 5"<<std::endl;
 
@@ -1384,6 +1393,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         return NULL;
                     }
                     uint64_t** resultArray=rslt->lst->lsttoarr();
+                    delete rslt->lst;
                     delete newRel1;
                     delete newRel2;
                     
@@ -1430,7 +1440,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     for(int i=0;i<rslt->lst->rowsz;i++)
                         delete[] resultArray[i];
                     delete[] resultArray;
-                    delete rslt->lst;
+                    // delete rslt->lst;
                     delete rslt;
                 //}
                 //else

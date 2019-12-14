@@ -77,11 +77,12 @@ class IntermediateArray {
     IntermediateArray(uint64_t columnsNum, uint64_t sortedByInputArrayId, uint64_t sortedByFieldId);
     ~IntermediateArray();
 
-    void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int inputArrayId, uint64_t fieldId);
+    void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int predicateArrayId, uint64_t fieldId);
     void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id, int predicateArray1Id, int predicateArray2Id);
     bool hasInputArrayId(int inputArrayId);
     bool shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId);
     uint64_t findColumnIndexByInputArrayId(int inputArrayId);
+    uint64_t findColumnIndexByPredicateArrayId(int predicateArrayId);
     IntermediateArray* selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, InputArray* inputArray1, InputArray* inputArray2);
     void print();
 };
