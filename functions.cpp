@@ -771,6 +771,114 @@ relation* re_orderedd(relation *rel, relation* new_rel, int no_used)
     return new_rel;
 }
 
+typedef class bucket bucket;
+
+class histogram
+{
+public:
+    uint64_t *hist;
+    uint64_t *psum;
+    bucket **next;
+};
+
+class bucket
+{
+public:
+    relation *rel;
+    histogram *hist;
+    int shift;
+    bucket *prev;
+    int index;  //keep where i am left
+};
+uint64_t psum_create(bucket *B, uint64_t count)
+{
+    B->hist->psum = new uint64_t[power];
+    for (uint64_t i = 0; i < power; i++)
+    {
+        if (B->hist->next[i] == NULL)
+        {
+            B->hist->psum[i] = count;
+            count+=B->hist->hist[i];
+        }
+        else
+        {
+            count = psum_create(B->hist->next[i], count);
+        }
+    }
+    return count;
+}
+
+relation* re_ordered_2(relation *rel, relation* new_rel, int no_used)
+{
+    bucket *root = new bucket(), *B = NULL;
+    B = root;
+    B->rel = rel;
+    B->hist = new histogram();
+    B->shift = 0;
+    B->prev = NULL;
+    B->hist->hist = new uint64_t[power]{0};
+    B->hist->next = new bucket*[power]();
+    //create hist
+    for (uint64_t i = 0; i < B->rel->num_tuples; i++)
+        B->hist->hist[hashFunction(B->rel->tuples[i].payload, 7 - B->shift)]++;
+    B->index = 0;
+    while (B->index < power)
+    {
+        //std::cout << "(" << B->shift << ") " << B->index << " " << B->hist->hist[B->index] << std::endl;
+        if (B->hist->hist[B->index] > TUPLES_PER_BUCKET && B->shift < 7)
+        {
+            B->hist->next[B->index] = new bucket();
+            B->hist->next[B->index]->rel = new relation();
+            B->hist->next[B->index]->rel->num_tuples = B->hist->hist[B->index];
+            B->hist->next[B->index]->rel->tuples = new tuple[B->hist->next[B->index]->rel->num_tuples];
+            B->hist->next[B->index]->hist = new histogram();
+            B->hist->next[B->index]->shift = B->shift + 1;
+            B->hist->next[B->index]->hist->hist = new uint64_t[power]{0};
+            B->hist->next[B->index]->hist->next = new bucket*[power]();
+            B->hist->next[B->index]->index = 0;
+            B->hist->next[B->index]->prev = B;
+            //transfer tuples of this bucket
+            int pos = 0;
+            for (uint64_t j = 0; j < power; j++)
+            {
+                if (B->hist->hist[hashFunction(B->rel->tuples[j].payload, 7 - B->shift)] == B->hist->hist[B->index])
+                {
+                    B->hist->next[B->index]->rel->tuples[pos] = B->rel->tuples[j];
+                    pos++;
+                    if (pos == B->hist->next[B->index]->rel->num_tuples)
+                        break;
+                }
+            }
+            B = B->hist->next[B->index];
+            //create hist
+            for (uint64_t i = 0; i < B->rel->num_tuples; i++)
+                B->hist->hist[hashFunction(B->rel->tuples[i].payload, 7 - B->shift)]++;
+            continue;
+        }
+        if (B->index == power - 1 && B->prev != NULL)
+            B = B->prev;
+         B->index++;
+    }
+    
+    psum_create(B, 0); 
+    uint64_t hash, payload;
+    for (int i = 0; i < rel->num_tuples; i++)
+    {
+        payload = rel->tuples[i].payload;
+        hash = hashFunction(payload,7-B->shift);
+        while(B->hist->next[hash] != NULL)
+        {
+            B = B->hist->next[hash];
+            hash = hashFunction(payload,7-B->shift);
+        }
+        std::cout << B->hist->psum[hash] << std::endl;
+        new_rel->tuples[B->hist->psum[hash]].key = rel->tuples[i].key;
+        new_rel->tuples[B->hist->psum[hash]++].payload = rel->tuples[i].payload;
+        B = root;
+    }
+    return new_rel;
+}
+
 void swap(tuple* tuple1, tuple* tuple2)
 {
     uint64_t tempKey = tuple1->key;

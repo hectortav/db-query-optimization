@@ -13,15 +13,15 @@ int main(void)
     R->num_tuples = 10;
     R->tuples = new tuple[R->num_tuples]
     {
-        {5, 0xBFF}, {6, 0xAFF},
-        {0, 0xBAA}, {1, 0xBAA}, {2, 0xAAA}, {3, 0xCAA}, {4, 0xCAA},
-        {7, 0xCCC}, {8, 0xBCC}, {9, 0xACC}
+        {5, 0xB005}, {6, 0xB006},
+        {0, 0xA000}, {1, 0xA001}, {2, 0xA002}, {3, 0xA003}, {4, 0xA004},
+        {7, 0xB007}, {8, 0xB008}, {9, 0xB009}
     };
     std::cout << "before" << std::endl;
     R->print();
     new_rel_R->num_tuples=R->num_tuples;
     new_rel_R->tuples = new tuple[R->num_tuples];
-    new_rel_R = re_ordered(R, new_rel_R, 0);
+    new_rel_R = re_ordered_2(R, new_rel_R, 0);
     std::cout << "\nafter" << std::endl;
     new_rel_R->print();
     new_rel_R->~relation();
