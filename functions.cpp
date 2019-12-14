@@ -290,49 +290,22 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
 {
     int64_t samestart=-1;
     int lstsize=1024*1024;
-    //list* lst=new list(lstsize,rsz+ssz-1);
     list*lst=new list(lstsize,2);
     for(uint64_t r=0,s=0,i=0;r<R->num_tuples&&s<S->num_tuples;)
     {
-        //std::cout<<"checking: R:"<<R->tuples[r].payload<<" S:"<<S->tuples[s].payload<<std::endl;
         int64_t dec=R->tuples[r].payload-S->tuples[s].payload;
         if(dec==0)
         {
-            //std::cout<<R->tuples[r].payload<<" same"<<std::endl; 
-            //char x[lstsize+2];
-            //x[0]='\0';
             lst->insert(R->tuples[r].key);
             lst->insert(S->tuples[s].key);
-            /*for(int i=0;i<rsz;i++)
-            {
-                //sprintf(x,"%s%ld ",x,rr[i][R->tuples[r].key]);
-                lst->insert(rr[i][R->tuples[r].key]);
-            }
-            for(int i=0;i<ssz;i++)
-            {
-                if(joincol==i)
-                    continue;
-                //sprintf(x,"%s%ld ",x,ss[i][S->tuples[s].key]);
-                lst->insert(ss[i][S->tuples[s].key]);
-            }*/
-            //sprintf(x,"%s\n",x);
-            //printf("%s",x);
-            //sprintf(x,"%ld %ld\n",R->tuples[r].key,S->tuples[s].key);
-        //lst->insert(x);
-            //std::cout<<i<<". "<<R->tuples[r].key<<" "<<S->tuples[s].key<<std::endl;
-            //std::cout<<x;
             i++;
-            //std::cout<<"Matching: R:"<<R->tuples[r].key<<" S:"<<S->tuples[s].key<<std::endl;
-            /*array[i][0]=R->tuples[r].key;
-            array[i][1]=R->tuples[s].key;
-            i++;*/
             switch(samestart)
             {
                 case -1:
                     if(s+1<S->num_tuples&&S->tuples[s].payload==S->tuples[s+1].payload)
                         samestart=s;
                 default:
-                    if(S->tuples[samestart].payload!=S->tuples[s].payload)  //S->tuples[samestart].payload invalid read
+                    if(S->tuples[samestart].payload!=S->tuples[s].payload)  
                         samestart=-1;
             }
             if(s+1<S->num_tuples&&S->tuples[s].payload==S->tuples[s+1].payload)
@@ -352,38 +325,18 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
         }
         else if(dec<0)
         {
-            //std::cout<<R->tuples[r].payload<<" <(r)"<<std::endl;
             r++;
-            /*if(samestart!=-1)
-            {
-                s=samestart;
-                samestart=-1;
-            }*/
             continue;
         }
         else
         {
-            //std::cout<<R->tuples[r].payload<<" >(s)"<<std::endl;
             s++;
             continue;
         }
     }
-    /*std::cout<<"got out"<<std::endl;
-    for(int i=0;i<50000;i++)
-    {
-        if(array[i][0]==-1&&array[i][1]==-1)
-            break;
-        std::cout<<i<<". "<<array[i][0]<<" "<<array[i][1]<<std::endl;
-    }*/
-    // std::cout<<std::endl;
     result* rslt=new result;
     rslt->lst=lst;
-    //std::cout<<lst->rows<<std::endl;
     return rslt;
-    //lst->print();
-    //lst->print();
-    //evala Return gia na mhn vgazei Warning
-    return NULL;
 }
 
 uint64_t** create_hist(relation *rel, int shift)
@@ -566,7 +519,6 @@ uint64_t* psumcreate(uint64_t* hist)
     return psum;
 }
 
-
 uint64_t* histcreate(tuple* array,int offset,int shift)
 {
     uint64_t *hist = new uint64_t[power]{0};
@@ -575,29 +527,23 @@ uint64_t* histcreate(tuple* array,int offset,int shift)
 
     return hist;
 }
-
-void tuplereorder(tuple* array,int offset,int shift)
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift)
 {
     uint64_t* hist=histcreate(array,offset,shift);
     uint64_t* psum=psumcreate(hist);
-    tuple* tups=new tuple[offset];
     for(int i=0;i<offset;i++)
     {
         uint64_t hash=hashFunction(array[i].payload,7-shift);
-        memcpy(tups+psum[hash],array+i,sizeof(tuple));
+        memcpy(array2+psum[hash],array+i,sizeof(tuple));
         psum[hash]++;
     }
-    memcpy(array,tups,offset*sizeof(tuple));
-    delete[] tups;
+    memcpy(array,array2,offset*sizeof(tuple));
     for(int i=0,start=0;i<power;i++)
     {
         if(hist[i]==0)
             continue;
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
-        {
-            int endoffset=psum[i]-start;
-            tuplereorder(array+start,endoffset,shift+1);
-        }
+            tuplereorder(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
         else            
             quickSort(array,start, psum[i]-1);
 
@@ -605,24 +551,6 @@ void tuplereorder(tuple* array,int offset,int shift)
     }
     delete[] psum;
     delete[] hist;
-}
-relation* re_ordered(relation *rel, relation* new_rel, int shift)
-{
-    tuplereorder(rel->tuples,rel->num_tuples,shift);
-    memcpy(new_rel->tuples,rel->tuples,sizeof(tuple)*rel->num_tuples);
-
-    // tuple** tups=new tuple*[rel->num_tuples];
-    // for(int i=0;i<rel->num_tuples;i++)
-    //     tups[i]=&rel->tuples[i];
-    
-    // tuplereorder(tups,rel->num_tuples,shift);
-    // memcpy(new_rel->tuples,rel->tuples,rel->num_tuples*sizeof(tuple));
-    // delete[] tups;
-
-
-    //sortBucket(rel,0,rel->num_tuples-1);
-    //memcpy(new_rel->tuples,rel->tuples,rel->num_tuples*sizeof(tuple));
-    return new_rel;
 }
 relation* re_orderedd(relation *rel, relation* new_rel, int no_used)
 {
@@ -1223,7 +1151,9 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         //newRel1->tuples = new tuple[rel1.num_tuples];
                         //std::cout<<"before"<<std::endl;
                         //reorderedRel1 = re_ordered(&rel1, newRel1, 0);
-                        tuplereorder(rel1.tuples,rel1.num_tuples,0);
+                        tuple* t=new tuple[rel1.num_tuples];
+                        tuplereorder(rel1.tuples,t,rel1.num_tuples,0);
+                        delete[] t;
                         //std::cout<<"after1"<<std::endl;
                     }
                     
@@ -1239,7 +1169,9 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         //newRel2->tuples = new tuple[rel2.num_tuples];                    
                         //std::cout<<"before"<<std::endl;
                         //reorderedRel2 = re_ordered(&rel2, newRel2, 0);
-                        tuplereorder(rel2.tuples,rel2.num_tuples,0);
+                        tuple* t=new tuple[rel2.num_tuples];
+                        tuplereorder(rel2.tuples,t,rel2.num_tuples,0);
+                        delete[] t;
 
                         //std::cout<<"after2"<<std::endl;
                     }
