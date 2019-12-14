@@ -18,9 +18,14 @@ startProgramAndCalculateTime() {
             if [[ $resultsLinesNum == $(wc -l < $outputFile) ]]; then
                 endTimestamp=$(date +%s%N)
                 elapsedTimeNanoseconds=$((endTimestamp-startTimestamp))
-                elapsedTimeMilliseconds=$(echo "scale=2; $elapsedTimeNanoseconds/1000000" | bc -l)
-                elapsedTimeSeconds=$(echo "scale=2; $elapsedTimeNanoseconds/1000000000" | bc -l)
-                echo "Queries execution time: $elapsedTimeNanoseconds nanoseconds = $elapsedTimeMilliseconds milliseconds = $elapsedTimeSeconds seconds"
+                elapsedMinutes=$(($elapsedTimeNanoseconds/60000000000))
+                remainingNanoseconds=$(($elapsedTimeNanoseconds%60000000000))
+                elapsedSeconds=$(($remainingNanoseconds/1000000000))
+                remainingNanoseconds=$(($remainingNanoseconds%1000000000))
+                elapsedMilliseconds=$(($remainingNanoseconds/1000000))
+                remainingNanoseconds=$(($remainingNanoseconds%1000000))
+
+                echo -e "Queries execution time -> $elapsedMinutes:$elapsedSeconds:$elapsedMilliseconds:$remainingNanoseconds\t(Minutes:Seconds:Milliseconds:Nanoseconds)"
                 
                 kill -SIGINT -$$
             fi
