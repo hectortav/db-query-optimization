@@ -87,6 +87,28 @@ class IntermediateArray {
     void print();
 };
 
+typedef class histogram histogram;
+
+class bucket
+{
+public:
+    relation *rel;
+    histogram *hist;
+    int shift;
+    bucket *prev;
+    int index;  //keep where i am left
+    ~bucket();
+};
+
+class histogram
+{
+public:
+    uint64_t *hist;
+    uint64_t *psum;
+    bucket **next;
+    ~histogram();
+};
+
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 // uint64_t** create_hist(relation*, int);
@@ -117,5 +139,8 @@ uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* re
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);
 uint64_t* histcreate(tuple* array,int offset,int shift);
 uint64_t* psumcreate(uint64_t* hist);
+
+relation* re_ordered_2(relation *rel, relation* new_rel, int no_used);
+
 
 #endif
