@@ -6,11 +6,9 @@ startProgramAndCalculateTime() {
     while read path action file
     do
         if [[ $file == "read_arrays_end" ]]; then
-            
             startTimestamp=$(date +%s%N)
-            exec 3>&-
         elif [[ $file == $outputFile ]] && [[ $action == "MODIFY" ]]; then
-            if [[ $resultsLinesNum == $(wc -l < $outputFile) ]]; then
+            if [[ $(wc -l < $resultsFile) == $(wc -l < $outputFile) ]]; then
                 endTimestamp=$(date +%s%N)
                 elapsedTimeNanoseconds=$((endTimestamp-startTimestamp))
                 elapsedMinutes=$(($elapsedTimeNanoseconds/60000000000))
@@ -22,6 +20,15 @@ startProgramAndCalculateTime() {
 
                 echo -e "Queries execution time -> $elapsedMinutes:$elapsedSeconds:$elapsedMilliseconds:$remainingNanoseconds\t(Minutes:Seconds:Milliseconds:Nanoseconds)"
                 
+                diffOutput=$(diff "$outputFile" "$resultsFile")
+                if [[ $diffOutput == "" ]]; then
+                    echo "Result: Correct"
+                else
+                    echo "Result: Wrong"
+                    echo "diff output:"
+                    echo $diffOutput
+                fi
+
                 kill -SIGINT -$$
             fi
         fi
@@ -39,7 +46,7 @@ do
             ;;
         n)
             echo -e "\nCompiling program normally..."
-            make
+            make -B
             ;;
         *)
             echo -e "\nInvalid character.\n"
@@ -74,7 +81,6 @@ do
             resultsFile="$workloadsPath/small/small.result"
             workFile="$workloadsPath/small/small.work"
             outputFile="small_ouput.txt"
-            resultsLinesNum=$(wc -l < $resultsFile)
             startProgramAndCalculateTime
             ;;
         m)
@@ -84,7 +90,6 @@ do
             resultsFile="$workloadsPath/medium/medium.result"
             workFile="$workloadsPath/medium/medium.work"
             outputFile="medium_ouput.txt"
-            resultsLinesNum=$(wc -l < $resultsFile)
             startProgramAndCalculateTime
             ;;
         *)
