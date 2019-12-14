@@ -35,4 +35,9 @@ void testpredsplittoterms(void);
 void populateRelationRandomly(relation &rel);
 bool isRelationOrdered(relation &rel);
 void testQuickSort(void);
+void histogramTest(void);
+void psumTest(void);
+void find_shiftTest(void);
+
+
 

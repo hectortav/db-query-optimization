@@ -112,7 +112,7 @@ void testsplitpreds(void)
     p=splitpreds(str,cn);
     CU_ASSERT(p[0][0]==0 && p[0][1]==2 && p[0][2]==2 && p[0][3]==1 && p[0][4]==0 && p[1][0]==1 && p[1][1]==0 && p[1][2]==2 && p[1][3]==2 && p[1][4]==1 && p[2][0]==0 && p[2][1]==1 && p[2][2]==2 && p[2][3]==3 && p[2][4]==2 && p[3][0]==3 && p[3][1]==0 &&p[3][2]==1 && p[3][3]==(uint64_t)-1 && p[3][4]==33199);
 }
-void testoptimizepredicates(void)
+/*void testoptimizepredicates(void)
 {
     //uint64_t p[3][5]={{0,1,2,1,2},{1,0,2,2,1},{0,1,0,(uint64_t)-1,3000}};
     uint64_t** p;
@@ -153,7 +153,8 @@ void testoptimizepredicates(void)
     CU_ASSERT(p[1][0]==0 && p[1][1]==2 && p[1][2]==2 && p[1][3]==1 && p[1][4]==0 && p[3][0]==1 && p[3][1]==0 && p[3][2]==2 && p[3][3]==2 && p[3][4]==1 && p[2][0]==0 && p[2][1]==1 && p[2][2]==2 && p[2][3]==3 && p[2][4]==2 && p[0][0]==3 && p[0][1]==0 &&p[0][2]==1 && p[0][3]==(uint64_t)-1 && p[0][4]==33199);
     
     
-}
+}*/
+
 void testpredsplittoterms(void)
 {
     uint64_t c1,c2,r1,r2,op;
@@ -189,7 +190,7 @@ void populateRelationRandomly(relation &rel) {
     }
 }
 
-bool isRelationOrdered(relation &rel) {
+bool isRelationOrderedTest(relation &rel) {
     for (int i = 0; i < rel.num_tuples - 1; i++) {
         if (rel.tuples[i].payload > rel.tuples[i + 1].payload)
             return false;
@@ -214,5 +215,69 @@ void testQuickSort(void) {
     quickSort(rel4.tuples, 0, rel4.num_tuples - 1);
     quickSort(rel5.tuples, 0, rel5.num_tuples - 1);
     
-    CU_ASSERT(isRelationOrdered(rel1) && isRelationOrdered(rel2) && isRelationOrdered(rel3) && isRelationOrdered(rel4) && isRelationOrdered(rel5));
+    CU_ASSERT(isRelationOrderedTest(rel1) && isRelationOrderedTest(rel2) && isRelationOrderedTest(rel3) && isRelationOrderedTest(rel4) && isRelationOrderedTest(rel5));
+}
+
+void histogramTest(void) {
+    relation rel;
+    populateRelationRandomly(rel);
+    uint64_t **hist = create_hist(&rel, 0);
+    uint64_t **hist_2 = create_hist(&rel, 0);
+
+    int x = pow(2,8);
+    uint64_t item_count = 0;
+
+    for (int i = 0; i < x; i++)
+    {
+        CU_ASSERT(hist[0][i] == hist_2[0][i]);
+        CU_ASSERT(hist[1][i] == hist_2[1][i]);
+        CU_ASSERT(hist[2][i] == hist_2[2][i]);
+        item_count += hist[1][i];
+    }
+    CU_ASSERT(item_count == rel.num_tuples);
+}
+
+void psumTest(void) {
+    relation rel;
+    uint64_t x = pow(2,8);
+    populateRelationRandomly(rel);
+    uint64_t **hist = create_hist(&rel, 0);
+    uint64_t **hist_2 = create_hist(&rel, 0);
+    uint64_t **psum = create_psum(hist, x);
+    uint64_t **psum_2 = create_psum(hist_2, x);
+
+
+    uint64_t item_count = 0;
+
+    for (int i = 0; i < x; i++)
+    {
+        CU_ASSERT(psum[0][i] == psum_2[0][i]);
+        CU_ASSERT(psum[1][i] == psum_2[1][i]);
+        CU_ASSERT(psum[2][i] == psum_2[2][i]);
+        CU_ASSERT(psum[0][i] == hist[0][i]);
+        CU_ASSERT(psum[2][i] == hist[2][i]);
+        if (i < x-1)
+        {
+            CU_ASSERT(psum[1][i+1] - psum[1][i]== hist[1][i]);
+        }
+        else 
+        {
+            CU_ASSERT(psum[1][i] - psum[1][i-1] == hist[1][i]);
+        }
+        
+    }
+}
+
+void find_shiftTest(void) {
+    relation rel;
+    uint64_t x = pow(2,8);
+    populateRelationRandomly(rel);
+    uint64_t **hist = create_hist(&rel, 0);
+    int i = 0;
+    while (hist[1][i] == 0)
+        i++;
+    uint64_t payload = hist[0][i];
+    uint64_t pos = find_shift(hist, x, payload, NULL);
+    CU_ASSERT(pos == payload);
+    
 }

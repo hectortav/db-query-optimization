@@ -90,7 +90,7 @@ class IntermediateArray {
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 uint64_t** create_hist(relation*, int);
-uint64_t** create_psum(uint64_t**);
+uint64_t** create_psum(uint64_t**, uint64_t);
 relation* re_ordered(relation*,relation*, int);
 relation* re_ordered_2(relation*,relation*, int); //temporary
 
@@ -112,6 +112,7 @@ void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, i
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds);
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);
+uint64_t find_shift(uint64_t **, uint64_t , uint64_t , uint64_t **);
 
 
 

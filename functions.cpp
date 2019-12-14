@@ -476,6 +476,13 @@ uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint6
 {
     uint64_t i, shift, j, flag;
     uint64_t x = pow(2, 8);
+
+    if (last == NULL)
+    {
+        uint64_t** last = new uint64_t*[3];
+        for(i = 0; i < 3; i++)
+            last[i] = new uint64_t[8];
+    }
     
     for (i = 0; i < hist_size; i++)
     {
@@ -760,139 +767,6 @@ relation* re_orderedd(relation *rel, relation* new_rel, int no_used)
 
     return new_rel;
 }
-
-/*relation* re_ordered_2(relation *rel, relation* new_rel, int shift)
-{
-    int x = pow(2, 8);
-    // relation *new_rel = new relation();
-    relation *temp;
-    relation *rtn;
-    //create histogram
-    uint64_t** hist = create_hist(rel, shift);
-    //create psum
-    uint64_t** psum = create_psum(hist, x);
-    uint64_t payload;
-    uint64_t i, j, y;
-
-    bool *flag = new bool[rel->num_tuples];
-    for (i = 0; i < rel->num_tuples; i++)
-        flag[i] = false;
-
-    i = 0;
-    while(i < rel->num_tuples)
-    {
-        //hash
-        //payload = (0xFFFFFFFF & rel->tuples[i].payload) >> (8*shift) & 0xFF;
-        payload = hashFunction(rel->tuples[i].payload, 7 - shift);
-        //find hash in psum = pos in new relation
-        
-        uint64_t next_i = psum[1][payload];
-
-        //key++ until their is an empty place
-        while ((next_i < rel->num_tuples) && flag[next_i])
-            next_i++;
-
-        if (next_i < rel->num_tuples)
-        {
-            new_rel->tuples[next_i].payload = rel->tuples[i].payload;
-            new_rel->tuples[next_i].key = rel->tuples[i].key;
-            flag[next_i] = true;
-        }
-        i++;
-    }
-
-
-    i = 0;
-    while (i < x)
-    {
-        if ((hist[1][i] > TUPLES_PER_BUCKET) && (shift  < 7))
-        {
-            // new rel to re_order
-            temp = new relation();
-            temp->num_tuples = hist[1][i];
-            temp->tuples = (new_rel->tuples + psum[1][i]);
-            rtn = re_ordered_2(temp, rel, shift + 1);
-            j = psum[1][i];
-            y = 0;
-            while (j < x)
-            {
-                if (j >= psum[1][i+1])
-                    break;
-                new_rel->tuples[j].payload = rtn->tuples[y].payload;
-                new_rel->tuples[j].key = rtn->tuples[y].key;
-                j++;
-                y++;
-            }
-            std::free(temp); // free only relation's pointer because the tuples are not taking additional space
-        }
-        else if (hist[1][i] > 0)
-        {
-              //  //print bucket before sort
-              //  std::cout << "{" << std::endl;
-              //  if (i + 1 < x)
-              //  {
-              //      for (int l = psum[1][i]; l < psum[1][i+1]; l++)
-              //          std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-              //  }
-              //  else
-              // {
-              //      for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
-              //          std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-              //  }
-              //  std::cout << "}" << std::endl;
-            //std::cout << std::endl;
-            if (i + 1 < x)
-            {
-                //std::cout << "-sort- " << psum[1][i] << " " << psum[1][i+1] << std::endl;
-                sortBucket(new_rel, psum[1][i], psum[1][i+1] - 1);
-            }
-            else
-            {
-                //std::cout << "-sort- " << psum[1][i] << " " << new_rel->num_tuples << std::endl;
-                sortBucket(new_rel, psum[1][i], rel->num_tuples - 1);
-            }
-        }
-        
-        //print buckets
-        //if (hist[1][i] > 0)
-        //{
-        //    if (i + 1 < x)
-        //    {
-        //        for (int l = psum[1][i]; l < psum[1][i+1]; l++)
-        //            std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-        //    }
-        //    else
-        //    {
-        //        for (int l = psum[1][i]; l < new_rel->num_tuples; l++)
-        //            std::cout << new_rel->tuples[l].payload << ". " << new_rel->tuples[l].key << std::endl;
-        //    }
-        //    std::cout << std::endl;
-        //}
-        
-        i++;
-    }
-
-    // std::cout << "before sort" << std::endl;
-    // new_rel->print();
-
-    // sortBucket(new_rel, 0, 4);
-
-    // std::cout << "after sort" << std::endl;
-    // new_rel->print();
-
-    delete [] hist[0];
-    delete [] hist[1];
-
-    delete [] hist;
-    
-    delete [] psum[0];
-    delete [] psum[1];
-
-    delete [] psum;
-    delete [] flag;
-
-    return new_rel;
-}*/
 
 void swap(tuple* tuple1, tuple* tuple2)
 {
