@@ -185,7 +185,11 @@ void IntermediateArray::populate(uint64_t** intermediateResult, uint64_t resultR
                 results[j][i] = prevIntermediateArray->results[j][prevIntermediateArrayRowId];
             }
         }
-        delete[] prevIntermediateArray->results[j];
+        if(j<columnsNum-1)
+        {
+            delete[] prevIntermediateArray->results[j];
+            prevIntermediateArray->results[j]=NULL;
+        }
     }
 }
 
@@ -1115,7 +1119,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         uint64_t field1Id = preds[i][1];
         uint64_t field2Id = preds[i][4];
         int operation = preds[i][2];
-        printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
+        //printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
         if (isFilter) {
             // printf("filter\n");
             uint64_t numToCompare = field2Id;
@@ -1267,7 +1271,10 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         return NULL;
                     }
                     uint64_t** resultArray=rslt->lst->lsttoarr();
+                    uint64_t rows=rslt->lst->rows;
+                    uint64_t rowsz=rslt->lst->rowsz;
                     delete rslt->lst;
+                    delete rslt;
                     delete newRel1;
                     delete newRel2;
                     
@@ -1294,7 +1301,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     if (curIntermediateArray == NULL) {
                         // first join
                         curIntermediateArray = new IntermediateArray(2, 0, 0);
-                        curIntermediateArray->populate(resultArray, rslt->lst->rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
+                        curIntermediateArray->populate(resultArray, rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
                         // printf("haaa\n");
                         // printf("new IntermediateArray:\n");
                         // curIntermediateArray->print();
@@ -1303,7 +1310,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         // printf("previous IntermediateArray:\n");
                         // curIntermediateArray->print();
                         IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1, 0, 0);
-                        newIntermediateArray->populate(resultArray, rslt->lst->rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
+                        newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
                         delete curIntermediateArray;
                         curIntermediateArray = newIntermediateArray;
                         // printf("new IntermediateArray:\n");
@@ -1311,11 +1318,11 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     }
                     prevPredicateWasFilterOrSelfJoin = false;
 
-                    for(int i=0;i<rslt->lst->rowsz;i++)
+                    for(int i=0;i<rowsz;i++)
                         delete[] resultArray[i];
                     delete[] resultArray;
-                    // delete rslt->lst;
-                    delete rslt;
+                    //delete rslt->lst;
+                    //delete rslt;
                 //}
                 //else
                 }
