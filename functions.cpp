@@ -98,16 +98,13 @@ InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, Input
 }
 
 void InputArray::extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputArray* pureInputArray) {
-    // printf("gg\n");
     rel.num_tuples = rowsNum;
     rel.tuples=new tuple[rel.num_tuples];
     for(uint64_t i = 0; i < rel.num_tuples; i++)
     {
         uint64_t inputArrayRowId = columns[0][i];
-        // printf("i: %lu\n", i);
         rel.tuples[i].key = inputArrayRowId;
         rel.tuples[i].payload = pureInputArray->columns[fieldId][inputArrayRowId];
-        // printf("aaaaaa\n", i);
     }
 }
 
@@ -278,7 +275,6 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
     }
 
     newIntermediateArray->rowsNum = newIntermediateArrayRowIndex; // update rowsNum because the other rows are useless
-    //newIntermediateArray->print();
     return newIntermediateArray;
 }
 
@@ -869,7 +865,6 @@ void sortBucket(relation* rel, int startIndex, int stopIndex) {
 
 InputArray** readArrays() {
     InputArray** inputArrays = new InputArray*[MAX_INPUT_ARRAYS_NUM]; // size is fixed
-    // printf("1\n");
     size_t fileNameSize = MAX_INPUT_FILE_NAME_SIZE;
     char fileName[fileNameSize];
     ssize_t rtn;
@@ -880,10 +875,8 @@ InputArray** readArrays() {
         if (strcmp(fileName, "Done") == 0)
             break;
 
-        // printf("loop 1\n");
         uint64_t rowsNum, columnsNum;
         FILE *fileP;
-        // printf("loop 2\n");
 
         fileP = fopen(fileName, "rb");
         if (fileP == NULL)
@@ -891,7 +884,6 @@ InputArray** readArrays() {
             printf("Could Not Open File (%s)\n", fileName);
             return NULL;
         }
-        // printf("loop 3\n");
 
         if ((rtn = fread(&rowsNum, sizeof(uint64_t), 1, fileP)) < 0) 
         {
@@ -903,7 +895,6 @@ InputArray** readArrays() {
             printf("fread for file <%s> returned %ld\n", fileName, rtn);
             return NULL;
         }
-        // printf("rows num: %lu, columns num: %lu\n", rowsNum, columnsNum);
 
         inputArrays[inputArraysIndex] = new InputArray(rowsNum, columnsNum);
 
@@ -1053,11 +1044,8 @@ bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex,
     if (curPredicateIndex <= 0 || prevPredicateWasFilterOrSelfJoin)
         return true;
 
-    // uint64_t* curPredicate = predicates[curPredicateIndex];
     uint64_t* prevPredicate = predicates[curPredicateIndex - 1];
 
-    // int curPredicateArray1Id = curPredicate[0], curPredicateArray2Id = curPredicate[3],
-    //      curField1Id = curPredicate[1], curField2Id = curPredicate[4];
     int prevPredicateArray1Id = prevPredicate[0], prevPredicateArray2Id = prevPredicate[3],
          prevField1Id = prevPredicate[1], prevField2Id = prevPredicate[4];
 
@@ -1074,42 +1062,20 @@ bool isRelationOrdered(relation &rel) {
 }
 IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
 {
-     //std::cout<<"HANDLEPREDICATES: "<<part<<std::endl;
     int cntr;
     uint64_t** preds=splitpreds(part,cntr);
-    // for(int i=0;i<cntr;i++)
-    // {
-    //     for(int j=0;j<5;j++)
-    //     {
-    //         std::cout<<"  "<<preds[i][j];
-    //     }
-    //     std::cout<<std::endl;
-    // }
     preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
-    // for(int i=0;i<cntr;i++)
-    // {
-    //     for(int j=0;j<5;j++)
-    //     {
-    //         std::cout<<"  "<<preds[i][j];
-    //     }
-    //     std::cout<<std::endl;
-    // }
 
-    // InputArray* inputArray1RowIds = new InputArray(inputArray1->rowsNum, 1);
-    // InputArray* inputArray2RowIds = new InputArray(inputArray2->rowsNum, 1);
     InputArray** inputArraysRowIds = new InputArray*[relationsnum];
     for (int i = 0; i < relationsnum; i++) {
-        // printf("................ %d\n", inputArrays[i]->rowsNum);
         inputArraysRowIds[i] = new InputArray(inputArrays[relationIds[i]]->rowsNum);
     }
 
     IntermediateArray* curIntermediateArray = NULL;
     bool prevPredicateWasFilterOrSelfJoin = false;
 
-    // filters and inner-joins are first and regular joins follow
     for(int i=0;i<cntr;i++)
     {
-        //std::cout<<"for "<<i<<std::endl;
         bool isFilter = preds[i][3] == (uint64_t) - 1;
         int predicateArray1Id = preds[i][0];
         int predicateArray2Id = preds[i][3];
@@ -1118,17 +1084,13 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         
         InputArray* inputArray1 = inputArrays[inputArray1Id];
         InputArray* inputArray2 = isFilter ? NULL : inputArrays[inputArray2Id];
-        // InputArray* inputArray1RowIds = new InputArray(inputArray1->rowsNum, 1);
-        // InputArray* inputArray2RowIds = new InputArray(inputArray2->rowsNum, 1);
         InputArray* inputArray1RowIds = inputArraysRowIds[predicateArray1Id];
         InputArray* inputArray2RowIds = isFilter ? NULL : inputArraysRowIds[predicateArray2Id];
 
         uint64_t field1Id = preds[i][1];
         uint64_t field2Id = preds[i][4];
         int operation = preds[i][2];
-        //printf("inputArray1Id: %d, inputArray2Id: %d, field1Id: %lu, field2Id: %lu, operation: %d\n", inputArray1Id, inputArray2Id, field1Id, field2Id, operation);
         if (isFilter) {
-            // printf("filter\n");
             uint64_t numToCompare = field2Id;
             InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, operation, numToCompare, inputArray1);
             delete inputArray1RowIds;
@@ -1140,28 +1102,19 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         switch (operation)
         {
         case 2: // '='
-                // if (isFilter) {
-                //     // handle filter
-                //     uint64_t numToCompare = field2Id;
-                //     InputArray* filteredInputArrayRowIds = inputarra
-                // }
-                //std::cout<<"case 2 1"<<std::endl;
                 if (predicateArray1Id == predicateArray2Id) {
                     // self-join of InputArray
-                    //std::cout<<"don't enter here"<<std::endl;
                     InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
                     delete inputArray1RowIds;
                     inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
                     prevPredicateWasFilterOrSelfJoin = true;
                     continue;
                 }
-                                //std::cout<<"case 2 2"<<std::endl;
 
                 if (inputArray1Id != inputArray2Id && 
                     (curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id)
                     && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id))) {
                     // self-join of IntermediateArray
-                    //std::cout<<" inputarray1 != ar2"<<std::endl;
                     IntermediateArray* filteredIntermediateArray = curIntermediateArray->selfJoin(inputArray1Id, inputArray2Id, field1Id, field2Id, inputArray1, inputArray2);
                     delete curIntermediateArray;
                     curIntermediateArray = filteredIntermediateArray;
@@ -1170,101 +1123,43 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                 }
 
                 {
-                                    //std::cout<<"case 2 3"<<std::endl;
-
-                    // printf("hi %d\n", inputArray1Id);
-                    // InputArray* inputArray1 = inputArrays[inputArray1Id];
-                    // InputArray* inputArray2 = inputArrays[inputArray2Id];
-                                        // printf("bye\n");
-                    // if (/* ... */) {
                     relation rel1, rel2;
                     bool rel2ExistsInIntermediateArray = false;
 
                     // fill rel1
                     if (curIntermediateArray == NULL || !curIntermediateArray->hasInputArrayId(inputArray1Id)) {
-                                                // printf("------------1\n");
-
-                        // rel1.num_tuples = inputArray1RowIds->rowsNum;
-                                                                        // printf("1.5\n");
-
-                        // extractcolumn(rel1, inputArray1->columns, field1Id); ////////////////////////////////////////
                         inputArray1RowIds->extractColumnFromRowIds(rel1, field1Id, inputArray1);
-                        //std::cout<<"num tuples: "<<rel1.num_tuples<<std::endl;
-                                                                        // printf("2\n");
-                                                                                                // printf("rel1\n");
-
-                        // rel1.print();
                     } else {
-                         //printf("else1\n");
-                        // rel1.num_tuples = curIntermediateArray->rowsNum;
-                                                // printf("rowsNum = %lu\n", rel1.num_tuples);
                         curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, predicateArray1Id, field1Id);
-                        // rel1.print();
                     }
-                //std::cout<<"case 2 4"<<std::endl;
 
                     // fill rel2
                     if (curIntermediateArray == NULL || inputArray1Id == inputArray2Id || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
-                                                                        // printf("------------2\n");
-
-                        // rel2.num_tuples = inputArray2->rowsNum;
-                        // extractcolumn(rel2, inputArray2->columns, field2Id);
                         inputArray2RowIds->extractColumnFromRowIds(rel2, field2Id, inputArray2);
-                        //std::cout<<"num tuples: "<<rel2.num_tuples<<std::endl;
-                        // printf("rel2\n");
-                        // rel2.print();
                     } else {
-                                                 //std::cout<<"else"<<std::endl;
                         rel2ExistsInIntermediateArray = true;
-                        // rel2.num_tuples = curIntermediateArray->rowsNum;
                         curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, predicateArray2Id, field2Id);
                     }
-                                    //std::cout<<"case 2 5"<<std::endl;
 
                     relation* newRel1 = new relation();
                     relation* reorderedRel1=&rel1;
-                    // if(isRelationOrdered(rel1))
-                    //     std::cout<<"is ordered"<<std::endl;
-                    // else std::cout<<"not ordered"<<std::endl;
                     
                     if (shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin)) {
-                        //newRel1->num_tuples = rel1.num_tuples;
-                        //newRel1->tuples = new tuple[rel1.num_tuples];
-                        //std::cout<<"before"<<std::endl;
-                        //reorderedRel1 = re_ordered(&rel1, newRel1, 0);
                         tuple* t=new tuple[rel1.num_tuples];
                         tuplereorder(rel1.tuples,t,rel1.num_tuples,0);
                         delete[] t;
-                        //std::cout<<"after1"<<std::endl;
                     }
                     
-                    
-                    
-                    // std::cout<<"\n";
-                    // ro_R->print();
                     relation* newRel2 = new relation();
                     relation* reorderedRel2=&rel2;
                     
                     if (shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin)) {
-                        //newRel2->num_tuples = rel2.num_tuples;
-                        //newRel2->tuples = new tuple[rel2.num_tuples];                    
-                        //std::cout<<"before"<<std::endl;
-                        //reorderedRel2 = re_ordered(&rel2, newRel2, 0);
                         tuple* t=new tuple[rel2.num_tuples];
                         tuplereorder(rel2.tuples,t,rel2.num_tuples,0);
                         delete[] t;
-
-                        //std::cout<<"after2"<<std::endl;
                     }
-
-                    // std::cout<<"\n";
-                    // ro_S->print();
-                    // std::cout<<"\n";
-
                     
                     result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
-                    // rslt->lst->print();
-                    //std::cout<<"\n";
                     if (rslt->lst->rows == 0) {
                         // no results
                         for(int i=0;i<cntr;i++)
@@ -1287,55 +1182,23 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     delete rslt->lst;
                     delete rslt;
                     delete newRel1;
-                    delete newRel2;
-                    
-                    // int fnlx=rslt->lst->rowsz;
-                    // int fnly=rslt->lst->rows;
-                    // if(resultArray!=NULL)
-                    // {
-                    //     for(int i=0;i<fnly;i++)
-                    //     {
-                    //         for(int j=0;j<fnlx;j++)
-                    //         {
-                    //             std::cout<<resultArray[j][i]<<" ";
-                    //         }
-                    //         std::cout<<"\n";
-                    //     }
-                    //     for(int i=0;i<fnlx;i++)
-                    //     {
-                    //         delete[] resultArray[i];
-                    //     }
-                    //     delete[] resultArray;
-                    // }
-                    
+                    delete newRel2;                    
                     
                     if (curIntermediateArray == NULL) {
                         // first join
                         curIntermediateArray = new IntermediateArray(2, 0, 0);
                         curIntermediateArray->populate(resultArray, rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
-                        // printf("haaa\n");
-                        // printf("new IntermediateArray:\n");
-                        // curIntermediateArray->print();
-
                     } else {
-                        // printf("previous IntermediateArray:\n");
-                        // curIntermediateArray->print();
                         IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1, 0, 0);
                         newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
                         delete curIntermediateArray;
                         curIntermediateArray = newIntermediateArray;
-                        // printf("new IntermediateArray:\n");
-                        // curIntermediateArray->print();
                     }
                     prevPredicateWasFilterOrSelfJoin = false;
 
                     for(int i=0;i<rowsz;i++)
                         delete[] resultArray[i];
                     delete[] resultArray;
-                    //delete rslt->lst;
-                    //delete rslt;
-                //}
-                //else
                 }
             break;
         default:
@@ -1357,10 +1220,6 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         /***********END***************************/
     }
 
-    // printf("Results rows number: %lu\n", curIntermediateArray->rowsNum);
-    // if (curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0) {
-    //     curIntermediateArray->print();
-    // }
     for(int i=0;i<cntr;i++)
     {
         delete[] preds[i];
