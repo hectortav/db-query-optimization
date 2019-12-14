@@ -237,6 +237,23 @@ void histogramTest(void) {
     CU_ASSERT(item_count == rel.num_tuples);
 }
 
+void histcreateTest(void) {
+    relation rel;
+    populateRelationRandomly(rel);
+    uint64_t *hist = histcreate(rel.tuples, rel.num_tuples, 0);
+    uint64_t *hist_2 = histcreate(rel.tuples, rel.num_tuples, 0);
+
+    int x = pow(2,8);
+    uint64_t item_count = 0;
+
+    for (int i = 0; i < x; i++)
+    {
+        CU_ASSERT(hist[i] == hist_2[i]);
+        item_count += hist[i];
+    }
+    CU_ASSERT(item_count == rel.num_tuples);
+}
+
 void psumTest(void) {
     relation rel;
     uint64_t x = pow(2,8);
@@ -263,6 +280,32 @@ void psumTest(void) {
         else 
         {
             CU_ASSERT(psum[1][i] - psum[1][i-1] == hist[1][i]);
+        }
+        
+    }
+}
+
+void psumcreateTest(void) {
+    relation rel;
+    uint64_t x = pow(2,8);
+    populateRelationRandomly(rel);
+    uint64_t *hist = histcreate(rel.tuples, rel.num_tuples, 0);
+    uint64_t *hist_2 = histcreate(rel.tuples, rel.num_tuples, 0);
+    uint64_t *psum = psumcreate(hist);
+    uint64_t *psum_2 = psumcreate(hist_2);
+
+    uint64_t item_count = 0;
+
+    for (int i = 0; i < x; i++)
+    {
+        CU_ASSERT(psum[i] == psum_2[i]);
+        if (i < x-1)
+        {
+            CU_ASSERT(psum[i+1] - psum[i]== hist[i]);
+        }
+        else 
+        {
+            CU_ASSERT(psum[i] - psum[i-1] == hist[i]);
         }
         
     }
