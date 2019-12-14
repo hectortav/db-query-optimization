@@ -40,6 +40,5 @@ void psumTest(void);
 void find_shiftTest(void);
 void histcreateTest(void);
 void psumcreateTest(void);
-
-
-
+void tuplesReorderTest(void);
+void re_orderedTest(void);
