@@ -415,18 +415,129 @@ void testInputArrayExtractColumnFromRowIds(void) {
     CU_ASSERT(rel->tuples[0].key == 0 && rel->tuples[0].payload == 5 &&
      rel->tuples[1].key == 1 && rel->tuples[1].payload == 42 &&
      rel->tuples[2].key == 2 && rel->tuples[2].payload == 77)
-    delete rel->tuples;
+    delete[] rel->tuples;
+    rel->tuples = NULL;
     inputArrayRowIds.extractColumnFromRowIds(*rel, 0, pureInputArray);
     CU_ASSERT(rel->tuples[0].key == 0 && rel->tuples[0].payload == 5 &&
      rel->tuples[1].key == 1 && rel->tuples[1].payload == 56 &&
      rel->tuples[2].key == 2 && rel->tuples[2].payload == 10)
-    delete rel->tuples;
+    delete[] rel->tuples;
+    rel->tuples = NULL;
     inputArrayRowIds.extractColumnFromRowIds(*rel, 2, pureInputArray);
     CU_ASSERT(rel->tuples[0].key == 0 && rel->tuples[0].payload == 3 &&
      rel->tuples[1].key == 1 && rel->tuples[1].payload == 11 &&
      rel->tuples[2].key == 2 && rel->tuples[2].payload == 77)
-    delete rel->tuples;
+    delete[] rel->tuples;
+    rel->tuples = NULL;
     
     delete rel;
     delete pureInputArray;
+}
+
+void testIntermediateArrayPopulate(void) {
+    uint64_t** resultsArray = new uint64_t*[2];
+    for (int j = 0; j < 2; j++) {
+        resultsArray[j] = new uint64_t[3];
+    }
+    resultsArray[0][0] = 5;
+    resultsArray[0][1] = 56;
+    resultsArray[0][2] = 10;
+    resultsArray[1][0] = 5;
+    resultsArray[1][1] = 42;
+    resultsArray[1][2] = 77;
+
+    IntermediateArray* intermediateArray = new IntermediateArray(2);
+    intermediateArray->populate(resultsArray, 3, NULL, 5, 3, 0, 1);
+
+    for (int j = 0; j < 2; j++) {
+        for (int i = 0; i < 3; i++) {
+            CU_ASSERT(resultsArray[j][i] == intermediateArray->results[j][i])
+        }
+    }
+
+    delete intermediateArray;
+    for (int j = 0; j < 2; j++) {
+        delete[] resultsArray[j];
+    }
+    delete[] resultsArray;
+}
+
+void testIntermediateArrayFindColumnIndex(void) {
+    uint64_t** resultsArray = new uint64_t*[2];
+    for (int j = 0; j < 2; j++) {
+        resultsArray[j] = new uint64_t[3];
+    }
+    resultsArray[0][0] = 5;
+    resultsArray[0][1] = 56;
+    resultsArray[0][2] = 10;
+    resultsArray[1][0] = 5;
+    resultsArray[1][1] = 42;
+    resultsArray[1][2] = 77;
+
+    IntermediateArray* intermediateArray = new IntermediateArray(2);
+    intermediateArray->populate(resultsArray, 3, NULL, 5, 3, 0, 1);
+
+    CU_ASSERT(intermediateArray->findColumnIndexByInputArrayId(5) == 0)
+    CU_ASSERT(intermediateArray->findColumnIndexByInputArrayId(3) == 1)
+    CU_ASSERT(intermediateArray->findColumnIndexByInputArrayId(144141) == -1)
+
+    CU_ASSERT(intermediateArray->findColumnIndexByPredicateArrayId(0) == 0)
+    CU_ASSERT(intermediateArray->findColumnIndexByPredicateArrayId(1) == 1)
+    CU_ASSERT(intermediateArray->findColumnIndexByPredicateArrayId(552525) == -1)
+
+    delete intermediateArray;
+    for (int j = 0; j < 2; j++) {
+        delete[] resultsArray[j];
+    }
+    delete[] resultsArray;
+}
+
+void testIntermediateArraySelfJoin(void) {
+
+    InputArray* pureInputArray1 = new InputArray(3, 3);
+    pureInputArray1->columns[0][0] = 5;
+    pureInputArray1->columns[0][1] = 56;
+    pureInputArray1->columns[0][2] = 1;
+    pureInputArray1->columns[1][0] = 5;
+    pureInputArray1->columns[1][1] = 42;
+    pureInputArray1->columns[1][2] = 10;
+    pureInputArray1->columns[2][0] = 3;
+    pureInputArray1->columns[2][1] = 11;
+    pureInputArray1->columns[2][2] = 77;
+    
+    InputArray* pureInputArray2 = new InputArray(3, 3);
+    pureInputArray2->columns[0][0] = 3;
+    pureInputArray2->columns[0][1] = 10;
+    pureInputArray2->columns[0][2] = 54;
+    pureInputArray2->columns[1][0] = 5;
+    pureInputArray2->columns[1][1] = 1;
+    pureInputArray2->columns[1][2] = 45;
+    pureInputArray2->columns[2][0] = 6;
+    pureInputArray2->columns[2][1] = 8;
+    pureInputArray2->columns[2][2] = 3;
+
+    uint64_t** resultsArray = new uint64_t*[2];
+    for (int j = 0; j < 2; j++) {
+        resultsArray[j] = new uint64_t[3];
+    }
+    resultsArray[0][0] = 2;
+    resultsArray[0][1] = 1;
+    resultsArray[0][2] = 0;
+    resultsArray[1][0] = 1;
+    resultsArray[1][1] = 0;
+    resultsArray[1][2] = 2;
+
+    IntermediateArray* intermediateArray = new IntermediateArray(2);
+    intermediateArray->populate(resultsArray, 3, NULL, 5, 3, 0, 1);
+    IntermediateArray* newIntermediateArray = intermediateArray->selfJoin(5, 3, 1, 0, pureInputArray1, pureInputArray2);
+    delete intermediateArray;
+    
+    CU_ASSERT(newIntermediateArray->results[0][0] == 2 && newIntermediateArray->results[1][0] == 1 && newIntermediateArray->rowsNum);
+
+    for (int j = 0; j < 2; j++) {
+        delete[] resultsArray[j];
+    }
+    delete[] resultsArray;
+    delete pureInputArray1;
+    delete pureInputArray2;
 }

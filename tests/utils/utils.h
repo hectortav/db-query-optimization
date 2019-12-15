@@ -44,3 +44,6 @@ void tuplesReorderTest(void);
 void re_orderedTest(void);
 void testInputArrayFilterRowIds(void);
 void testInputArrayExtractColumnFromRowIds(void);
+void testIntermediateArrayPopulate(void);
+void testIntermediateArrayFindColumnIndex(void);
+void testIntermediateArraySelfJoin(void);
