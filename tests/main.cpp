@@ -32,6 +32,7 @@ int main()
      || (NULL == CU_add_test(pSuite, "test of psumcreateTest()", psumcreateTest))
      || (NULL == CU_add_test(pSuite, "test of tuplesReorderTest()", tuplesReorderTest)) 
      || (NULL == CU_add_test(pSuite, "test of InputArray::filterRowIds()", testInputArrayFilterRowIds)) 
+     || (NULL == CU_add_test(pSuite, "test of InputArray::extractColumnFromRowIds()", testInputArrayExtractColumnFromRowIds)) 
     )
    {
       CU_cleanup_registry();

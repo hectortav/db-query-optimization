@@ -395,3 +395,38 @@ void testInputArrayFilterRowIds(void) {
 
     delete pureInputArray;
 }
+
+void testInputArrayExtractColumnFromRowIds(void) {
+    InputArray* pureInputArray = new InputArray(3, 3);
+    pureInputArray->columns[0][0] = 5;
+    pureInputArray->columns[0][1] = 56;
+    pureInputArray->columns[0][2] = 10;
+    pureInputArray->columns[1][0] = 5;
+    pureInputArray->columns[1][1] = 42;
+    pureInputArray->columns[1][2] = 77;
+    pureInputArray->columns[2][0] = 3;
+    pureInputArray->columns[2][1] = 11;
+    pureInputArray->columns[2][2] = 77;
+
+    InputArray inputArrayRowIds(3);
+    relation* rel = new relation();
+
+    inputArrayRowIds.extractColumnFromRowIds(*rel, 1, pureInputArray);
+    CU_ASSERT(rel->tuples[0].key == 0 && rel->tuples[0].payload == 5 &&
+     rel->tuples[1].key == 1 && rel->tuples[1].payload == 42 &&
+     rel->tuples[2].key == 2 && rel->tuples[2].payload == 77)
+    delete rel->tuples;
+    inputArrayRowIds.extractColumnFromRowIds(*rel, 0, pureInputArray);
+    CU_ASSERT(rel->tuples[0].key == 0 && rel->tuples[0].payload == 5 &&
+     rel->tuples[1].key == 1 && rel->tuples[1].payload == 56 &&
+     rel->tuples[2].key == 2 && rel->tuples[2].payload == 10)
+    delete rel->tuples;
+    inputArrayRowIds.extractColumnFromRowIds(*rel, 2, pureInputArray);
+    CU_ASSERT(rel->tuples[0].key == 0 && rel->tuples[0].payload == 3 &&
+     rel->tuples[1].key == 1 && rel->tuples[1].payload == 11 &&
+     rel->tuples[2].key == 2 && rel->tuples[2].payload == 77)
+    delete rel->tuples;
+    
+    delete rel;
+    delete pureInputArray;
+}
