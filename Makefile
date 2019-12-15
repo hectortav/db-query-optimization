@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS  = -g #-pg
+CFLAGS  = --std=c++11 #-g -pg
 DEPS=list.h functions.h
 
 default: final
