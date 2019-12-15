@@ -42,3 +42,4 @@ void histcreateTest(void);
 void psumcreateTest(void);
 void tuplesReorderTest(void);
 void re_orderedTest(void);
+void testInputArrayFilterRowIds(void);

@@ -93,7 +93,6 @@ InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, Input
     }
 
     newInputArrayRowIds->rowsNum = newInputArrayRowIndex; // update rowsNum because the other rows are useless
-    delete[] pureInputArray;
     return newInputArrayRowIds;
 }
 

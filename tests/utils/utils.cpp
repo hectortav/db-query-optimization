@@ -354,3 +354,44 @@ void tuplesReorderTest(void) {
 //         test = new_rel->tuples[i].payload;
 //     }
 // }
+
+void randomFillInputArray(InputArray* inputArray) {
+    srand(time(NULL));
+    for (uint64_t j = 0; j < inputArray->columnsNum; j++) {
+        for (uint64_t i = 0; i < inputArray->rowsNum; i++) {
+            inputArray->columns[j][i] = rand()%1000000;
+        }
+    }
+}
+
+void testInputArrayFilterRowIds(void) {
+    // InputArray InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, InputArray* pureInputArray);
+
+    InputArray* pureInputArray = new InputArray(2, 3);
+    pureInputArray->columns[0][0] = 5;
+    pureInputArray->columns[0][1] = 10;
+    pureInputArray->columns[1][0] = 5;
+    pureInputArray->columns[1][1] = 77;
+    pureInputArray->columns[2][0] = 3;
+    pureInputArray->columns[2][1] = 77;
+    
+    InputArray inputArrayRowIds(2);
+
+    InputArray* newInputArrayRowIds = inputArrayRowIds.filterRowIds(0, 1, pureInputArray);
+    CU_ASSERT(newInputArrayRowIds->columns[0][0] == 0 && newInputArrayRowIds->rowsNum == 1)
+    delete newInputArrayRowIds;
+
+    newInputArrayRowIds = inputArrayRowIds.filterRowIds(2, 2, 3, pureInputArray);
+    CU_ASSERT(newInputArrayRowIds->columns[0][0] == 0 && newInputArrayRowIds->rowsNum == 1)
+    delete newInputArrayRowIds;
+
+    newInputArrayRowIds = inputArrayRowIds.filterRowIds(1, 0, 57, pureInputArray);
+    CU_ASSERT(newInputArrayRowIds->columns[0][0] == 1 && newInputArrayRowIds->rowsNum == 1)
+    delete newInputArrayRowIds;
+
+    newInputArrayRowIds = inputArrayRowIds.filterRowIds(2, 1, 0, pureInputArray);
+    CU_ASSERT(newInputArrayRowIds->rowsNum == 0)
+    delete newInputArrayRowIds;
+
+    delete pureInputArray;
+}
