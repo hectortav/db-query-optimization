@@ -199,10 +199,6 @@ bool IntermediateArray::hasInputArrayId(int inputArrayId) {
     return false;
 }
 
-bool IntermediateArray::shouldSort(int nextQueryInputArrayId, uint64_t nextQueryFieldId) {
-    return ! (this->sortedByInputArrayId == nextQueryInputArrayId && this->sortedByFieldId == nextQueryFieldId);
-}
-
 void IntermediateArray::print() {
     printf("input array ids: ");
     for (uint64_t j = 0; j < columnsNum; j++) {
