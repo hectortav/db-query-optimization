@@ -28,13 +28,9 @@ int main()
      //|| (NULL == CU_add_test(pSuite, "test of optimizepredicates()",testoptimizepredicates))
      || (NULL == CU_add_test(pSuite, "test of predsplittoterms()",testpredsplittoterms))
      || (NULL == CU_add_test(pSuite, "test of sortBucket()", testQuickSort))
-     || (NULL == CU_add_test(pSuite, "test of histogramTest()", histogramTest))
      || (NULL == CU_add_test(pSuite, "test of histcreateTest()", histcreateTest))
-     || (NULL == CU_add_test(pSuite, "test of psumTest()", psumTest))
      || (NULL == CU_add_test(pSuite, "test of psumcreateTest()", psumcreateTest))
-     || (NULL == CU_add_test(pSuite, "test of find_shiftTest()", find_shiftTest))
      || (NULL == CU_add_test(pSuite, "test of tuplesReorderTest()", tuplesReorderTest)) 
-     || (NULL == CU_add_test(pSuite, "test of re_orderedTest()", re_orderedTest))
     )
    {
       CU_cleanup_registry();
