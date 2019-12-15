@@ -71,10 +71,8 @@ class IntermediateArray {
                             // contains ids of predicate arrays that correspond to each column
     uint64_t columnsNum;
     uint64_t rowsNum;
-    uint64_t sortedByFieldId;
-    int sortedByInputArrayId;
 
-    IntermediateArray(uint64_t columnsNum, uint64_t sortedByInputArrayId, uint64_t sortedByFieldId);
+    IntermediateArray(uint64_t columnsNum);
     ~IntermediateArray();
 
     void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int predicateArrayId, uint64_t fieldId);

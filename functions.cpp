@@ -108,10 +108,8 @@ void InputArray::extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputA
     }
 }
 
-IntermediateArray::IntermediateArray(uint64_t columnsNum, uint64_t sortedByInputArrayId, uint64_t sortedByFieldId) {
+IntermediateArray::IntermediateArray(uint64_t columnsNum) {
     this->rowsNum = 0;
-    this->sortedByFieldId = sortedByFieldId;
-    this->sortedByInputArrayId = sortedByInputArrayId;
     this->columnsNum = columnsNum;
     this->results = new uint64_t*[columnsNum];
     for (uint64_t j = 0; j < columnsNum; j++) {
@@ -237,7 +235,7 @@ uint64_t IntermediateArray::findColumnIndexByPredicateArrayId(int predicateArray
 }
 
 IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, InputArray* inputArray1, InputArray* inputArray2) {
-    IntermediateArray* newIntermediateArray = new IntermediateArray(columnsNum, 0, 0);
+    IntermediateArray* newIntermediateArray = new IntermediateArray(columnsNum);
 
     newIntermediateArray->rowsNum = rowsNum;
     for (uint64_t j = 0; j < newIntermediateArray->columnsNum; j++) {
@@ -1241,10 +1239,10 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     if (curIntermediateArray == NULL) {
                         // first join
-                        curIntermediateArray = new IntermediateArray(2, 0, 0);
+                        curIntermediateArray = new IntermediateArray(2);
                         curIntermediateArray->populate(resultArray, rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
                     } else {
-                        IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1, 0, 0);
+                        IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1);
                         newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
                         delete curIntermediateArray;
                         curIntermediateArray = newIntermediateArray;
