@@ -699,19 +699,17 @@ uint64_t psum_create(bucket *B, uint64_t count)
     B->hist->psum = new uint64_t[power]{0};
     for (uint64_t i = 0; i < power; i++)
     {
-        //if (B->hist->hist[i] != 0)
-        //    std::cout << "hash: " << i << " shift: " << B->shift << " pos: " << count << std::endl;
-        if (B->hist->next[i] == NULL)
+        if (B->hist->hist[i] != 0)
         {
-            if (B->hist->hist[i] != 0)
+            if (B->hist->next[i] == NULL)
             {
                 B->hist->psum[i] = count;
                 count+=B->hist->hist[i];
             }
-        }
-        else
-        {
-            count = psum_create(B->hist->next[i], count);
+            else
+            {
+                count = psum_create(B->hist->next[i], count);
+            }
         }
     }
     return count;
@@ -719,27 +717,35 @@ uint64_t psum_create(bucket *B, uint64_t count)
 
 void call_quicksort(bucket *B, relation *rel)
 {
-    for (uint64_t i = 0; i < power; i++)
+    int64_t first = 0;
+    B->index = 0;
+    while(B->index < power)
     {
-        if (B->hist->next[i] == NULL)
+        if (B->hist->next[B->index] != NULL)
         {
-            if (B->hist->hist[i] != 0)
+            B = B->hist->next[B->index];
+            B->index = 0;
+            continue;
+        }
+        if (B->hist->psum[B->index] > 0)
+        {
+            
+            if (B->index + 1 < power)
             {
-
-                if (i + 1 < power)
-                {
-                    quickSort(rel->tuples, B->hist->psum[i], B->hist->psum[i+1] - 1);
-                }
-                else
-                {
-                   quickSort(rel->tuples, B->hist->psum[i], rel->num_tuples - 1);
-                }
+                //std::cout << first << " " << B->hist->psum[B->index] - 1 << std::endl;
+                quickSort(rel->tuples, first, B->hist->psum[B->index] - 1);
+                first = B->hist->psum[B->index];
+            }
+            if (B->prev == NULL)
+            {
+                //std::cout << first << " " << rel->num_tuples - 1 << std::endl;
+                quickSort(rel->tuples, first, rel->num_tuples - 1);
             }
         }
-        else
-        {
-            call_quicksort(B->hist->next[i], rel);
-        }
+
+        if (B->index == power - 1 && B->prev != NULL)
+            B = B->prev;
+        B->index++;
     }
 }
 
@@ -838,11 +844,18 @@ void mid_func(tuple *t1, tuple *t2, int num, int not_used)
 {
     relation *new_rel_R = new relation(), *R = new relation();
     new_rel_R->num_tuples=num;
-    new_rel_R->tuples = t2;
-    new_rel_R->num_tuples=num;
-    new_rel_R->tuples = t1;
+    new_rel_R->tuples = new tuple[num];
+    R->num_tuples=num;
+    R->tuples = new tuple[num];
+
+    //memcpy(new_rel_R->tuples, t2, num*sizeof(tuple));
+    memcpy(R->tuples, t1, num*sizeof(tuple));
+
     new_rel_R = re_ordered_2(R, new_rel_R, not_used);
-    t1 = new_rel_R->tuples;
+    memcpy(t1, new_rel_R->tuples, num*sizeof(tuple));
+
+    R->~relation();
+    new_rel_R->~relation();
 }
 
 void swap(tuple* tuple1, tuple* tuple2)
