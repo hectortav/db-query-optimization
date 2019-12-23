@@ -7,6 +7,7 @@
 #include <ctime>
 #include <cstdio>
 #include <math.h>
+#include "JobScheduler.h"
 
 #define MAX_INPUT_FILE_NAME_SIZE 100
 #define MAX_INPUT_ARRAYS_NUM 20
