@@ -148,10 +148,17 @@ void *threadWork(void *arg)
         pthread_mutex_unlock(&jobQueueMutex);
         pthread_cond_signal(&jobQueueFullCond);
 
+        if (curJobListNode->job->getJobId() == -1) // only ExitJob has jobId == -1
+        {
+            // thread should exit
+            delete curJobListNode;
+            pthread_exit((void **)0);
+        }
+
         curJobListNode->job->run();
 
         delete curJobListNode;
     }
 
-    return 0;
+    pthread_exit((void **)0);
 }

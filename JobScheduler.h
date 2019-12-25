@@ -16,13 +16,26 @@ class Job
 {
 private:
     int jobId;
+
 public:
-    Job() = default;
+    Job()
+    {
+        jobId = 0;
+    };
     virtual ~Job() {}
 
     // This method should be implemented by subclasses.
     virtual void run() = 0;
-    virtual int setJobId(int jobId) {this->jobId = jobId; return jobId;};
+    virtual int setJobId(int jobId)
+    {
+        this->jobId = jobId;
+        return jobId;
+    };
+
+    int getJobId()
+    {
+        return jobId;
+    };
 };
 
 class JobListNode
@@ -80,7 +93,11 @@ public:
     ~ExitJob() {}
 
     void run() {}
-    int setJobId(int jobId) {Job::setJobId(-1); return jobId;}
+    int setJobId(int jobId)
+    {
+        Job::setJobId(-1);
+        return jobId;
+    }
 };
 
 #endif
