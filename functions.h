@@ -109,6 +109,46 @@ public:
     ~histogram();
 };
 
+void tuplereorder_parallel(tuple*, tuple*, int, int);
+void quickSort(tuple*, int, int);
+
+class trJob : public Job    //tuple reorder job
+{
+private:
+    tuple* array;
+    tuple* array2;
+    int offset;
+    int shift;
+
+public:
+    trJob(tuple* array,tuple* array2, int offset,int shift) : Job() { }
+
+    void run() override
+    {
+        std::cout << "reorder added to queue\n";
+        tuplereorder_parallel(array, array2, offset, shift);
+        return; 
+    }
+};
+
+class qJob : public Job    //quicksort job
+{
+private:
+    tuple* tuples;
+    int startIndex;
+    int stopIndex;
+
+public:
+    qJob(tuple* tuples, int startIndex, int stopIndex) : Job() { }
+
+    void run() override
+    {
+        std::cout << "quicksort added to queue\n";
+        quickSort(tuples, startIndex, stopIndex);
+        return; 
+    }
+};
+
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 // uint64_t** create_hist(relation*, int);
@@ -118,6 +158,7 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
 void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t);
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift);
 
 
 // functions for bucket sort

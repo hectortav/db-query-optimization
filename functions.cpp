@@ -1,6 +1,9 @@
 #include "functions.h"
 #include "JobScheduler.h"
 
+
+JobScheduler *scheduler = NULL;
+
 void relation::print()
 {
     for(uint64_t i=0;i<this->num_tuples;i++)
@@ -329,173 +332,6 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
     return rslt;
 }
 
-// uint64_t** create_hist(relation *rel, int shift)
-// {
-//     int x = pow(2,8);
-//     uint64_t **hist = new uint64_t*[3];
-//     for(int i = 0; i < 3; i++)
-//         hist[i] = new uint64_t[x];
-//     uint64_t payload;
-//     for(int i = 0; i < x; i++)
-//     {
-//         hist[0][i]= i;
-//         hist[1][i]= 0;
-//         hist[2][i]= shift;
-//     }
-
-//     for (uint64_t i = 0; i < rel->num_tuples; i++)
-//     {
-//         payload = hashFunction(rel->tuples[i].payload, 7-shift);
-//         hist[1][payload]++;
-//     }
-//     return hist;
-// }
-
-// uint64_t** create_psum(uint64_t** hist, uint64_t size)
-// {
-//     uint64_t count = 0;
-//     uint64_t x = size;
-//     uint64_t **psum = new uint64_t*[3];
-//     for(int i = 0; i < 3; i++)
-//         psum[i] = new uint64_t[x];
-
-//     for (uint64_t i = 0; i < x; i++)
-//     {
-//         psum[0][i] = hist[0][i];
-//         psum[1][i] = (uint64_t)count;
-//         psum[2][i] = hist[2][i];
-//         count+=hist[1][i];
-//     }
-//     return psum;
-// }
-
-// void pr(uint64_t** a, uint64_t array_size)
-// {
-//     uint64_t i;
-//     for (i = 0; i < array_size; i++)
-//     {
-//         if (a[1][i] != 0 || (i < array_size -1 && a[2][i] < a[2][i+1]))
-//         {
-//             for (uint64_t l = 0; l < a[2][i]; l++)
-//                 std::cout << "  ";
-//             std::cout << a[0][i] << ". " << a[1][i] << " - " << a[2][i] << std::endl;
-//         }
-//     }
-// }
-
-// uint64_t** combine_hist(uint64_t** big, uint64_t** small, uint64_t position, uint64_t big_size)   //big_size == size of row in big
-// {
-//     uint64_t x = pow(2,8), i;    //size of small == pow(2,8)
-
-//     uint64_t **hist = new uint64_t*[3];
-//     for(i = 0; i < 3; i++)
-//         hist[i] = new uint64_t[x + big_size];
-
-//     /*for (i = 0; i < position; i++) { hist[0][i] = big[0][i]; hist[1][i] = big[1][i]; hist[2][i] = big[2][i]; }*/
-//     memcpy(hist[0], big[0], sizeof(big[0][0]) * position);
-//     memcpy(hist[1], big[1], sizeof(big[1][0]) * position);
-//     memcpy(hist[2], big[2], sizeof(big[2][0]) * position);
-//     i = position;
-//     hist[0][i] = big[0][i];
-//     hist[1][i] = 0;//big[1][i];
-//     hist[2][i] = big[2][i];
-//     i++;
-//     memcpy(&hist[0][i], small[0], sizeof(small[0][0]) * x);
-//     memcpy(&hist[1][i], small[1], sizeof(small[1][0]) * x);
-//     memcpy(&hist[2][i], small[2], sizeof(small[2][0]) * x);
-//     /*for (j = 0; j < x; j++) { hist[0][i] = small[0][j]; hist[1][i] = small[1][j]; hist[2][i] = small[2][j]; i++; }*/
-//     memcpy(&hist[0][position + 1 + x], &big[0][position + 1], sizeof(big[0][0]) * (big_size - position-1)); //added -1 and solved some valgrind errors
-//     memcpy(&hist[1][position + 1 + x], &big[1][position + 1], sizeof(big[1][0]) * (big_size - position-1));
-//     memcpy(&hist[2][position + 1 + x], &big[2][position + 1], sizeof(big[2][0]) * (big_size - position-1));
-//     /*for (i = position + 1; i < big_size; i++) { hist[0][i + x] = big[0][i]; hist[1][i + x] = big[1][i]; hist[2][i + x] = big[2][i]; }*/
-
-//     for(i = 0; i < 3; i++)
-//     {
-//         delete [] big[i];
-//         delete [] small[i];
-//     }
-//     delete [] big;
-//     delete [] small;
-
-//     return hist;
-// }
-
-// uint64_t find_shift(uint64_t **hist, uint64_t hist_size, uint64_t payload, uint64_t **last)
-// {
-//     uint64_t i, shift, j, flag;
-//     uint64_t x = pow(2, 8);
-
-//     if (last == NULL)
-//     {
-//         uint64_t** last = new uint64_t*[3];
-//         for(i = 0; i < 3; i++)
-//             last[i] = new uint64_t[8];
-//     }
-    
-//     for (i = 0; i < hist_size; i++)
-//     {
-//         //std::cout << payload << ": " << hashFunction(payload, 7 - hist[2][i]) << " : " << hist[0][i] << std::endl;
-//         if (i < hist_size - 1 && hist[2][i] < hist[2][i+1])
-//         {
-//             last[0][hist[2][i]] = hist[0][i];   //hash
-//             last[1][hist[2][i]] = hist[2][i];   //shift
-//             last[2][hist[2][i]] = (uint64_t)hashFunction(payload, 7 - hist[2][i]) != hist[0][i]; //true or false for hashFunction(payload, 7 - hist[2][i]) != hist[0][i]
-//             shift = hist[2][i];
-//             if (last[2][hist[2][i]] != 0)
-//             {
-//                 if (hist[1][i] != 0)
-//                 {
-//                     flag = 1;
-//                     std::cout<<"ok"<<hist[2][i]<<std::endl;
-//                     for(j = 0; j < hist[2][i]; j++)
-//                     {
-//                         if (last[2][hist[2][j]] != 0)//hashFunction(payload, 7 - last[1][j]) != last[0][j])    //last[1] == shift
-//                         {
-//                             flag = 0;
-//                             break;
-//                         }
-//                     }
-//                     if (flag)
-//                         return i;
-//                     continue;
-//                 }
-//                 i+=(x-1);
-//                 while (hist[2][i+1] > shift)
-//                     i++;
-                
-//             }
-//         }
-
-//         if (hist[1][i] != 0 && hashFunction(payload, 7 - hist[2][i]) == hist[0][i])
-//         {
-//             flag = 1;
-//             for(j = 0; j < hist[2][i]; j++)
-//             {
-//                 if (last[2][hist[2][j]] != 0)//hashFunction(payload, 7 - last[1][j]) != last[0][j])    //last[1] == shift
-//                 {
-//                     flag = 0;
-//                     break;
-//                 }
-//             }
-//             if (flag)
-//                 return i;
-//         }
-//     }
-//     //pr(hist, hist_size);
-//     std::cout << "NOT FOUND: " << payload << " HASH: " << hashFunction(payload, 7 - 7) << std::endl;
-//     return 0;
-// }
-
-// void print_psum_hist(uint64_t** psum, uint64_t** hist, int array_size)
-// {
-//     std::cout << "<<<<<<<" << std::endl;
-//     for (int i = 0; i < array_size; i++)
-//         if (i == array_size-1 || psum[1][i] != psum[1][i+1])
-//             std::cout << psum[0][i] << " " << psum[1][i] << " " << psum[2][i] << std::endl;
-//     std::cout << "<<<<<<<" << std::endl;
-//     pr(hist, array_size);
-//     std::cout << "<<<<<<<" << std::endl;
-// }
 uint64_t* psumcreate(uint64_t* hist)
 {
     uint64_t count = 0;
@@ -544,10 +380,15 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
     delete[] hist;
 }
 
+int path = 0;   //temp way to choose parallel modes
+
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift)
 {
     uint64_t* hist=histcreate(array,offset,shift);
     uint64_t* psum=psumcreate(hist);
+    trJob *reorder = NULL;
+    qJob *quick = NULL;
+
     for(int i=0;i<offset;i++)
     {
         uint64_t hash=hashFunction(array[i].payload,7-shift);
@@ -560,9 +401,21 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift)
         if(hist[i]==0)
             continue;
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
-            tuplereorder_parallel(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
-        else            
-            quickSort(array,start, psum[i]-1);
+        {
+            scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1));
+            delete reorder;
+        }
+        else
+        {
+            if (path == 0)
+                quickSort(array,start, psum[i]-1);
+            else if (path == 1)
+            {
+                scheduler->schedule(quick = new qJob(array,start, psum[i]-1));
+                delete quick;
+            }
+            
+        }   
 
         start=psum[i];
     }
@@ -576,9 +429,10 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t)
         tuplereorder_serial(array, array2, offset, shift);
     else if (t == parallel)
     {
-        JobScheduler scheduler(4, 10);
+        if (scheduler == NULL)
+            scheduler = new JobScheduler(4, 10);
         tuplereorder_parallel(array, array2, offset, shift);
-        scheduler.~JobScheduler();
+        scheduler->~JobScheduler();
     }
 }
 
@@ -926,7 +780,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     if (shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel1.num_tuples];
-                        tuplereorder(rel1.tuples,t,rel1.num_tuples,0, parallel);
+                        tuplereorder(rel1.tuples,t,rel1.num_tuples,0, serial);  //add parallel
                         //mid_func(rel1.tuples,t,rel1.num_tuples,0);
 
                         delete[] t;
@@ -937,7 +791,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     if (shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel2.num_tuples];
-                        tuplereorder(rel2.tuples,t,rel2.num_tuples,0, parallel);
+                        tuplereorder(rel2.tuples,t,rel2.num_tuples,0, serial);  //add parallel
                         //mid_func(rel2.tuples,t,rel2.num_tuples,0);
                         delete[] t;
                     }
