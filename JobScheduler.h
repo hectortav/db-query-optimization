@@ -14,14 +14,15 @@ static pthread_cond_t jobQueueFullCond = PTHREAD_COND_INITIALIZER, jobQueueEmpty
 // Abstract Class Job
 class Job
 {
-public:
+private:
     int jobId;
-
+public:
     Job() = default;
     virtual ~Job() {}
 
     // This method should be implemented by subclasses.
     virtual int run() = 0;
+    virtual int setJobId(int jobId) {this->jobId = jobId; return jobId;};
 };
 
 class JobListNode
@@ -67,7 +68,19 @@ public:
     // Waits Until executed all jobs in the queue.void Barrier();
     // Add a job in the queue and returns a job id
     int schedule(Job *job);
-    void threadWork();
+    // void* threadWork(void*);
+};
+
+void *threadWork(void *arg);
+
+class ExitJob : Job
+{
+public:
+    ExitJob() {}
+    ~ExitJob() {}
+
+    int run() {}
+    int setJobId(int jobId) {Job::setJobId(-1);}
 };
 
 #endif
