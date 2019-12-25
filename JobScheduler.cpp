@@ -83,13 +83,25 @@ JobScheduler::JobScheduler(int threadsNum, int jobsMaxNum)
 {
     jobQueue = new JobQueue(jobsMaxNum);
     threadIds = new pthread_t[threadsNum];
+    for (int i = 0; i < threadsNum; i++)
+    {
+        pthread_create(&threadIds[i], NULL, threadWork, (void *)jobQueue);
+    }
     nextJobId = 0;
 }
 
 JobScheduler::~JobScheduler()
 {
     for (int i = 0; i < threadsNum; i++)
+    {
+        ExitJob *job = new ExitJob();
+        schedule((Job *)job);
+    }
+
+    for (int i = 0; i < threadsNum; i++)
+    {
         pthread_join(threadIds[i], NULL);
+    }
 
     delete jobQueue;
     delete[] threadIds;
@@ -108,20 +120,19 @@ int JobScheduler::schedule(Job *job)
         // Should never happen
         std::cout << "Job could not be inserted into queue" << std::endl;
         pthread_mutex_unlock(&jobQueueMutex);
-        
+
         return -1;
     }
 
     pthread_mutex_unlock(&jobQueueMutex);
     pthread_cond_signal(&jobQueueEmptyCond);
 
-    job->jobId = nextJobId++;
-
-    return nextJobId - 1;
+    return job->setJobId(nextJobId++);
 }
 
-void JobScheduler::threadWork()
+void *threadWork(void *arg)
 {
+    JobQueue *jobQueue = (JobQueue *)arg;
     while (1)
     {
         pthread_mutex_lock(&jobQueueMutex);
@@ -141,4 +152,6 @@ void JobScheduler::threadWork()
 
         delete curJobListNode;
     }
+
+    return 0;
 }
