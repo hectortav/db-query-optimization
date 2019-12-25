@@ -178,7 +178,7 @@ void *threadWork(void *arg)
             //std::cout << "thread " << pthread_self() << ", 5" << std::endl;
 
             // thread should exit
-            // delete curJobListNode;
+            delete curJobListNode;
             pthread_exit((void **)0);
         }
         // printf("3\n");
