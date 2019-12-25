@@ -58,6 +58,7 @@ public:
     JobQueue(int maxSize);
     ~JobQueue();
 
+    int getCurrentSize();
     bool isEmpty();
     bool isFull();
     int insertJobAtEnd(Job *job);
@@ -95,8 +96,7 @@ public:
     void run() {}
     int setJobId(int jobId)
     {
-        Job::setJobId(-1);
-        return jobId;
+        return Job::setJobId(-1);
     }
 };
 

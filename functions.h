@@ -121,11 +121,12 @@ private:
     int shift;
 
 public:
-    trJob(tuple* array,tuple* array2, int offset,int shift) : Job() { }
+    trJob(tuple* array,tuple* array2, int offset,int shift) : Job() { /*std::cout<<"Job -> array:"<<array<<", offset: "<<offset<<std::endl;*/ this->array = array; this->array2 = array2; this->offset = offset; this->shift = shift; }
 
     void run() override
     {
         std::cout << "reorder added to queue\n";
+        std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
         tuplereorder_parallel(array, array2, offset, shift);
         return; 
     }
@@ -139,7 +140,7 @@ private:
     int stopIndex;
 
 public:
-    qJob(tuple* tuples, int startIndex, int stopIndex) : Job() { }
+    qJob(tuple* tuples, int startIndex, int stopIndex) : Job() { this->tuples = tuples; this->startIndex = startIndex; this->stopIndex = stopIndex; }
 
     void run() override
     {

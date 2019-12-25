@@ -403,7 +403,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift)
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
             scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1));
-            delete reorder;
+            // delete reorder;
         }
         else
         {
@@ -433,6 +433,7 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t)
             scheduler = new JobScheduler(4, 10);
         tuplereorder_parallel(array, array2, offset, shift);
         scheduler->~JobScheduler();
+        scheduler = NULL;
     }
 }
 
@@ -780,7 +781,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     if (shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel1.num_tuples];
-                        tuplereorder(rel1.tuples,t,rel1.num_tuples,0, serial);  //add parallel
+                        tuplereorder(rel1.tuples,t,rel1.num_tuples,0, parallel);  //add parallel
                         //mid_func(rel1.tuples,t,rel1.num_tuples,0);
 
                         delete[] t;
@@ -791,7 +792,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     if (shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel2.num_tuples];
-                        tuplereorder(rel2.tuples,t,rel2.num_tuples,0, serial);  //add parallel
+                        tuplereorder(rel2.tuples,t,rel2.num_tuples,0, parallel);  //add parallel
                         //mid_func(rel2.tuples,t,rel2.num_tuples,0);
                         delete[] t;
                     }
