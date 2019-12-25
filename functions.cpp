@@ -516,7 +516,8 @@ uint64_t* histcreate(tuple* array,int offset,int shift)
 
     return hist;
 }
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift)
+
+void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
 {
     uint64_t* hist=histcreate(array,offset,shift);
     uint64_t* psum=psumcreate(hist);
@@ -532,7 +533,7 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift)
         if(hist[i]==0)
             continue;
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
-            tuplereorder(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
+            tuplereorder_serial(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
         else            
             quickSort(array,start, psum[i]-1);
 
@@ -541,6 +542,41 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift)
     delete[] psum;
     delete[] hist;
 }
+
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift)
+{
+    uint64_t* hist=histcreate(array,offset,shift);
+    uint64_t* psum=psumcreate(hist);
+    for(int i=0;i<offset;i++)
+    {
+        uint64_t hash=hashFunction(array[i].payload,7-shift);
+        memcpy(array2+psum[hash],array+i,sizeof(tuple));
+        psum[hash]++;
+    }
+    memcpy(array,array2,offset*sizeof(tuple));
+    for(int i=0,start=0;i<power;i++)
+    {
+        if(hist[i]==0)
+            continue;
+        if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
+            tuplereorder_parallel(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
+        else            
+            quickSort(array,start, psum[i]-1);
+
+        start=psum[i];
+    }
+    delete[] psum;
+    delete[] hist;
+}
+
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t)
+{
+    if (t == serial)
+        tuplereorder_serial(array, array2, offset, shift);
+    else if (t == parallel)
+        tuplereorder_parallel(array, array2, offset, shift);
+}
+
 // relation* re_orderedd(relation *rel, relation* new_rel, int no_used)
 // {
 //     int shift = 0;
@@ -1195,7 +1231,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     if (shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel1.num_tuples];
-                        tuplereorder(rel1.tuples,t,rel1.num_tuples,0);
+                        tuplereorder(rel1.tuples,t,rel1.num_tuples,0, parallel);
                         //mid_func(rel1.tuples,t,rel1.num_tuples,0);
 
                         delete[] t;
@@ -1206,7 +1242,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     if (shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel2.num_tuples];
-                        tuplereorder(rel2.tuples,t,rel2.num_tuples,0);
+                        tuplereorder(rel2.tuples,t,rel2.num_tuples,0, parallel);
                         //mid_func(rel2.tuples,t,rel2.num_tuples,0);
                         delete[] t;
                     }

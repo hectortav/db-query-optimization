@@ -12,6 +12,8 @@
 #define MAX_INPUT_FILE_NAME_SIZE 100
 #define MAX_INPUT_ARRAYS_NUM 20
 
+enum Type {serial = 0, parallel = 1}; 
+
 typedef class list list;
 
 
@@ -24,7 +26,7 @@ public:
 
 const unsigned long BUCKET_SIZE = 64 * pow(2, 10);  //64KB (I think)
 const unsigned long TUPLE_SIZE = sizeof(tuple);
-const int TUPLES_PER_BUCKET = 1;//(int)(BUCKET_SIZE / TUPLE_SIZE);  
+const int TUPLES_PER_BUCKET = (int)(BUCKET_SIZE / TUPLE_SIZE);  
 //const int TUPLES_PER_BUCKET=10;
 const uint64_t power=pow(2,8);
 //each bucket must be smaller than 64KB 
@@ -115,7 +117,7 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 // relation* re_ordered_2(relation*,relation*, int); //temporary
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift);
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t);
 
 
 // functions for bucket sort
