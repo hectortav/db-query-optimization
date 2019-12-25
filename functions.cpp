@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "JobScheduler.h"
 
 void relation::print()
 {
@@ -574,7 +575,11 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t)
     if (t == serial)
         tuplereorder_serial(array, array2, offset, shift);
     else if (t == parallel)
+    {
+        JobScheduler scheduler(4, 10);
         tuplereorder_parallel(array, array2, offset, shift);
+        scheduler.~JobScheduler();
+    }
 }
 
 // relation* re_orderedd(relation *rel, relation* new_rel, int no_used)

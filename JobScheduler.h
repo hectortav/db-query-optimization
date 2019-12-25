@@ -70,4 +70,39 @@ public:
     void threadWork();
 };
 
+class trJob : public Job    //tuple reorder job
+{
+private:
+    tuple* array;
+    tuple* array2;
+    int offset;
+    int shift;
+
+public:
+    trJob(tuple* array,tuple* array2, int offset,int shift) : Job() { }
+
+    void run() override
+    {
+        tuplereorder_parallel(array, array2, offset, shift);
+        return; 
+    }
+}
+
+class qJob : public Job    //quicksort job
+{
+private:
+    tuple* tuples;
+    int startIndex;
+    int stopIndex;
+
+public:
+    qJob(tuple* tuples, int startIndex, int stopIndex) : Job() { }
+
+    void run() override
+    {
+        quickSort(tuples, startIndex, stopIndex);
+        return; 
+    }
+}
+
 #endif
