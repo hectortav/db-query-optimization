@@ -155,7 +155,7 @@ public:
 
     void run() override
     {
-        std::cout << "quicksort added to queue\n";
+        // std::cout << "quicksort added to queue\n";
         quickSort(tuples, startIndex, stopIndex);
         return; 
     }

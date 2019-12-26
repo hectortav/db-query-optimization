@@ -123,6 +123,7 @@ JobScheduler::~JobScheduler()
 int JobScheduler::schedule(Job *job)
 {
     pthread_mutex_lock(&jobQueueMutex);
+    // std::cout<<jobQueue->getCurrentSize()<<std::endl;
     while (jobQueue->isFull())
     {
         pthread_cond_wait(&jobQueueFullCond, &jobQueueMutex);

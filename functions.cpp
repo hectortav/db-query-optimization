@@ -353,6 +353,7 @@ uint64_t* histcreate(tuple* array,int offset,int shift)
 
     return hist;
 }
+uint64_t cntrcntr;
 
 void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
 {
@@ -383,9 +384,10 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
 }
 
 int path = 0;   //temp way to choose parallel modes
-
+static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/)
 {
+    
     // std::cout<<"array:"<<array<<", offset: "<<offset<<", isLastCall: "<<isLastCall<<std::endl;
     uint64_t* hist=histcreate(array,offset,shift);
     uint64_t* psum=psumcreate(hist);
@@ -422,9 +424,11 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
             else if (path == 1)
             {
                 scheduler->schedule(quick = new qJob(array,start, psum[i]-1));
-                delete quick;
+                //delete quick;
             }
         }   
+        start=psum[i];
+
     }
     for(int i=0,start=0;i<power;i++)
     {
@@ -436,8 +440,8 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
             scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastCallIndex ? true : false, reorderIndex));
             // delete reorder;
         }
-
         start=psum[i];
+
     }
     // std::cout<<"isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
     if (isLastCall && lastCallIndex == -1) {
@@ -458,7 +462,7 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int 
     else if (t == parallel)
     {
         if (scheduler == NULL)
-            scheduler = new JobScheduler(4, 1000);
+            scheduler = new JobScheduler(32, 1000);
         tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex);
     }
 }
@@ -482,6 +486,9 @@ int randomIndex(int startIndex, int stopIndex) {
 
 int partition(tuple* tuples, int startIndex, int stopIndex)
 { 
+    pthread_mutex_lock(&blah);
+    cntrcntr++;
+    pthread_mutex_unlock(&blah);
     int pivotIndex = randomIndex(startIndex, stopIndex);
 
     uint64_t pivot = tuples[pivotIndex].payload;
@@ -505,8 +512,15 @@ int partition(tuple* tuples, int startIndex, int stopIndex)
 }
 
 // (startIndex, stopIndex) -> inclusive
+
 void quickSort(tuple* tuples, int startIndex, int stopIndex)
 {
+    // pthread_mutex_lock(&blah);
+    // cntr++;
+    // std::cout<<" quicksort "<<cntr<<" start: "<<startIndex<<" stopIndex: "<<std::endl;
+    // pthread_mutex_unlock(&blah);
+
+    
     if (startIndex < stopIndex) 
     { 
         int partitionIndex = partition(tuples, startIndex, stopIndex); 
@@ -863,7 +877,10 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         }
                         scheduler->~JobScheduler();
                         scheduler = NULL;
+
                     }
+                    // std::cout<<cntrcntr<<std::endl;
+
                     // std::cout<<"-------------MAIN THREAD5"<<std::endl;
                     
                     if (t1 != NULL)
