@@ -16,7 +16,7 @@ enum Type {serial = 0, parallel = 1};
 
 typedef class list list;
 
-static bool lastJobQueued[2] = {false, false};
+// static bool lastJobQueued[2] = {false, false};
 
 class tuple
 {
@@ -28,6 +28,16 @@ public:
 const unsigned long BUCKET_SIZE = 64 * pow(2, 10);  //64KB (I think)
 const unsigned long TUPLE_SIZE = sizeof(tuple);
 const int TUPLES_PER_BUCKET = (int)(BUCKET_SIZE / TUPLE_SIZE);  
+
+extern bool** lastJobQueued;
+extern JobScheduler *scheduler;
+extern pthread_mutex_t* MutexArray;
+extern pthread_cond_t*  CondArray;
+extern pthread_cond_t CondQueries;
+extern pthread_mutex_t MutexQueries;
+extern char** Result;
+extern uint64_t* SortJobSum;
+
 //const int TUPLES_PER_BUCKET=10;
 const uint64_t power=pow(2,8);
 //each bucket must be smaller than 64KB 
@@ -110,8 +120,11 @@ public:
     ~histogram();
 };
 
-void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int);
+void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int, int);
 void quickSort(tuple*, int, int);
+void handlequery(char** ,InputArray**,int);
+
+static pthread_mutex_t smutex=PTHREAD_MUTEX_INITIALIZER;
 
 class trJob : public Job    //tuple reorder job
 {
@@ -122,9 +135,9 @@ private:
     int shift;
     bool isLastCall;
     int reorderIndex;
-
+    int queryid;
 public:
-    trJob(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex) : Job() 
+    trJob(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex,int queryid) : Job() 
     { 
         this->array = array;
         this->array2 = array2;
@@ -132,13 +145,22 @@ public:
         this->shift = shift;
         this->isLastCall = isLastCall;
         this->reorderIndex = reorderIndex;
+        this->queryid=queryid;
+        pthread_mutex_lock(&smutex);
+        SortJobSum[queryid]++;
+        pthread_mutex_unlock(&smutex);
     }
 
     void run() override
     {
         // std::cout << "reorder added to queue\n";
         // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
-        tuplereorder_parallel(array, array2, offset, shift, isLastCall, reorderIndex);
+        tuplereorder_parallel(array, array2, offset, shift, isLastCall, reorderIndex,queryid);
+        pthread_mutex_lock(&smutex);
+            SortJobSum[queryid]--;
+            if(SortJobSum[queryid]==0)
+                pthread_cond_signal(&CondArray[queryid]);
+        pthread_mutex_unlock(&smutex);
         return; 
     }
 };
@@ -161,6 +183,22 @@ public:
     }
 };
 
+class queryJob : public Job
+{
+private:
+    char** parts;
+    InputArray** allrelations;
+    int id;
+
+public:
+    queryJob(char** parts,InputArray** allrelations, int id) : Job(){this->parts=parts;this->allrelations=allrelations;this->id=id;}
+    void run() override
+    {
+        handlequery(parts,allrelations,id);
+        return;
+    }
+};
+
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 // uint64_t** create_hist(relation*, int);
@@ -169,8 +207,8 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 // relation* re_ordered_2(relation*,relation*, int); //temporary
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex);
-void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex);
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex,int queryid);
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex,int queryid);
 
 
 // functions for bucket sort
@@ -182,11 +220,11 @@ void sortBucket(relation* rel, int startIndex, int endIndex);
 InputArray** readArrays();
 char** readbatch(int& lns);
 char** makeparts(char* query);
-void handlequery(char** parts,InputArray** allrelations);
+void handlequery(char** parts,InputArray** allrelations,int id);
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
 bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin);
-IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds);
-void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds);
+IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds,int queryid);
+void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds,int queryid);
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds);
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);

@@ -127,10 +127,10 @@ int JobScheduler::schedule(Job *job)
     while (jobQueue->isFull())
     {
         pthread_cond_wait(&jobQueueFullCond, &jobQueueMutex);
-    }
+    }    
+
     
     int jobId = job->setJobId(nextJobId++);
-    
     if (jobQueue->insertJobAtEnd(job) != 0)
     {
         // Should never happen
@@ -143,7 +143,7 @@ int JobScheduler::schedule(Job *job)
     pthread_mutex_unlock(&jobQueueMutex);
     pthread_cond_signal(&jobQueueEmptyCond);
 
-    //std::cout << "Job scheduled" << std::endl;
+    // std::cout << "Job scheduled" << std::endl;
     return jobId;
 }
 

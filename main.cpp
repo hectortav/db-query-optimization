@@ -152,22 +152,47 @@ int main(void)
     //     }
     // }
     srand(time(NULL));
-
     int lines;
+    scheduler=new JobScheduler(16,1000);
     while(1)
     {
         lines=0;
         char** arr=readbatch(lines);
         if(arr==NULL)
             break;
+
        // std::cout<<arr<<std::endl;
         // std::cout<<std::endl;
         //std::cout<<lines<<std::endl;
+        SortJobSum=new uint64_t[lines]{0};
+        MutexArray=new pthread_mutex_t[lines];
+        CondArray=new pthread_cond_t[lines];
+        lastJobQueued=new bool*[lines];
+        CondQueries=PTHREAD_COND_INITIALIZER;
+        MutexQueries=PTHREAD_MUTEX_INITIALIZER;
+        Result=new char*[lines];
         for(int i=0;i<lines;i++)
         {
+            // std::cout<<i<<std::endl;
+            Result[i]=new char[100];
+            Result[i][0]='\0';
+            lastJobQueued[i]=new bool[2]{false};
+            MutexArray[i]=PTHREAD_MUTEX_INITIALIZER;
+            CondArray[i]=PTHREAD_COND_INITIALIZER;
             //std::cout<<arr[i]<<std::endl;
-            handlequery(makeparts(arr[i]), inputArrays);
-            std::cout<<std::endl;
+            scheduler->schedule(new queryJob(makeparts(arr[i]), inputArrays,i));
+            // std::cout<<std::endl;
+        }
+        
+        for(int i=0;i<lines;i++)
+        {
+            pthread_mutex_lock(&MutexQueries);
+            pthread_cond_wait(&CondQueries,&MutexQueries);
+            pthread_mutex_unlock(&MutexQueries);
+        }
+        for(int i=0;i<lines;i++)
+        {
+            std::cout<<Result[i]<<std::endl;
         }
         for(int i=0;i<lines;i++)
             delete[] arr[i];
@@ -180,5 +205,6 @@ int main(void)
     }
     delete[] inputArrays;
     remove("read_arrays_end");
+    delete scheduler;
     return 0;
 }
