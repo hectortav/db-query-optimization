@@ -13,8 +13,6 @@ static pthread_mutex_t jobSchedulerDestroyMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t jobQueueFullCond = PTHREAD_COND_INITIALIZER, jobQueueEmptyCond = PTHREAD_COND_INITIALIZER; // condition variables for JobQueue
 static pthread_cond_t jobSchedulerDestroyCond = PTHREAD_COND_INITIALIZER;
 
-static bool lastJobQueued = false;
-
 // Abstract Class Job
 class Job
 {

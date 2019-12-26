@@ -16,6 +16,7 @@ enum Type {serial = 0, parallel = 1};
 
 typedef class list list;
 
+static bool lastJobQueued[2] = {false, false};
 
 class tuple
 {
@@ -109,7 +110,7 @@ public:
     ~histogram();
 };
 
-void tuplereorder_parallel(tuple*, tuple*, int, int, bool);
+void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int);
 void quickSort(tuple*, int, int);
 
 class trJob : public Job    //tuple reorder job
@@ -120,22 +121,24 @@ private:
     int offset;
     int shift;
     bool isLastCall;
+    int reorderIndex;
 
 public:
-    trJob(tuple* array,tuple* array2, int offset,int shift, bool isLastCall) : Job() 
+    trJob(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex) : Job() 
     { 
         this->array = array;
         this->array2 = array2;
         this->offset = offset;
         this->shift = shift;
         this->isLastCall = isLastCall;
+        this->reorderIndex = reorderIndex;
     }
 
     void run() override
     {
         // std::cout << "reorder added to queue\n";
         // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
-        tuplereorder_parallel(array, array2, offset, shift, isLastCall);
+        tuplereorder_parallel(array, array2, offset, shift, isLastCall, reorderIndex);
         return; 
     }
 };
@@ -166,8 +169,8 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 // relation* re_ordered_2(relation*,relation*, int); //temporary
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t);
-void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall);
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex);
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex);
 
 
 // functions for bucket sort
