@@ -110,14 +110,14 @@ JobScheduler::~JobScheduler()
     for (int i = 0; i < threadsNum; i++)
     {
         pthread_join(threadIds[i], NULL);
-        //std::cout << "Thread " << threadIds[i] << " exited" << std::endl;
+        // std::cout << "Thread " << threadIds[i] << " exited" << std::endl;
     }
 
     delete jobQueue;
     jobQueue = NULL;
     delete[] threadIds;
     threadIds = NULL;
-    //std::cout << "JobScheduler deleted" << std::endl;
+    // std::cout << "JobScheduler deleted" << std::endl;
 }
 
 int JobScheduler::schedule(Job *job)

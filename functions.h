@@ -109,7 +109,7 @@ public:
     ~histogram();
 };
 
-void tuplereorder_parallel(tuple*, tuple*, int, int);
+void tuplereorder_parallel(tuple*, tuple*, int, int, bool);
 void quickSort(tuple*, int, int);
 
 class trJob : public Job    //tuple reorder job
@@ -119,15 +119,23 @@ private:
     tuple* array2;
     int offset;
     int shift;
+    bool isLastCall;
 
 public:
-    trJob(tuple* array,tuple* array2, int offset,int shift) : Job() { /*std::cout<<"Job -> array:"<<array<<", offset: "<<offset<<std::endl;*/ this->array = array; this->array2 = array2; this->offset = offset; this->shift = shift; }
+    trJob(tuple* array,tuple* array2, int offset,int shift, bool isLastCall) : Job() 
+    { 
+        this->array = array;
+        this->array2 = array2;
+        this->offset = offset;
+        this->shift = shift;
+        this->isLastCall = isLastCall;
+    }
 
     void run() override
     {
-        std::cout << "reorder added to queue\n";
-        std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
-        tuplereorder_parallel(array, array2, offset, shift);
+        // std::cout << "reorder added to queue\n";
+        // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
+        tuplereorder_parallel(array, array2, offset, shift, isLastCall);
         return; 
     }
 };
@@ -159,7 +167,7 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
 void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t);
-void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift);
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall);
 
 
 // functions for bucket sort

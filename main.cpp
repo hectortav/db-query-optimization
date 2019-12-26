@@ -151,6 +151,7 @@ int main(void)
     //         inputArrays[i]->print();
     //     }
     // }
+    srand(time(NULL));
 
     int lines;
     while(1)

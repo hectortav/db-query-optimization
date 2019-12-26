@@ -1,6 +1,6 @@
 #include "functions.h"
 #include "JobScheduler.h"
-
+#include <unistd.h>
 
 JobScheduler *scheduler = NULL;
 
@@ -369,8 +369,10 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
     {
         if(hist[i]==0)
             continue;
-        if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
+        if(hist[i] > TUPLES_PER_BUCKET && shift < 7){
+        // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
             tuplereorder_serial(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
+        }
         else            
             quickSort(array,start, psum[i]-1);
 
@@ -382,8 +384,9 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
 
 int path = 0;   //temp way to choose parallel modes
 
-void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift)
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall)
 {
+    // std::cout<<"array:"<<array<<", offset: "<<offset<<", isLastCall: "<<isLastCall<<std::endl;
     uint64_t* hist=histcreate(array,offset,shift);
     uint64_t* psum=psumcreate(hist);
     trJob *reorder = NULL;
@@ -396,14 +399,21 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift)
         psum[hash]++;
     }
     memcpy(array,array2,offset*sizeof(tuple));
+
+    int lastCallIndex = -1;
+    
     for(int i=0,start=0;i<power;i++)
     {
         if(hist[i]==0)
             continue;
-        if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
+        if(hist[i] > TUPLES_PER_BUCKET && shift < 7 && isLastCall)
         {
-            scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1));
-            // delete reorder;
+            // std::cout<<"should break bucket"<<std::endl;
+            
+                // lastCallIndex = i;
+            
+            lastCallIndex = i;
+            // isLastCall = false;
         }
         else
         {
@@ -414,10 +424,28 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift)
                 scheduler->schedule(quick = new qJob(array,start, psum[i]-1));
                 delete quick;
             }
-            
         }   
+    }
+    for(int i=0,start=0;i<power;i++)
+    {
+        if(hist[i]==0)
+            continue;
+        if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
+        {
+            // std::cout<<"should break bucket, isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
+            scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastCallIndex ? true : false));
+            // delete reorder;
+        }
 
         start=psum[i];
+    }
+    // std::cout<<"isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
+    if (isLastCall && lastCallIndex == -1) {
+        // std::cout<<"In if -> isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
+        // scheduler->~JobScheduler();
+        // scheduler = NULL;
+        lastJobQueued = true;
+        pthread_cond_signal(&jobSchedulerDestroyCond);
     }
     delete[] psum;
     delete[] hist;
@@ -430,10 +458,22 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t)
     else if (t == parallel)
     {
         if (scheduler == NULL)
-            scheduler = new JobScheduler(4, 10);
-        tuplereorder_parallel(array, array2, offset, shift);
+            scheduler = new JobScheduler(4, 1000);
+        tuplereorder_parallel(array, array2, offset, shift, true);
+                // std::cout<<"-------------MAIN THREAD3"<<std::endl;
+
+        pthread_mutex_lock(&jobSchedulerDestroyMutex);
+        while (lastJobQueued == false)
+        {
+            pthread_cond_wait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex);
+        }
+                // std::cout<<"-------------MAIN THREAD1"<<std::endl;
+
+        pthread_mutex_unlock(&jobSchedulerDestroyMutex);
+        // std::cout<<"-------------MAIN THREAD"<<std::endl;
         scheduler->~JobScheduler();
         scheduler = NULL;
+        lastJobQueued = false;
     }
 }
 
@@ -450,9 +490,8 @@ void swap(tuple* tuple1, tuple* tuple2)
 }
 
 int randomIndex(int startIndex, int stopIndex) {
-    srand(time(NULL));
-
-    return rand()%(stopIndex - startIndex + 1) + startIndex;
+    unsigned int seed = stopIndex - startIndex;
+    return rand_r(&seed)%(stopIndex - startIndex + 1) + startIndex;
 }
 
 int partition(tuple* tuples, int startIndex, int stopIndex)
@@ -734,6 +773,8 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
             continue;
         }
 
+        // std::cout<<"predicateArray1Id: "<<predicateArray1Id<<", predicateArray2Id: "<<predicateArray2Id<<std::endl;
+
         switch (operation)
         {
         case 2: // '='
@@ -778,7 +819,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
                     relation* newRel1 = new relation();
                     relation* reorderedRel1=&rel1;
-                    
+                    // std::cout<<"rel1 size: "<<reorderedRel1->num_tuples<<std::endl;
                     if (shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel1.num_tuples];
                         tuplereorder(rel1.tuples,t,rel1.num_tuples,0, parallel);  //add parallel
@@ -789,7 +830,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     
                     relation* newRel2 = new relation();
                     relation* reorderedRel2=&rel2;
-                    
+                    // std::cout<<"rel2 size: "<<reorderedRel2->num_tuples<<std::endl;
                     if (shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin)) {
                         tuple* t=new tuple[rel2.num_tuples];
                         tuplereorder(rel2.tuples,t,rel2.num_tuples,0, parallel);  //add parallel
