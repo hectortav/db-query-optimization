@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <pthread.h>
 #include <iostream>
+#define THREADS_NUM 8
+#define QUEUE_SIZE 1000
 
 static pthread_mutex_t jobQueueMutex = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 static pthread_mutex_t jobSchedulerDestroyMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -84,6 +86,9 @@ public:
     // Waits Until executed all jobs in the queue.void Barrier();
     // Add a job in the queue and returns a job id
     int schedule(Job *job);
+    bool queueEmpty() {
+        return jobQueue->isEmpty();
+    }
     // void* threadWork(void*);
 };
 

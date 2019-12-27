@@ -383,7 +383,7 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
     delete[] hist;
 }
 
-int path = 0;   //temp way to choose parallel modes
+int path = 1;   //temp way to choose parallel modes
 static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/)
 {
