@@ -152,10 +152,10 @@ void *threadWork(void *arg)
     JobQueue *jobQueue = (JobQueue *)arg;
     while (1)
     {
-        // std::cout<<"thread "<<pthread_self()<<", 1"<<std::endl;
+        // std::cout<<"thread "<<pthread_self()<<", current queue size: "<<jobQueue->getCurrentSize()<<std::endl;
 
         pthread_mutex_lock(&jobQueueMutex);
-        //std::cout << "thread " << pthread_self() << ", 2, queue is empty: " << jobQueue->isEmpty() << std::endl;
+        // std::cout << "thread " << pthread_self() << ", 2, queue is empty: " << jobQueue->isEmpty() << std::endl;
 
         while (jobQueue->isEmpty())
         {
@@ -164,7 +164,7 @@ void *threadWork(void *arg)
         // std::cout << "1" << std::endl;
         // get node from cyclic buffer by copying its contents to curBufferNode
         JobListNode *curJobListNode = jobQueue->getNodeFromStart();
-                //std::cout << "thread " << pthread_self() << " got Job with id " << curJobListNode->job->getJobId() << std::endl;
+                // std::cout << "thread " << pthread_self() << " got Job with id " << curJobListNode->job->getJobId() << std::endl;
 
         // std::cout << "2" << std::endl;
         // std::cout<<"thread "<<pthread_self()<<", 3"<<std::endl;
@@ -186,7 +186,7 @@ void *threadWork(void *arg)
 
         // printf("before run\n");
         curJobListNode->job->run();
-        // printf("after run\n");
+        // std::cout<<"thread "<<pthread_self()<<"after run"<<std::endl;
 
         delete curJobListNode;
     }

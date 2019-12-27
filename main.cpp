@@ -154,7 +154,7 @@ int main(void)
     srand(time(NULL));
 
     int lines;
-    scheduler = new JobScheduler(4, 1000);
+    scheduler = new JobScheduler(100, 10000);
     while(1)
     {
         lines=0;
@@ -171,6 +171,7 @@ int main(void)
         // queryJobDoneConds = new pthread_cond_t[lines];
         queryJobDoneArray = new bool[lines];
 
+        std::cout<<"total queries: "<<lines<<std::endl;
         for (int i = 0; i < lines; i++) {
             predicateJobsDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
             predicateJobsDoneConds[i] = PTHREAD_COND_INITIALIZER;
@@ -185,23 +186,28 @@ int main(void)
 
         for(int i=0;i<lines;i++)
         {
+            // std::cout<<"query index: "<<i<<std::endl;
             //std::cout<<arr[i]<<std::endl;
-            scheduler->schedule(new queryJob(makeparts(arr[i]), inputArrays, i));
+            scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i));
             // std::cout<<std::endl;
         }
+        // std::cout<<"-------------MAIN THREAD: will wait for queries to finish"<<std::endl;
+
         for(int i=0;i<lines;i++)
         {
             pthread_mutex_lock(&queryJobDoneMutex);
             while (queryJobDoneArray[i] == false){
-                pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
+                // pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
+                struct timespec timeout;
+                clock_gettime(CLOCK_REALTIME, &timeout);
+                timeout.tv_sec += 1;
+                pthread_cond_timedwait(&queryJobDoneCond, &queryJobDoneMutex, &timeout);
             }
-                // std::cout<<"-------------MAIN THREAD1"<<std::endl;
+                // std::cout<<"-------------MAIN THREAD: finished query with index -> "<<i<<std::endl;
 
             pthread_mutex_unlock(&queryJobDoneMutex);
             queryJobDoneArray[i] == false;
 
-            delete predicateJobsDoneMutexes[i];
-            delete predicateJobsDoneConds[i];
             delete[] lastJobDoneArrays[i];
         }
         delete[] predicateJobsDoneMutexes;
@@ -213,12 +219,14 @@ int main(void)
         delete[] arr;
         arr=NULL;
     }
-
+    std::cout<<"-----------------------------------------------------------------------------OUT OF LOOP"<<std::endl;
     delete scheduler;
 
     for(int i=0;i<MAX_INPUT_ARRAYS_NUM;i++)
     {
-        delete inputArrays[i];
+        if (inputArrays[i] != NULL) {
+            delete inputArrays[i];
+        }
     }
     delete[] inputArrays;
     remove("read_arrays_end");

@@ -16,17 +16,17 @@ enum Type {serial = 0, parallel = 1};
 
 typedef class list list;
 
-pthread_mutex_t* predicateJobsDoneMutexes;
-pthread_cond_t* predicateJobsDoneConds;
+extern pthread_mutex_t *predicateJobsDoneMutexes;
+extern pthread_cond_t *predicateJobsDoneConds;
 // pthread_mutex_t* queryJobDoneMutexes;
 // pthread_cond_t* queryJobDoneConds;
 static pthread_mutex_t queryJobDoneMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t queryJobDoneCond = PTHREAD_COND_INITIALIZER;
 
-static bool** lastJobDoneArrays;
-static bool* queryJobDoneArray;
+extern bool** lastJobDoneArrays;
+extern bool* queryJobDoneArray;
 
-JobScheduler *scheduler = NULL;
+extern JobScheduler *scheduler;
 
 class tuple
 {
@@ -70,9 +70,9 @@ class InputArray
     InputArray(uint64_t rowsNum);  // initialization for storing row ids
     ~InputArray();
 
-    InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, InputArray* pureInputArray); // filtering when storing row ids
-    InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id, InputArray* pureInputArray); // inner join
-    void extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
+    InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare,const InputArray* pureInputArray); // filtering when storing row ids
+    InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id,const InputArray* pureInputArray); // inner join
+    void extractColumnFromRowIds(relation& rel, uint64_t fieldId,const InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
     void print();
 };
 
@@ -89,12 +89,12 @@ class IntermediateArray {
     IntermediateArray(uint64_t columnsNum);
     ~IntermediateArray();
 
-    void extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int predicateArrayId, uint64_t fieldId);
+    void extractFieldToRelation(relation* resultRelation, const InputArray* inputArray, int predicateArrayId, uint64_t fieldId);
     void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id, int predicateArray1Id, int predicateArray2Id);
     bool hasInputArrayId(int inputArrayId);
     uint64_t findColumnIndexByInputArrayId(int inputArrayId);
     uint64_t findColumnIndexByPredicateArrayId(int predicateArrayId);
-    IntermediateArray* selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, InputArray* inputArray1, InputArray* inputArray2);
+    IntermediateArray* selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, const InputArray* inputArray1, const InputArray* inputArray2);
     void print();
 };
 
@@ -120,7 +120,7 @@ public:
     ~histogram();
 };
 
-void handlequery(char** ,InputArray** , int);
+void handlequery(char** ,const InputArray** , int);
 void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int, int);
 void quickSort(tuple*, int, int);
 
@@ -128,11 +128,11 @@ class queryJob : public Job {
     
 private:
     char** parts;
-    InputArray** allrelations;
+    const InputArray** allrelations;
     int queryIndex;
 
 public:
-    queryJob(char** parts,InputArray** allrelations, int queryIndex) : Job() 
+    queryJob(char** parts,const InputArray** allrelations, int queryIndex) : Job() 
     { 
         this->parts = parts;
         this->allrelations = allrelations;
@@ -219,11 +219,11 @@ void sortBucket(relation* rel, int startIndex, int endIndex);
 InputArray** readArrays();
 char** readbatch(int& lns);
 char** makeparts(char* query);
-void handlequery(char** parts,InputArray** allrelations, int queryIndex);
+void handlequery(char** parts,const InputArray** allrelations, int queryIndex);
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
 bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin);
-IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds, int queryIndex);
-void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds);
+IntermediateArray* handlepredicates(const InputArray** relations,char* part,int relationsnum, int* relationIds, int queryIndex);
+void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds);
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds);
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);

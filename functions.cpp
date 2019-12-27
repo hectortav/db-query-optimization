@@ -2,7 +2,13 @@
 #include "JobScheduler.h"
 #include <unistd.h>
 
-// JobScheduler *scheduler = NULL;
+pthread_mutex_t* predicateJobsDoneMutexes;
+pthread_cond_t* predicateJobsDoneConds;
+
+bool** lastJobDoneArrays;
+bool* queryJobDoneArray;
+
+JobScheduler *scheduler;
 
 void relation::print()
 {
@@ -46,12 +52,14 @@ InputArray::~InputArray() {
     delete[] this->columns;
 }
 
-InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, InputArray* pureInputArray) {
+InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray) {
     InputArray* newInputArrayRowIds = new InputArray(rowsNum);
     uint64_t newInputArrayRowIndex = 0;
 
     for (uint64_t i = 0; i < rowsNum; i++) {
         uint64_t inputArrayRowId = columns[0][i];
+        // std::cout<<"inputArrayRowId: "<<inputArrayRowId<<std::endl;
+
         uint64_t inputArrayFieldValue = pureInputArray->columns[fieldId][inputArrayRowId];
         bool filterApplies = false;
         switch (operation)
@@ -80,7 +88,7 @@ InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t n
     return newInputArrayRowIds;
 }
 
-InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, InputArray* pureInputArray) {
+InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, const InputArray* pureInputArray) {
     InputArray* newInputArrayRowIds = new InputArray(rowsNum);
     uint64_t newInputArrayRowIndex = 0;
 
@@ -100,7 +108,7 @@ InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, Input
     return newInputArrayRowIds;
 }
 
-void InputArray::extractColumnFromRowIds(relation& rel, uint64_t fieldId, InputArray* pureInputArray) {
+void InputArray::extractColumnFromRowIds(relation& rel, uint64_t fieldId, const InputArray* pureInputArray) {
     rel.num_tuples = rowsNum;
     rel.tuples=new tuple[rel.num_tuples];
     for(uint64_t i = 0; i < rel.num_tuples; i++)
@@ -133,7 +141,7 @@ IntermediateArray::~IntermediateArray() {
     delete[] this->predicateArrayIds;
 }
 
-void IntermediateArray::extractFieldToRelation(relation* resultRelation, InputArray* inputArray, int predicateArrayId, uint64_t fieldId) {
+void IntermediateArray::extractFieldToRelation(relation* resultRelation, const InputArray* inputArray, int predicateArrayId, uint64_t fieldId) {
     resultRelation->num_tuples = rowsNum;
     resultRelation->tuples = new tuple[resultRelation->num_tuples];
 
@@ -237,7 +245,7 @@ uint64_t IntermediateArray::findColumnIndexByPredicateArrayId(int predicateArray
     return -1;
 }
 
-IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, InputArray* inputArray1, InputArray* inputArray2) {
+IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, const InputArray* inputArray1, const InputArray* inputArray2) {
     IntermediateArray* newIntermediateArray = new IntermediateArray(columnsNum);
 
     newIntermediateArray->rowsNum = rowsNum;
@@ -387,7 +395,8 @@ int path = 0;   //temp way to choose parallel modes
 static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
 {
-    
+            std::cout<<"reorder added to queue -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+
     // std::cout<<"array:"<<array<<", offset: "<<offset<<", isLastCall: "<<isLastCall<<std::endl;
     uint64_t* hist=histcreate(array,offset,shift);
     uint64_t* psum=psumcreate(hist);
@@ -406,6 +415,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
     
     for(int i=0,start=0;i<power;i++)
     {
+        // std::cout<<"reorderIndex: "<<reorderIndex<<" -> "<<i<<" of "<<power<<std::endl;
         if(hist[i]==0)
             continue;
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7 && isLastCall)
@@ -430,6 +440,8 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         start=psum[i];
 
     }
+    if (isLastCall && lastCallIndex == -1)
+        std::cout<<"reorderIndex: "<<reorderIndex<<"between fors"<<std::endl;
     for(int i=0,start=0;i<power;i++)
     {
         if(hist[i]==0)
@@ -448,6 +460,8 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         // std::cout<<"In if -> isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
         // scheduler->~JobScheduler();
         // scheduler = NULL;
+        std::cout<<"queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+        
         lastJobDoneArrays[queryIndex][reorderIndex] = true;
         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     }
@@ -461,8 +475,8 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int 
         tuplereorder_serial(array, array2, offset, shift);
     else if (t == parallel)
     {
-        if (scheduler == NULL)
-            scheduler = new JobScheduler(32, 1000);
+        // if (scheduler == NULL)
+        //     scheduler = new JobScheduler(32, 1000);
         tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex, queryIndex);
     }
 }
@@ -539,6 +553,9 @@ void sortBucket(relation* rel, int startIndex, int stopIndex) {
 
 InputArray** readArrays() {
     InputArray** inputArrays = new InputArray*[MAX_INPUT_ARRAYS_NUM]; // size is fixed
+    for (int i = 0; i < MAX_INPUT_ARRAYS_NUM; i++) {
+        inputArrays[i] = NULL;
+    }
     size_t fileNameSize = MAX_INPUT_FILE_NAME_SIZE;
     char fileName[fileNameSize];
     ssize_t rtn;
@@ -679,7 +696,7 @@ char** makeparts(char* query)
 
 Type mode = parallel;
 
-void handlequery(char** parts,InputArray** allrelations, int queryIndex)
+void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 {
     /*for(int i=0;i<3;i++)
     {
@@ -687,17 +704,27 @@ void handlequery(char** parts,InputArray** allrelations, int queryIndex)
     }*/
     int relationIds[MAX_INPUT_ARRAYS_NUM];
     int relationsnum;
+    // std::cout<<"1, queryIndex: "<<queryIndex<<std::endl;
     loadrelationIds(relationIds, parts[0], relationsnum);
+        // std::cout<<"2, queryIndex: "<<queryIndex<<std::endl;
+
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds, queryIndex);
+        // std::cout<<"3, queryIndex: "<<queryIndex<<std::endl;
+
     handleprojection(result,allrelations,parts[2], relationIds);
+            // std::cout<<"4, queryIndex: "<<queryIndex<<std::endl;
+
     if(result!=NULL)
         delete result;
     delete[] parts;   
 
-    if (mode == parallel) {
+    // if (mode == parallel) {
+        std::cout<<std::endl;
         queryJobDoneArray[queryIndex]=true;
         pthread_cond_signal(&queryJobDoneCond);
-    }
+                // std::cout<<"query "<<queryIndex<<" ended"<<std::endl;
+
+    // }
 }
 void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 {
@@ -744,7 +771,7 @@ bool isRelationOrdered(relation &rel) {
 
 
 
-IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds, int queryIndex)
+IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,int relationsnum, int* relationIds, int queryIndex)
 {
     int cntr;
     uint64_t** preds=splitpreds(part,cntr);
@@ -752,6 +779,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
     InputArray** inputArraysRowIds = new InputArray*[relationsnum];
     for (int i = 0; i < relationsnum; i++) {
+        // std::cout<<"relationIds[i] = "<<relationIds[i]<<" ====================================================================="<<std::endl;
         inputArraysRowIds[i] = new InputArray(inputArrays[relationIds[i]]->rowsNum);
     }
 
@@ -766,8 +794,8 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
         int inputArray1Id = relationIds[predicateArray1Id];
         int inputArray2Id = isFilter ? -1 : relationIds[predicateArray2Id];
         
-        InputArray* inputArray1 = inputArrays[inputArray1Id];
-        InputArray* inputArray2 = isFilter ? NULL : inputArrays[inputArray2Id];
+        const InputArray* inputArray1 = inputArrays[inputArray1Id];
+        const InputArray* inputArray2 = isFilter ? NULL : inputArrays[inputArray2Id];
         InputArray* inputArray1RowIds = inputArraysRowIds[predicateArray1Id];
         InputArray* inputArray2RowIds = isFilter ? NULL : inputArraysRowIds[predicateArray2Id];
 
@@ -856,6 +884,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                             //  std::cout<<"-------------MAIN THREAD3"<<std::endl;
 
                     if (mode == parallel) {
+                        std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
                         if (shouldSortRel1) {
                             pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
                             while (lastJobDoneArrays[queryIndex][0] == false){
@@ -866,22 +895,25 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                             pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
                             lastJobDoneArrays[queryIndex][0] = false;
                         }
+                        std::cout<<"middle"<<std::endl;
                         if (shouldSortRel2){
                             pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
                             while (lastJobDoneArrays[queryIndex][1] == false) {
                                 // std::cout<<"-------------lastJobQueued1: "<<lastJobQueued[1]<<std::endl;
 
-                                struct timespec timeout;
-                                clock_gettime(CLOCK_REALTIME, &timeout);
-                                timeout.tv_sec += 1;
-                                pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex], &timeout);
-                            // pthread_cond_wait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex);
+                                // struct timespec timeout;
+                                // clock_gettime(CLOCK_REALTIME, &timeout);
+                                // timeout.tv_sec += 1;
+                                // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex], &timeout);
+                            pthread_cond_wait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex]);
                             }
                                 // std::cout<<"-------------MAIN THREAD"<<std::endl;
 
                             pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
                             lastJobDoneArrays[queryIndex][1] = false;
                         }
+                        std::cout<<"query "<<queryIndex<<" stopped waiting for predicate jobs to finish"<<std::endl;
+
                         // scheduler->~JobScheduler();
                         // scheduler = NULL;
 
@@ -968,7 +1000,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
 
 }
-void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds)
+void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds)
 {
     // std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
     int projarray,projcolumn,predicatearray;
