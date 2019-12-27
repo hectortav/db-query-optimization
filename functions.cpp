@@ -2,7 +2,7 @@
 #include "JobScheduler.h"
 #include <unistd.h>
 
-JobScheduler *scheduler = NULL;
+// JobScheduler *scheduler = NULL;
 
 void relation::print()
 {
@@ -385,7 +385,7 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
 
 int path = 0;   //temp way to choose parallel modes
 static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
-void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/)
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
 {
     
     // std::cout<<"array:"<<array<<", offset: "<<offset<<", isLastCall: "<<isLastCall<<std::endl;
@@ -437,7 +437,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
             // std::cout<<"should break bucket, isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
-            scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastCallIndex ? true : false, reorderIndex));
+            scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastCallIndex ? true : false, reorderIndex, queryIndex));
             // delete reorder;
         }
         start=psum[i];
@@ -448,14 +448,14 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         // std::cout<<"In if -> isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
         // scheduler->~JobScheduler();
         // scheduler = NULL;
-        lastJobQueued[reorderIndex] = true;
-        pthread_cond_signal(&jobSchedulerDestroyCond);
+        lastJobDoneArrays[queryIndex][reorderIndex] = true;
+        pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     }
     delete[] psum;
     delete[] hist;
 }
 
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex)
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex, int queryIndex)
 {
     if (t == serial)
         tuplereorder_serial(array, array2, offset, shift);
@@ -463,7 +463,7 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int 
     {
         if (scheduler == NULL)
             scheduler = new JobScheduler(32, 1000);
-        tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex);
+        tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex, queryIndex);
     }
 }
 
@@ -676,7 +676,10 @@ char** makeparts(char* query)
     parts[2]=query+start;
     return parts;
 }
-void handlequery(char** parts,InputArray** allrelations)
+
+Type mode = parallel;
+
+void handlequery(char** parts,InputArray** allrelations, int queryIndex)
 {
     /*for(int i=0;i<3;i++)
     {
@@ -685,12 +688,16 @@ void handlequery(char** parts,InputArray** allrelations)
     int relationIds[MAX_INPUT_ARRAYS_NUM];
     int relationsnum;
     loadrelationIds(relationIds, parts[0], relationsnum);
-    IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds);
+    IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds, queryIndex);
     handleprojection(result,allrelations,parts[2], relationIds);
     if(result!=NULL)
         delete result;
     delete[] parts;   
 
+    if (mode == parallel) {
+        queryJobDoneArray[queryIndex]=true;
+        pthread_cond_signal(&queryJobDoneCond);
+    }
 }
 void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 {
@@ -735,9 +742,9 @@ bool isRelationOrdered(relation &rel) {
     return true;
 }
 
-Type mode = parallel;
 
-IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
+
+IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds, int queryIndex)
 {
     int cntr;
     uint64_t** preds=splitpreds(part,cntr);
@@ -828,7 +835,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                     // std::cout<<"shouldSortRel1: "<<shouldSortRel1<<std::endl;
                     if (shouldSortRel1) {
                         t1=new tuple[rel1.num_tuples];
-                        tuplereorder(rel1.tuples,t1,rel1.num_tuples,0, mode, 0);  //add parallel
+                        tuplereorder(rel1.tuples,t1,rel1.num_tuples,0, mode, 0, queryIndex);  //add parallel
                         //mid_func(rel1.tuples,t,rel1.num_tuples,0);
 
                         // delete[] t1;
@@ -842,7 +849,7 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                                         // std::cout<<"shouldSortRel2: "<<shouldSortRel2<<std::endl;
                     if (shouldSortRel2) {
                         t2=new tuple[rel2.num_tuples];
-                        tuplereorder(rel2.tuples,t2,rel2.num_tuples,0, mode, 1);  //add parallel
+                        tuplereorder(rel2.tuples,t2,rel2.num_tuples,0, mode, 1, queryIndex);  //add parallel
                         //mid_func(rel2.tuples,t,rel2.num_tuples,0);
                         // delete[] t2;
                     }
@@ -850,33 +857,33 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
 
                     if (mode == parallel) {
                         if (shouldSortRel1) {
-                            pthread_mutex_lock(&jobSchedulerDestroyMutex);
-                            while (lastJobQueued[0] == false){
-                                pthread_cond_wait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex);
+                            pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+                            while (lastJobDoneArrays[queryIndex][0] == false){
+                                pthread_cond_wait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex]);
                             }
                                 // std::cout<<"-------------MAIN THREAD1"<<std::endl;
 
-                            pthread_mutex_unlock(&jobSchedulerDestroyMutex);
-                            lastJobQueued[0] = false;
+                            pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+                            lastJobDoneArrays[queryIndex][0] = false;
                         }
                         if (shouldSortRel2){
-                            pthread_mutex_lock(&jobSchedulerDestroyMutex);
-                            while (lastJobQueued[1] == false) {
+                            pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+                            while (lastJobDoneArrays[queryIndex][1] == false) {
                                 // std::cout<<"-------------lastJobQueued1: "<<lastJobQueued[1]<<std::endl;
 
                                 struct timespec timeout;
                                 clock_gettime(CLOCK_REALTIME, &timeout);
                                 timeout.tv_sec += 1;
-                                pthread_cond_timedwait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex, &timeout);
+                                pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex], &timeout);
                             // pthread_cond_wait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex);
                             }
                                 // std::cout<<"-------------MAIN THREAD"<<std::endl;
 
-                            pthread_mutex_unlock(&jobSchedulerDestroyMutex);
-                            lastJobQueued[1] = false;
+                            pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+                            lastJobDoneArrays[queryIndex][1] = false;
                         }
-                        scheduler->~JobScheduler();
-                        scheduler = NULL;
+                        // scheduler->~JobScheduler();
+                        // scheduler = NULL;
 
                     }
                     // std::cout<<cntrcntr<<std::endl;

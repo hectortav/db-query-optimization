@@ -16,7 +16,17 @@ enum Type {serial = 0, parallel = 1};
 
 typedef class list list;
 
-static bool lastJobQueued[2] = {false, false};
+pthread_mutex_t* predicateJobsDoneMutexes;
+pthread_cond_t* predicateJobsDoneConds;
+// pthread_mutex_t* queryJobDoneMutexes;
+// pthread_cond_t* queryJobDoneConds;
+static pthread_mutex_t queryJobDoneMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t queryJobDoneCond = PTHREAD_COND_INITIALIZER;
+
+static bool** lastJobDoneArrays;
+static bool* queryJobDoneArray;
+
+JobScheduler *scheduler = NULL;
 
 class tuple
 {
@@ -110,8 +120,33 @@ public:
     ~histogram();
 };
 
-void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int);
+void handlequery(char** ,InputArray** , int);
+void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int, int);
 void quickSort(tuple*, int, int);
+
+class queryJob : public Job {
+    
+private:
+    char** parts;
+    InputArray** allrelations;
+    int queryIndex;
+
+public:
+    queryJob(char** parts,InputArray** allrelations, int queryIndex) : Job() 
+    { 
+        this->parts = parts;
+        this->allrelations = allrelations;
+        this->queryIndex = queryIndex;
+    }
+
+    void run() override
+    {
+        // std::cout << "reorder added to queue\n";
+        // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
+        handlequery(parts, allrelations, queryIndex);
+        return; 
+    }
+};
 
 class trJob : public Job    //tuple reorder job
 {
@@ -122,9 +157,10 @@ private:
     int shift;
     bool isLastCall;
     int reorderIndex;
+    int queryIndex;
 
 public:
-    trJob(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex) : Job() 
+    trJob(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex, int queryIndex) : Job() 
     { 
         this->array = array;
         this->array2 = array2;
@@ -132,13 +168,14 @@ public:
         this->shift = shift;
         this->isLastCall = isLastCall;
         this->reorderIndex = reorderIndex;
+        this->queryIndex = queryIndex;
     }
 
     void run() override
     {
         // std::cout << "reorder added to queue\n";
         // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
-        tuplereorder_parallel(array, array2, offset, shift, isLastCall, reorderIndex);
+        tuplereorder_parallel(array, array2, offset, shift, isLastCall, reorderIndex, queryIndex);
         return; 
     }
 };
@@ -169,8 +206,8 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 // relation* re_ordered_2(relation*,relation*, int); //temporary
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex);
-void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex);
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex, int queryIndex);
+void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex, int queryIndex);
 
 
 // functions for bucket sort
@@ -182,10 +219,10 @@ void sortBucket(relation* rel, int startIndex, int endIndex);
 InputArray** readArrays();
 char** readbatch(int& lns);
 char** makeparts(char* query);
-void handlequery(char** parts,InputArray** allrelations);
+void handlequery(char** parts,InputArray** allrelations, int queryIndex);
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
 bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin);
-IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds);
+IntermediateArray* handlepredicates(InputArray** relations,char* part,int relationsnum, int* relationIds, int queryIndex);
 void handleprojection(IntermediateArray* rowarr,InputArray** array,char* part, int* relationIds);
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds);

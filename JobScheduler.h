@@ -6,12 +6,12 @@
 #include <iostream>
 
 static pthread_mutex_t jobQueueMutex = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
-static pthread_mutex_t jobSchedulerDestroyMutex = PTHREAD_MUTEX_INITIALIZER;
+// static pthread_mutex_t jobSchedulerDestroyMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // jobQueueFullCond: JobQueue is currently full
 // jobQueueEmptyCond: JobQueue is currently empty
 static pthread_cond_t jobQueueFullCond = PTHREAD_COND_INITIALIZER, jobQueueEmptyCond = PTHREAD_COND_INITIALIZER; // condition variables for JobQueue
-static pthread_cond_t jobSchedulerDestroyCond = PTHREAD_COND_INITIALIZER;
+// static pthread_cond_t jobSchedulerDestroyCond = PTHREAD_COND_INITIALIZER;
 
 // Abstract Class Job
 class Job
