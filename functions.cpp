@@ -305,6 +305,7 @@ result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,
                 case -1:
                     if(s+1<S->num_tuples&&S->tuples[s].payload==S->tuples[s+1].payload)
                         samestart=s;
+                    break;
                 default:
                     if(S->tuples[samestart].payload!=S->tuples[s].payload)  
                         samestart=-1;
@@ -395,7 +396,7 @@ int path = 0;   //temp way to choose parallel modes
 static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
 {
-            std::cout<<"reorder added to queue -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+            // std::cout<<"reorder added to queue -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
 
     // std::cout<<"array:"<<array<<", offset: "<<offset<<", isLastCall: "<<isLastCall<<std::endl;
     uint64_t* hist=histcreate(array,offset,shift);
@@ -406,7 +407,8 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
     for(int i=0;i<offset;i++)
     {
         uint64_t hash=hashFunction(array[i].payload,7-shift);
-        memcpy(array2+psum[hash],array+i,sizeof(tuple));
+        array2[psum[hash]].key = array[i].key;
+        array2[psum[hash]].payload = array[i].payload;
         psum[hash]++;
     }
     memcpy(array,array2,offset*sizeof(tuple));
@@ -440,8 +442,8 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         start=psum[i];
 
     }
-    if (isLastCall && lastCallIndex == -1)
-        std::cout<<"reorderIndex: "<<reorderIndex<<"between fors"<<std::endl;
+    // if (isLastCall && lastCallIndex == -1)
+        // std::cout<<"reorderIndex: "<<reorderIndex<<"between fors"<<std::endl;
     for(int i=0,start=0;i<power;i++)
     {
         if(hist[i]==0)
@@ -460,7 +462,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         // std::cout<<"In if -> isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
         // scheduler->~JobScheduler();
         // scheduler = NULL;
-        std::cout<<"queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+        // std::cout<<"queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
         
         lastJobDoneArrays[queryIndex][reorderIndex] = true;
         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
@@ -884,7 +886,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                             //  std::cout<<"-------------MAIN THREAD3"<<std::endl;
 
                     if (mode == parallel) {
-                        std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
+                        // std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
                         if (shouldSortRel1) {
                             pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
                             while (lastJobDoneArrays[queryIndex][0] == false){
@@ -895,7 +897,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                             pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
                             lastJobDoneArrays[queryIndex][0] = false;
                         }
-                        std::cout<<"middle"<<std::endl;
+                        // std::cout<<"middle"<<std::endl;
                         if (shouldSortRel2){
                             pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
                             while (lastJobDoneArrays[queryIndex][1] == false) {
@@ -912,7 +914,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                             pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
                             lastJobDoneArrays[queryIndex][1] = false;
                         }
-                        std::cout<<"query "<<queryIndex<<" stopped waiting for predicate jobs to finish"<<std::endl;
+                        // std::cout<<"query "<<queryIndex<<" stopped waiting for predicate jobs to finish"<<std::endl;
 
                         // scheduler->~JobScheduler();
                         // scheduler = NULL;

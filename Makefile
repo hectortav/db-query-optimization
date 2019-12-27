@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS  = --std=c++11 #-g #-pg
+CFLAGS  = --std=c++11 -g #-pg
 DEPS=list.h JobScheduler.h functions.h
 
 default: final

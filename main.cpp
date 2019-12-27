@@ -154,7 +154,7 @@ int main(void)
     srand(time(NULL));
 
     int lines;
-    scheduler = new JobScheduler(100, 10000);
+    scheduler = new JobScheduler(30, 10000);
     while(1)
     {
         lines=0;
@@ -171,7 +171,7 @@ int main(void)
         // queryJobDoneConds = new pthread_cond_t[lines];
         queryJobDoneArray = new bool[lines];
 
-        std::cout<<"total queries: "<<lines<<std::endl;
+        // std::cout<<"total queries: "<<lines<<std::endl;
         for (int i = 0; i < lines; i++) {
             predicateJobsDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
             predicateJobsDoneConds[i] = PTHREAD_COND_INITIALIZER;
@@ -188,6 +188,7 @@ int main(void)
         {
             // std::cout<<"query index: "<<i<<std::endl;
             //std::cout<<arr[i]<<std::endl;
+            // handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
             scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i));
             // std::cout<<std::endl;
         }
@@ -219,7 +220,7 @@ int main(void)
         delete[] arr;
         arr=NULL;
     }
-    std::cout<<"-----------------------------------------------------------------------------OUT OF LOOP"<<std::endl;
+    // std::cout<<"-----------------------------------------------------------------------------OUT OF LOOP"<<std::endl;
     delete scheduler;
 
     for(int i=0;i<MAX_INPUT_ARRAYS_NUM;i++)
