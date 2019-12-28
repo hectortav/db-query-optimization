@@ -125,6 +125,7 @@ JobScheduler::~JobScheduler()
 
 int JobScheduler::schedule(Job *job, int queryIndex)
 {
+    
     pthread_mutex_lock(&jobQueueMutex);
     // std::cout<<jobQueue->getCurrentSize()<<std::endl;
     while (jobQueue->isFull())
@@ -144,18 +145,18 @@ int JobScheduler::schedule(Job *job, int queryIndex)
     }
 
     // std::cout<<"Job with id: "<<jobId<<" inserted to queue"<<"queryIndex: "<<queryIndex<<std::endl;
-
-    pthread_mutex_unlock(&jobQueueMutex);
-    pthread_cond_signal(&jobQueueEmptyCond);
-
     if (queryIndex != -1) {
         pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
         
         jobsCounter[queryIndex]++;
-        // std::cout<<"++ "<<jobsCounter[queryIndex]<<std::endl;
+        // std::cout<<"++ "<<jobsCounter[queryIndex]<<" queryindex: "<<queryIndex<<std::endl;
         
         pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
     }
+    pthread_mutex_unlock(&jobQueueMutex);
+    pthread_cond_signal(&jobQueueEmptyCond);
+
+    
 
     //std::cout << "Job scheduled" << std::endl;
     return jobId;

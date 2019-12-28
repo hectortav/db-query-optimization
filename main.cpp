@@ -154,7 +154,7 @@ int main(void)
     // srand(time(NULL));
 
     int lines;
-    scheduler = new JobScheduler(100, 1000000000);
+    scheduler = new JobScheduler(200, 1000000000);
     
     while(1)
     {
@@ -234,7 +234,6 @@ int main(void)
         delete[] lastJobDoneArrays;
         delete[] jobsCounter;
         delete[] jobsCounterMutexes;
-
         for(int i=0;i<lines;i++)
             delete[] arr[i];
         delete[] arr;

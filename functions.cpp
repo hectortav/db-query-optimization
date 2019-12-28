@@ -460,6 +460,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
             // delete reorder;
         } else {
             bool isLastQuickSort = (lastQuicksortCallIndex == i && lastReorderCallIndex == -1);
+            // std::cout<<isLastQuickSort<<" "<<lastQuicksortCallIndex<<std::endl;
             // std::cout<<"queryIndex = "<<queryIndex<<", reorderIndex: "<<reorderIndex<<", isLastQuickSort: "<<isLastQuickSort<<", lastQuicksortCallIndex: "<<lastQuicksortCallIndex<<", lastReorderCallIndex"<<lastReorderCallIndex<<std::endl;
             if (path == 0)
                 quickSort(array,start, psum[i]-1, -1, -1, isLastQuickSort);
@@ -567,6 +568,7 @@ void quickSort(tuple* tuples, int startIndex, int stopIndex, int queryIndex, int
 
     //(quickSortMode == parallel || reorderMode == parallel) && 
     if (isLastCall) {
+        // std::cout<<"islastcall qs"<<std::endl;
         // std::cout<<"queryIndex: "<<queryIndex<<" last call, "<<"reorderIndex: "<<reorderIndex<<std::endl;
         lastJobDoneArrays[queryIndex][reorderIndex] = true;
         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
@@ -963,7 +965,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                             pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
                             lastJobDoneArrays[queryIndex][1] = false;
                         }
-
+                        // sleep(1);
                         // pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
                         pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
                         while (jobsCounter[queryIndex] != 0){
@@ -973,13 +975,18 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                                 // timeout.tv_sec += 1;
                                 // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex], &timeout);
                                 // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &jobsCounterMutexes[queryIndex], &timeout);
-                                // std::cout<<"jobsCounter -> "<<jobsCounter[queryIndex]<<std::endl;
                             // pthread_mutex_lock(&jobsCounterMutex);
+
                             pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
+                            // std::cout<<"jobsCounter -> "<<jobsCounter[queryIndex]<<" queryindex: "<<queryIndex<<std::endl;
+
                         }
                             // std::cout<<"-------------MAIN THREAD1"<<std::endl;
 
                         pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+                        // while(1)
+                        //     std::cout<<"jobcntr "<<jobsCounter[queryIndex]<<" "<<queryIndex<<std::endl;
+
                         // pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
 
                         // std::cout<<"query "<<queryIndex<<" stopped waiting for predicate jobs to finish"<<std::endl;
