@@ -1407,6 +1407,7 @@ void usage(char** argv)
 }
 void params(char** argv,int argc)
 {
+    bool threadsNumGiven = false;
     for(int i=1;i<argc;i++)
     {
         if(strcmp(argv[i],"-h")==0)
@@ -1424,7 +1425,22 @@ void params(char** argv,int argc)
             joinMode=parallel;
         else if(strcmp(argv[i],"-all")==0)
             queryMode=reorderMode=joinMode=quickSortMode=parallel;
-        else if(strcmp(argv[i],"-n")==0)
-            scheduler=new JobScheduler(atoi(argv[i+1]),10000000);
+        else if(strcmp(argv[i],"-n")==0) {
+            if (i + 1 >= argc) {
+                std::cout<<"Wrong arguments"<<std::endl;
+                exit(1);
+            }
+            int threadsNum = atoi(argv[i+1]);
+            if (threadsNum <= 0) {
+                std::cout<<"Wrong arguments"<<std::endl;
+                exit(1);
+            }
+            scheduler=new JobScheduler(threadsNum,10000000);
+            threadsNumGiven = true;
+        }
+    }
+    if (!threadsNumGiven && (queryMode == parallel || reorderMode == parallel || quickSortMode == parallel || joinMode == parallel)) {
+        std::cout<<"Please rerun the program with -n <threads> to specify the number of threads to run"<<std::endl;
+        exit(1);
     }
 }
