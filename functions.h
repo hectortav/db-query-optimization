@@ -18,6 +18,7 @@ enum Type {serial = 0, parallel = 1};
 
 typedef class list list;
 
+extern int* JoinQueued;
 extern pthread_mutex_t *predicateJobsDoneMutexes;
 extern pthread_cond_t *predicateJobsDoneConds;
 extern pthread_cond_t *jobsCounterConds;
@@ -126,6 +127,8 @@ public:
 void handlequery(char** ,const InputArray** , int);
 void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int, int);
 void quickSort(tuple*, int, int, int, int, bool);
+void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,int queryIndex);
+
 
 class queryJob : public Job {
     
@@ -231,6 +234,25 @@ public:
     }
 };
 
+class jJob : public Job
+{
+private:
+    tuple* R;
+    tuple* S;
+    int Rsize;
+    int Sstart;
+    int Send;
+    list* lst;
+    int queryIndex;
+public:
+    jJob(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,int queryIndex) : Job() {this->R=R;this->S=S;this->Rsize=Rsize;this->Sstart=Sstart;this->Send=Send;this->lst=lst;this->queryIndex=queryIndex;}
+
+    void run() override
+    {
+        joinparallel(R,S,Rsize,Sstart,Send,lst,queryIndex);
+        return;
+    }
+};
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 // uint64_t** create_hist(relation*, int);

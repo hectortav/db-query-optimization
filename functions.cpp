@@ -288,6 +288,140 @@ inline uint64_t hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
 
+int* JoinQueued;
+result* managejoin(relation* R, relation* S, int queryIndex)
+{
+    // JobScheduler * scheduler=new JobScheduler(1,100000);
+        // int partsize=1000;
+        // int parts=(S->num_tuples/partsize)+1;
+    int parts=1;
+    int partsize=(S->num_tuples/parts)+1;
+    list** lst=new list*[parts];
+    // bool* done=new bool[parts]{false};
+    JoinQueued[queryIndex]=parts;
+    // pthread_mutex_lock(&DoneJoinMutex);
+    // std::cout<<"start"<<std::endl;
+    // std::cout<<parts<<std::endl;
+    for(int i=0;i<parts;i++)
+    {
+        // std::cout<<i<<" of "<<parts<<std::endl;
+        lst[i]=new list(131072,2);
+        int start=i*partsize;
+        int end=(i+1)*partsize;
+        if(end>S->num_tuples)
+            end=S->num_tuples;
+        bool b;
+
+        scheduler->schedule(new jJob(R->tuples,S->tuples,R->num_tuples,start,end,lst[i],queryIndex),-1); 
+        // std::cout<<start<<" "<<end<<" "<<S->num_tuples<<std::endl;
+        // joinparallel(R->tuples,S->tuples,R->num_tuples,start,end,lst[i],&b);
+
+    }
+    pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+    while(JoinQueued[queryIndex]>0)
+    {
+        pthread_cond_wait(&predicateJobsDoneConds[queryIndex],&predicateJobsDoneMutexes[queryIndex]);
+    }
+    pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+
+    // pthread_mutex_lock(&LastJoinMutex);
+    // if(done>0)
+    // {
+    //     pthread_mutex_unlock(&DoneJoinMutex);
+    //     pthread_cond_wait(&LastJoinCond,&LastJoinMutex);
+    // }
+    // else pthread_mutex_unlock(&DoneJoinMutex);
+
+    // pthread_mutex_unlock(&LastJoinMutex);
+    // std::cout<<"waited"<<std::endl;
+    result* rslt=new result;
+    rslt->lst=NULL;
+    // rslt->lst=lst[0];
+    for(int i=0;i<parts;i++)
+    {
+        // std::cout<<i<<std::endl;
+        if(lst[i]->rows>0)
+        {
+            if(rslt->lst==NULL)
+                rslt->lst=lst[i];
+            else
+            {
+                rslt->lst->last->next=lst[i]->first;
+                rslt->lst->last=lst[i]->last;
+                rslt->lst->rows+=lst[i]->rows;
+                lst[i]->first=lst[i]->last=NULL;
+                delete lst[i];
+
+            }
+        }
+    }
+    delete[] lst;
+    // delete scheduler;
+    // std::cout<<"cool"<<std::endl;
+    if(rslt->lst==NULL)
+        rslt->lst=new list(1,2);
+    return rslt;
+    // int size=131072; //bytes
+}
+void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,int queryIndex)
+{
+    // std::cout<<"join parl "<<std::endl;
+    int64_t samestart=-1;
+    for(uint64_t r=0,s=Sstart;r<Rsize&&s<Send;)
+    {
+        int64_t dec=R[r].payload-S[s].payload;
+        if(dec==0)
+        {
+            lst->insert(R[r].key);
+            lst->insert(S[s].key);
+            switch(samestart)
+            {
+                case -1:
+                    if(s+1<Send&&S[s].payload==S[s+1].payload)
+                        samestart=s;
+                default:
+                    if(S[samestart].payload!=S[s].payload)  
+                        samestart=-1;
+            }
+            if(s+1<Send&&S[s].payload==S[s+1].payload)
+                s++;
+            
+            else
+            {
+                r++;
+                if(samestart>-1)
+                {
+                    s=samestart;
+                    samestart=-1;
+                }
+            }
+            continue;
+        }
+        else if(dec<0)
+        {
+            r++;
+            continue;
+        }
+        else
+        {
+            s++;
+            continue;
+        }
+    }
+    pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+    // std::cout<<"i'm done"<<std::endl;
+    JoinQueued[queryIndex]--;
+    if(JoinQueued[queryIndex]==0)
+        pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
+    pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+    // if(islast)
+    // {
+    //     std::cout<<"im last"<<std::endl;
+    //     pthread_cond_signal(&LastJoinCond);
+    //     std::cout<<"did it"<<std::endl;
+    // }
+
+}
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
 {
     int64_t samestart=-1;
@@ -1003,7 +1137,9 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                         delete[] t1;
                     if (t2 != NULL)
                         delete[] t2;
-                    result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
+                    // result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
+                    result* rslt = managejoin(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2,queryIndex);
+
                     if (rslt->lst->rows == 0) {
                         // no results
                         for(int i=0;i<cntr;i++)
