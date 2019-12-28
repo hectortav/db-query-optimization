@@ -3,10 +3,8 @@
 //using namespace std;
 //tuple is in std :/
 
-int main(char** argv, int argc)
+int main(int argc,char** argv)
 {
-    if(argc<3)
-        usage(argv);   
 
     params(argv,argc);
 

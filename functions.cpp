@@ -1392,12 +1392,14 @@ void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,ui
 void usage(char** argv)
 {
     std::cout<<"Query Optimziation Program with thread support"<<std::endl;
-    std::cout<<"Usage: "<<argv[0]<<" [OPTIONS] -n <threads>"<<std::endl;
-    std::cout<<"   -qr         (QueRy)Run in queries of every batch in parallel"<<std::endl;
-    std::cout<<"   -ro         (ReOrder)Run bucket reorder (radix-sort) in parallel"<<std::endl;
-    std::cout<<"   -qs         (QuickSort)Run quicksorts independently"<<std::endl;
-    std::cout<<"   -jn         (JoiN) Runs joins in parallel (split arrays)"<<std::endl;
-    std::cout<<"   -all        (ALL) Everything runs in parallel"<<std::endl<<std::endl;    
+    std::cout<<"Usage: "<<argv[0]<<" [OPTIONS] "<<std::endl;
+    std::cout<<"   -qr           (QueRy)Run in queries of every batch in parallel"<<std::endl;
+    std::cout<<"   -ro           (ReOrder)Run bucket reorder (radix-sort) in parallel"<<std::endl;
+    std::cout<<"   -qs           (QuickSort)Run quicksorts independently"<<std::endl;
+    std::cout<<"   -jn           (JoiN) Runs joins in parallel (split arrays)"<<std::endl;
+    std::cout<<"   -all          (ALL) Everything runs in parallel"<<std::endl;  
+    std::cout<<"   -n <threads>  Specify number of threads to run"<<std::endl;  
+    std::cout<<"   -h            Displays this help message"<<std::endl<<std::endl;
     std::cout<<"Default is: everything runs serial"<<std::endl<<std::endl;
     std::cout<<"*Note that <threads> must be greater than the max batch size so that the threads do not hang*"<<std::endl;
     std::cout<<"*Ignoring all invalid arguments*"<<std::endl;
@@ -1407,6 +1409,11 @@ void params(char** argv,int argc)
 {
     for(int i=1;i<argc;i++)
     {
+        if(strcmp(argv[i],"-h")==0)
+        {
+            usage(argv);
+            exit(1);
+        }
         if(strcmp(argv[i],"-qr")==0)
             queryMode=parallel;
         else if(strcmp(argv[i],"-ro")==0)
