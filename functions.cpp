@@ -294,7 +294,7 @@ result* managejoin(relation* R, relation* S, int queryIndex)
     // JobScheduler * scheduler=new JobScheduler(1,100000);
         // int partsize=1000;
         // int parts=(S->num_tuples/partsize)+1;
-    int parts=1;
+    int parts=16;
     int partsize=(S->num_tuples/parts)+1;
     list** lst=new list*[parts];
     // bool* done=new bool[parts]{false};
@@ -1389,3 +1389,35 @@ void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,ui
     }
 }
 
+void usage(char** argv)
+{
+    std::cout<<"Query Optimziation Program with thread support"<<std::endl;
+    std::cout<<"Usage: "<<argv[0]<<" [OPTIONS] -n <threads>"<<std::endl;
+    std::cout<<"   -qr         (QueRy)Run in queries of every batch in parallel"<<std::endl;
+    std::cout<<"   -ro         (ReOrder)Run bucket reorder (radix-sort) in parallel"<<std::endl;
+    std::cout<<"   -qs         (QuickSort)Run quicksorts independently"<<std::endl;
+    std::cout<<"   -jn         (JoiN) Runs joins in parallel (split arrays)"<<std::endl;
+    std::cout<<"   -all        (ALL) Everything runs in parallel"<<std::endl<<std::endl;    
+    std::cout<<"Default is: everything runs serial"<<std::endl<<std::endl;
+    std::cout<<"*Note that <threads> must be greater than the max batch size so that the threads do not hang*"<<std::endl;
+    std::cout<<"*Ignoring all invalid arguments*"<<std::endl;
+    return;
+}
+void params(char** argv,int argc)
+{
+    for(int i=1;i<argc;i++)
+    {
+        if(strcmp(argv[i],"-qr")==0)
+            queryMode=parallel
+        else if(strcmp(argv[i],"-ro")==0)
+            reorderMode=parallel;
+        else if(strcmp(argv[i],"-qs")==0)
+            quickSortMode=parallel;
+        else if(strcmp(argv[i],"-jn")==0)
+            joinMode=parallel;
+        else if(strcmp(argv[i],"-all")==0)
+            queryMode=reorderMode=joinMode=quickSortMode=parallel;
+        else if(strcmp(argv[i],"-n")==0)
+            scheduler=new JobScheduler(atoi(argv[i+1]),10000000);
+    }
+}
