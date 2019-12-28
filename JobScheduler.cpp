@@ -1,5 +1,8 @@
 #include "JobScheduler.h"
 
+pthread_mutex_t* jobsCounterMutexes; // mutex for jobsCounter
+int64_t* jobsCounter;
+
 JobListNode::JobListNode(Job *job)
 {
     this->job = job;
@@ -103,7 +106,7 @@ JobScheduler::~JobScheduler()
     for (int i = 0; i < threadsNum; i++)
     {
         ExitJob *job = new ExitJob();
-        schedule((Job *)job);
+        schedule((Job *)job, -1);
         //std::cout << "queue size: " << jobQueue->getCurrentSize()<<std::endl;
     }
 
@@ -120,7 +123,7 @@ JobScheduler::~JobScheduler()
     // std::cout << "JobScheduler deleted" << std::endl;
 }
 
-int JobScheduler::schedule(Job *job)
+int JobScheduler::schedule(Job *job, int queryIndex)
 {
     pthread_mutex_lock(&jobQueueMutex);
     // std::cout<<jobQueue->getCurrentSize()<<std::endl;
@@ -140,8 +143,19 @@ int JobScheduler::schedule(Job *job)
         return -1;
     }
 
+    // std::cout<<"Job with id: "<<jobId<<" inserted to queue"<<"queryIndex: "<<queryIndex<<std::endl;
+
     pthread_mutex_unlock(&jobQueueMutex);
     pthread_cond_signal(&jobQueueEmptyCond);
+
+    if (queryIndex != -1) {
+        pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+        
+        jobsCounter[queryIndex]++;
+        // std::cout<<"++ "<<jobsCounter[queryIndex]<<std::endl;
+        
+        pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+    }
 
     //std::cout << "Job scheduled" << std::endl;
     return jobId;
@@ -185,7 +199,10 @@ void *threadWork(void *arg)
         // printf("3\n");
 
         // printf("before run\n");
+        // std::cout<<"before run: jobId = "<<curJobListNode->job->getJobId()<<std::endl;
         curJobListNode->job->run();
+                // std::cout<<"after run: jobId = "<<curJobListNode->job->getJobId()<<std::endl;
+
         // std::cout<<"thread "<<pthread_self()<<"after run"<<std::endl;
 
         delete curJobListNode;

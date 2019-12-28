@@ -154,7 +154,8 @@ int main(void)
     // srand(time(NULL));
 
     int lines;
-    scheduler = new JobScheduler(16, 10000);
+    scheduler = new JobScheduler(100, 1000000000);
+    
     while(1)
     {
         lines=0;
@@ -164,6 +165,8 @@ int main(void)
        // std::cout<<arr<<std::endl;
         // std::cout<<std::endl;
         //std::cout<<lines<<std::endl;
+        jobsCounterMutexes = new pthread_mutex_t[lines];
+        jobsCounterConds = new pthread_cond_t[lines];
         predicateJobsDoneMutexes = new pthread_mutex_t[lines];
         predicateJobsDoneConds = new pthread_cond_t[lines];
         lastJobDoneArrays = new bool*[lines];
@@ -171,11 +174,15 @@ int main(void)
         // queryJobDoneConds = new pthread_cond_t[lines];
         queryJobDoneArray = new bool[lines];
         QueryResult=new char*[lines];
+        jobsCounter = new int64_t[lines];
         // std::cout<<"total queries: "<<lines<<std::endl;
         for (int i = 0; i < lines; i++) {
+            pthread_mutex_init(&jobsCounterMutexes[i], NULL);
+            pthread_cond_init(&jobsCounterConds[i], NULL);
+            jobsCounter[i] = 0;
             QueryResult[i]=new char[100];
-            predicateJobsDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
-            predicateJobsDoneConds[i] = PTHREAD_COND_INITIALIZER;
+            pthread_mutex_init(&predicateJobsDoneMutexes[i], NULL);
+            pthread_cond_init(&predicateJobsDoneConds[i], NULL);
             // queryJobDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
             // queryJobDoneConds[i] = PTHREAD_COND_INITIALIZER;
             queryJobDoneArray[i] = false;
@@ -183,8 +190,9 @@ int main(void)
             lastJobDoneArrays[i] = new bool[2];
             lastJobDoneArrays[i][0] = false;
             lastJobDoneArrays[i][1] = false;
-            scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i));
 
+            scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i), -1);
+            // handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
         }
 
         // for(int i=0;i<lines;i++)
@@ -224,6 +232,8 @@ int main(void)
         delete[] predicateJobsDoneMutexes;
         delete[] predicateJobsDoneConds;
         delete[] lastJobDoneArrays;
+        delete[] jobsCounter;
+        delete[] jobsCounterMutexes;
 
         for(int i=0;i<lines;i++)
             delete[] arr[i];

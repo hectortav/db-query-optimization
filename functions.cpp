@@ -4,6 +4,7 @@
 
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
+pthread_cond_t *jobsCounterConds;
 
 bool** lastJobDoneArrays;
 bool* queryJobDoneArray;
@@ -384,7 +385,7 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
             tuplereorder_serial(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
         }
         else            
-            quickSort(array,start, psum[i]-1);
+            quickSort(array,start, psum[i]-1, -1, -1, false);
 
         start=psum[i];
     }
@@ -396,7 +397,7 @@ int path = 1;   //temp way to choose parallel modes
 static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
 {
-            // std::cout<<"reorder added to queue -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+            // std::cout<<"reorder started -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
 
     // std::cout<<"array:"<<array<<", offset: "<<offset<<", isLastCall: "<<isLastCall<<std::endl;
     uint64_t* hist=histcreate(array,offset,shift);
@@ -413,59 +414,78 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
     }
     memcpy(array,array2,offset*sizeof(tuple));
 
-    int lastCallIndex = -1;
-    
-    for(int i=0,start=0;i<power;i++)
-    {
-        // std::cout<<"reorderIndex: "<<reorderIndex<<" -> "<<i<<" of "<<power<<std::endl;
-        if(hist[i]==0)
-            continue;
-        if(hist[i] > TUPLES_PER_BUCKET && shift < 7 && isLastCall)
-        {
-            // std::cout<<"should break bucket"<<std::endl;
-            
-                // lastCallIndex = i;
-            
-            lastCallIndex = i;
-            // isLastCall = false;
-        }
-        else
-        {
-            if (path == 0)
-                quickSort(array,start, psum[i]-1);
-            else if (path == 1)
-            {
-                scheduler->schedule(quick = new qJob(array,start, psum[i]-1));
-                //delete quick;
-            }
-        }   
-        start=psum[i];
+    int lastReorderCallIndex = -1;
+    int lastQuicksortCallIndex = -1;
+    // if (reorderIndex == 0)
+    //     std::cout<<"1, reorderIndex: "<<reorderIndex<<std::endl;
 
+    if (isLastCall) {
+        for(int i=0,start=0;i<power;i++)
+        {
+            // std::cout<<"reorderIndex: "<<reorderIndex<<" -> "<<i<<" of "<<power<<std::endl;
+            if(hist[i]==0)
+                continue;
+            if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
+            {
+                // std::cout<<"should break bucket"<<std::endl;
+                
+                    // lastCallIndex = i;
+                
+                lastReorderCallIndex = i;
+                // isLastCall = false;
+            }
+            else
+            {
+                lastQuicksortCallIndex = i;
+            }   
+            start=psum[i];
+        }
     }
+    // if (reorderIndex == 0)
+        // std::cout<<"1, reorderIndex: "<<reorderIndex<<", isLastCall: "<<isLastCall<<std::endl;
     // if (isLastCall && lastCallIndex == -1)
         // std::cout<<"reorderIndex: "<<reorderIndex<<"between fors"<<std::endl;
+    bool allHistsEmpty = true;
     for(int i=0,start=0;i<power;i++)
     {
+        // if (reorderIndex == 0)
+            // std::cout<<"1, reorderIndex: "<<reorderIndex<<", i: "<<i<<"hist[i]: "<<hist[i]<<std::endl;
         if(hist[i]==0)
             continue;
+        allHistsEmpty = false;
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
-            // std::cout<<"should break bucket, isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
-            scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastCallIndex ? true : false, reorderIndex, queryIndex));
+            // std::cout<<"will scheduler new reorder -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+            scheduler->schedule(new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex), queryIndex);
             // delete reorder;
+        } else {
+            bool isLastQuickSort = (lastQuicksortCallIndex == i && lastReorderCallIndex == -1);
+            // std::cout<<"queryIndex = "<<queryIndex<<", reorderIndex: "<<reorderIndex<<", isLastQuickSort: "<<isLastQuickSort<<", lastQuicksortCallIndex: "<<lastQuicksortCallIndex<<", lastReorderCallIndex"<<lastReorderCallIndex<<std::endl;
+            if (path == 0)
+                quickSort(array,start, psum[i]-1, -1, -1, isLastQuickSort);
+            else if (path == 1)
+            {
+                scheduler->schedule(new qJob(array,start, psum[i]-1, queryIndex, reorderIndex, isLastQuickSort), queryIndex);
+                //delete quick;
+            }
         }
         start=psum[i];
 
     }
     // std::cout<<"isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
-    if (isLastCall && lastCallIndex == -1) {
-        // std::cout<<"In if -> isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
-        // scheduler->~JobScheduler();
-        // scheduler = NULL;
-        // std::cout<<"queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+    
+    // if (reorderMode == parallel &&  isLastCall && lastCallIndex == -1) {
+    //     // std::cout<<"In if -> isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
+    //     // scheduler->~JobScheduler();
+    //     // scheduler = NULL;
+    //     // std::cout<<"queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
         
-        lastJobDoneArrays[queryIndex][reorderIndex] = true;
-        pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
+    //     lastJobDoneArrays[queryIndex][reorderIndex] = true;
+    //     pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
+    // }
+    if (allHistsEmpty) {
+         lastJobDoneArrays[queryIndex][reorderIndex] = true;
+         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     }
     delete[] psum;
     delete[] hist;
@@ -529,7 +549,7 @@ int partition(tuple* tuples, int startIndex, int stopIndex)
 
 // (startIndex, stopIndex) -> inclusive
 
-void quickSort(tuple* tuples, int startIndex, int stopIndex)
+void quickSort(tuple* tuples, int startIndex, int stopIndex, int queryIndex, int reorderIndex, bool isLastCall)
 {
     // pthread_mutex_lock(&blah);
     // cntr++;
@@ -541,17 +561,24 @@ void quickSort(tuple* tuples, int startIndex, int stopIndex)
     { 
         int partitionIndex = partition(tuples, startIndex, stopIndex); 
   
-        quickSort(tuples, startIndex, partitionIndex - 1); 
-        quickSort(tuples, partitionIndex + 1, stopIndex); 
+        quickSort(tuples, startIndex, partitionIndex - 1, queryIndex, reorderIndex, false); 
+        quickSort(tuples, partitionIndex + 1, stopIndex, queryIndex, reorderIndex, false); 
     } 
+
+    //(quickSortMode == parallel || reorderMode == parallel) && 
+    if (isLastCall) {
+        // std::cout<<"queryIndex: "<<queryIndex<<" last call, "<<"reorderIndex: "<<reorderIndex<<std::endl;
+        lastJobDoneArrays[queryIndex][reorderIndex] = true;
+        pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
+    }
 }
 
-// (startIndex, stopIndex) -> inclusive
-void sortBucket(relation* rel, int startIndex, int stopIndex) {
-    // stopIndex--;
-    //std::cout<<"sort "<<startIndex<<" "<<stopIndex<<std::endl;
-    quickSort(rel->tuples, startIndex, stopIndex);
-}
+// // (startIndex, stopIndex) -> inclusive
+// void sortBucket(relation* rel, int startIndex, int stopIndex) {
+//     // stopIndex--;
+//     //std::cout<<"sort "<<startIndex<<" "<<stopIndex<<std::endl;
+//     quickSort(rel->tuples, startIndex, stopIndex);
+// }
 
 InputArray** readArrays() {
     InputArray** inputArrays = new InputArray*[MAX_INPUT_ARRAYS_NUM]; // size is fixed
@@ -936,6 +963,25 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                             pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
                             lastJobDoneArrays[queryIndex][1] = false;
                         }
+
+                        // pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+                        pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+                        while (jobsCounter[queryIndex] != 0){
+                            // pthread_mutex_unlock(&jobsCounterMutex);
+                            // struct timespec timeout;
+                                // clock_gettime(CLOCK_REALTIME, &timeout);
+                                // timeout.tv_sec += 1;
+                                // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex], &timeout);
+                                // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &jobsCounterMutexes[queryIndex], &timeout);
+                                // std::cout<<"jobsCounter -> "<<jobsCounter[queryIndex]<<std::endl;
+                            // pthread_mutex_lock(&jobsCounterMutex);
+                            pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
+                        }
+                            // std::cout<<"-------------MAIN THREAD1"<<std::endl;
+
+                        pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+                        // pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+
                         // std::cout<<"query "<<queryIndex<<" stopped waiting for predicate jobs to finish"<<std::endl;
 
                         // scheduler->~JobScheduler();

@@ -20,6 +20,7 @@ typedef class list list;
 
 extern pthread_mutex_t *predicateJobsDoneMutexes;
 extern pthread_cond_t *predicateJobsDoneConds;
+extern pthread_cond_t *jobsCounterConds;
 // pthread_mutex_t* queryJobDoneMutexes;
 // pthread_cond_t* queryJobDoneConds;
 static pthread_mutex_t queryJobDoneMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -124,7 +125,7 @@ public:
 
 void handlequery(char** ,const InputArray** , int);
 void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int, int);
-void quickSort(tuple*, int, int);
+void quickSort(tuple*, int, int, int, int, bool);
 
 class queryJob : public Job {
     
@@ -178,6 +179,16 @@ public:
         // std::cout << "reorder added to queue\n";
         // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
         tuplereorder_parallel(array, array2, offset, shift, isLastCall, reorderIndex, queryIndex);
+
+        pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+        jobsCounter[queryIndex]--;
+        if (jobsCounter[queryIndex] == 0) {
+            pthread_cond_signal(&jobsCounterConds[queryIndex]);
+        }
+        // std::cout<<"-- "<<jobsCounter[queryIndex]<<std::endl;
+        // std::cout<<"reorder Job with id: "<<getJobId()<<" finished"<<" queryIndex: "<<queryIndex<<std::endl;
+
+        pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
         return; 
     }
 };
@@ -188,14 +199,34 @@ private:
     tuple* tuples;
     int startIndex;
     int stopIndex;
+    int queryIndex;
+    int reorderIndex;
+    bool isLastCall;
 
 public:
-    qJob(tuple* tuples, int startIndex, int stopIndex) : Job() { this->tuples = tuples; this->startIndex = startIndex; this->stopIndex = stopIndex; }
+    qJob(tuple* tuples, int startIndex, int stopIndex, int queryIndex, int reorderIndex, bool isLastCall) : Job()
+    {
+        this->tuples = tuples;
+        this->startIndex = startIndex;
+        this->stopIndex = stopIndex;
+        this->queryIndex = queryIndex;
+        this->reorderIndex = reorderIndex;
+        this->isLastCall = isLastCall;
+    }
 
     void run() override
     {
         // std::cout << "quicksort added to queue\n";
-        quickSort(tuples, startIndex, stopIndex);
+        quickSort(tuples, startIndex, stopIndex, queryIndex, reorderIndex, isLastCall);
+
+        pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+        jobsCounter[queryIndex]--;
+        if (jobsCounter[queryIndex] == 0) {
+            pthread_cond_signal(&jobsCounterConds[queryIndex]);
+        }
+        // std::cout<<"qJob -- "<<jobsCounter[queryIndex]<<std::endl;
+        // std::cout<<"quicksort Job with id: "<<getJobId()<<" finished"<<" queryIndex: "<<queryIndex<<std::endl;
+        pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
         return; 
     }
 };
@@ -216,7 +247,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
 void swap(tuple* tuple1, tuple* tuple2);
 int randomIndex(int startIndex, int stopIndex);
 int partition(tuple* tuples, int startIndex, int stopIndex);
-void quickSort(tuple* tuples, int startIndex, int stopIndex);
+void quickSort(tuple* tuples, int startIndex, int stopIndex, int queryIndex, int reorderIndex, bool isLastCall);
 void sortBucket(relation* rel, int startIndex, int endIndex);
 InputArray** readArrays();
 char** readbatch(int& lns);
