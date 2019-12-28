@@ -7,7 +7,7 @@ pthread_cond_t* predicateJobsDoneConds;
 
 bool** lastJobDoneArrays;
 bool* queryJobDoneArray;
-
+char** QueryResult;
 JobScheduler *scheduler;
 
 void relation::print()
@@ -696,7 +696,7 @@ char** makeparts(char* query)
     return parts;
 }
 
-Type mode = serial;
+Type mode = parallel;
 
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 {
@@ -717,7 +717,7 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds, queryIndex);
         // std::cout<<"3, queryIndex: "<<queryIndex<<std::endl;
 
-    handleprojection(result,allrelations,parts[2], relationIds);
+    handleprojection(result,allrelations,parts[2], relationIds,queryIndex);
             // std::cout<<"4, queryIndex: "<<queryIndex<<std::endl;
 
     if(result!=NULL)
@@ -725,7 +725,7 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
     // delete[] parts;   
 
     // if (mode == parallel) {
-        std::cout<<std::endl;
+        // std::cout<<std::endl;
         queryJobDoneArray[queryIndex]=true;
         pthread_cond_signal(&queryJobDoneCond);
                 // std::cout<<"query "<<queryIndex<<" ended"<<std::endl;
@@ -1024,9 +1024,10 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
 
 
 }
-void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds)
+void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex)
 {
     // std::cout<<"HANDLEPROJECTION: "<<part<<std::endl;
+    QueryResult[queryIndex][0]='\0';
     int projarray,projcolumn,predicatearray;
     for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
     {
@@ -1061,13 +1062,19 @@ void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* p
                     sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
                 }
             }
-            //std::cout<<projarray<<"."<<projcolumn<<": ";
             if(sum!=0)
-                std::cout<<sum;
+                sprintf(QueryResult[queryIndex],"%s%" PRIu64,QueryResult[queryIndex],sum);
             else
-                std::cout<<"NULL";
+                sprintf(QueryResult[queryIndex],"%sNULL",QueryResult[queryIndex]);
             if(part[i]!='\0')
-                std::cout<<" ";
+                sprintf(QueryResult[queryIndex],"%s ",QueryResult[queryIndex]);
+            //std::cout<<projarray<<"."<<projcolumn<<": ";
+            // if(sum!=0)
+            //     std::cout<<sum;
+            // else
+            //     std::cout<<"NULL";
+            // if(part[i]!='\0')
+            //     std::cout<<" ";
         }
     }
 }

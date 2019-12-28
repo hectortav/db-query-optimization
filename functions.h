@@ -8,6 +8,8 @@
 #include <cstdio>
 #include <math.h>
 #include "JobScheduler.h"
+#include <inttypes.h>
+
 
 #define MAX_INPUT_FILE_NAME_SIZE 100
 #define MAX_INPUT_ARRAYS_NUM 20
@@ -25,7 +27,7 @@ static pthread_cond_t queryJobDoneCond = PTHREAD_COND_INITIALIZER;
 
 extern bool** lastJobDoneArrays;
 extern bool* queryJobDoneArray;
-
+extern char** QueryResult;
 extern JobScheduler *scheduler;
 
 class tuple
@@ -223,7 +225,7 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex);
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
 bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin);
 IntermediateArray* handlepredicates(const InputArray** relations,char* part,int relationsnum, int* relationIds, int queryIndex);
-void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds);
+void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex);
 uint64_t** splitpreds(char* ch,int& cn);
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds);
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);
