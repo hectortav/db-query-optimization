@@ -1408,7 +1408,7 @@ void params(char** argv,int argc)
     for(int i=1;i<argc;i++)
     {
         if(strcmp(argv[i],"-qr")==0)
-            queryMode=parallel
+            queryMode=parallel;
         else if(strcmp(argv[i],"-ro")==0)
             reorderMode=parallel;
         else if(strcmp(argv[i],"-qs")==0)
