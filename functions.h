@@ -112,6 +112,8 @@ public:
 
 void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int);
 void quickSort(tuple*, int, int);
+void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,bool* done);
+
 
 class trJob : public Job    //tuple reorder job
 {
@@ -161,8 +163,30 @@ public:
     }
 };
 
+class jJob : public Job
+{
+private:
+    tuple* R;
+    tuple* S;
+    int Rsize;
+    int Sstart;
+    int Send;
+    list* lst;
+    bool* done;
+public:
+    jJob(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,bool* done) : Job() {this->R=R;this->S=S;this->Rsize=Rsize;this->Sstart=Sstart;this->Send=Send;this->lst=lst;this->done=done;}
+
+    void run() override
+    {
+        joinparallel(R,S,Rsize,Sstart,Send,lst,done);
+        return;
+    }
+};
+
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
+void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,bool* done);
+result* managejoin(relation* R, relation* S);
 // uint64_t** create_hist(relation*, int);
 // uint64_t** create_psum(uint64_t**, uint64_t);
 // relation* re_ordered(relation*,relation*, int);

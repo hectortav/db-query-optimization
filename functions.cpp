@@ -278,7 +278,156 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
 inline uint64_t hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
+pthread_mutex_t LastJoinMutex=PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t LastJoinCond=PTHREAD_COND_INITIALIZER;
+int done;
+pthread_mutex_t DoneJoinMutex=PTHREAD_MUTEX_INITIALIZER;
 
+void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,bool* doned)
+{
+    // std::cout<<"join parl "<<std::endl;
+    int64_t samestart=-1;
+    for(uint64_t r=0,s=Sstart;r<Rsize&&s<Send;)
+    {
+        int64_t dec=R[r].payload-S[s].payload;
+        if(dec==0)
+        {
+            lst->insert(R[r].key);
+            lst->insert(S[s].key);
+            switch(samestart)
+            {
+                case -1:
+                    if(s+1<Send&&S[s].payload==S[s+1].payload)
+                        samestart=s;
+                default:
+                    if(S[samestart].payload!=S[s].payload)  
+                        samestart=-1;
+            }
+            if(s+1<Send&&S[s].payload==S[s+1].payload)
+                s++;
+            
+            else
+            {
+                r++;
+                if(samestart>-1)
+                {
+                    s=samestart;
+                    samestart=-1;
+                }
+            }
+            continue;
+        }
+        else if(dec<0)
+        {
+            r++;
+            continue;
+        }
+        else
+        {
+            s++;
+            continue;
+        }
+    }
+    pthread_mutex_lock(&DoneJoinMutex);
+    // std::cout<<"i'm done"<<std::endl;
+    done--;
+    if(done==0)
+        pthread_cond_signal(&LastJoinCond);
+    pthread_mutex_unlock(&DoneJoinMutex);
+    // if(islast)
+    // {
+    //     std::cout<<"im last"<<std::endl;
+    //     pthread_cond_signal(&LastJoinCond);
+    //     std::cout<<"did it"<<std::endl;
+    // }
+
+}
+bool alldone(bool* arr,int size)
+{
+    for(int i=0;i<size;i++)
+    {
+        if(arr[i]==false)
+        return false;
+    }
+    return true;
+}
+result* managejoin(relation* R, relation* S)
+{
+    JobScheduler * scheduler=new JobScheduler(1,100000);
+        // int partsize=1000;
+        // int parts=(S->num_tuples/partsize)+1;
+    int parts=1;
+    int partsize=(S->num_tuples/parts)+1;
+    list** lst=new list*[parts];
+    // bool* done=new bool[parts]{false};
+    done=parts;
+    pthread_mutex_lock(&DoneJoinMutex);
+    // std::cout<<"start"<<std::endl;
+    // std::cout<<parts<<std::endl;
+    for(int i=0;i<parts;i++)
+    {
+        // std::cout<<i<<" of "<<parts<<std::endl;
+        lst[i]=new list(131072,2);
+        int start=i*partsize;
+        int end=(i+1)*partsize;
+        if(end>S->num_tuples)
+            end=S->num_tuples;
+        bool b;
+
+        scheduler->schedule(new jJob(R->tuples,S->tuples,R->num_tuples,start,end,lst[i],&b));
+        // std::cout<<start<<" "<<end<<" "<<S->num_tuples<<std::endl;
+        // joinparallel(R->tuples,S->tuples,R->num_tuples,start,end,lst[i],&b);
+
+    }
+    // std::cout<<"end"<<std::endl;
+    // std::cout<<"will wait"<<std::endl;
+    pthread_mutex_lock(&LastJoinMutex);
+    // while(done>0)
+    // {
+    //     std::cout<<done<<std::endl;
+    //     pthread_mutex_unlock(&DoneJoinMutex);
+    //     pthread_cond_wait(&LastJoinCond,&LastJoinMutex);
+    //     pthread_mutex_lock(&DoneJoinMutex);
+    // }
+    // pthread_mutex_unlock(&DoneJoinMutex);
+    if(done>0)
+    {
+        pthread_mutex_unlock(&DoneJoinMutex);
+        pthread_cond_wait(&LastJoinCond,&LastJoinMutex);
+    }
+    else pthread_mutex_unlock(&DoneJoinMutex);
+
+    pthread_mutex_unlock(&LastJoinMutex);
+    // std::cout<<"waited"<<std::endl;
+    result* rslt=new result;
+    rslt->lst=NULL;
+    // rslt->lst=lst[0];
+    for(int i=0;i<parts;i++)
+    {
+        // std::cout<<i<<std::endl;
+        if(lst[i]->rows>0)
+        {
+            if(rslt->lst==NULL)
+                rslt->lst=lst[i];
+            else
+            {
+                rslt->lst->last->next=lst[i]->first;
+                rslt->lst->last=lst[i]->last;
+                rslt->lst->rows+=lst[i]->rows;
+                lst[i]->first=lst[i]->last=NULL;
+                delete lst[i];
+
+            }
+        }
+    }
+    delete[] lst;
+    delete scheduler;
+    // std::cout<<"cool"<<std::endl;
+    if(rslt->lst==NULL)
+        rslt->lst=new list(1024*1024,2);
+    return rslt;
+    // int size=131072; //bytes
+}
 result* join(relation* R, relation* S,uint64_t**rr,uint64_t**ss,int rsz,int ssz,int joincol)
 {
     int64_t samestart=-1;
@@ -417,17 +566,8 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
             lastCallIndex = i;
             // isLastCall = false;
         }
-        else
-        {
-            if (path == 0)
-                quickSort(array,start, psum[i]-1);
-            else if (path == 1)
-            {
-                scheduler->schedule(quick = new qJob(array,start, psum[i]-1));
-                //delete quick;
-            }
-        }   
-        start=psum[i];
+        
+        // start=psum[i];
 
     }
     for(int i=0,start=0;i<power;i++)
@@ -437,9 +577,19 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
             // std::cout<<"should break bucket, isLastCall: "<<isLastCall<<", lastCallIndex: "<<lastCallIndex<<std::endl;
-            scheduler->schedule(reorder = new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastCallIndex ? true : false, reorderIndex));
+            scheduler->schedule(new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastCallIndex ? true : false, reorderIndex));
             // delete reorder;
         }
+        else
+        {
+            if (path == 0)
+                quickSort(array,start, psum[i]-1);
+            else if (path == 1)
+            {
+                scheduler->schedule(new qJob(array,start, psum[i]-1));
+                //delete quick;
+            }
+        }   
         start=psum[i];
 
     }
@@ -462,7 +612,7 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int 
     else if (t == parallel)
     {
         if (scheduler == NULL)
-            scheduler = new JobScheduler(32, 1000);
+            scheduler = new JobScheduler(16, 1000000);
         tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex);
     }
 }
@@ -528,6 +678,8 @@ void quickSort(tuple* tuples, int startIndex, int stopIndex)
         quickSort(tuples, startIndex, partitionIndex - 1); 
         quickSort(tuples, partitionIndex + 1, stopIndex); 
     } 
+    if(path==1)
+        pthread_cond_signal(&jobSchedulerDestroyCond);
 }
 
 // (startIndex, stopIndex) -> inclusive
@@ -735,7 +887,7 @@ bool isRelationOrdered(relation &rel) {
     return true;
 }
 
-Type mode = parallel;
+Type mode = serial;
 
 IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int relationsnum, int* relationIds)
 {
@@ -864,17 +1016,27 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                             while (lastJobQueued[1] == false) {
                                 // std::cout<<"-------------lastJobQueued1: "<<lastJobQueued[1]<<std::endl;
 
-                                struct timespec timeout;
-                                clock_gettime(CLOCK_REALTIME, &timeout);
-                                timeout.tv_sec += 1;
-                                pthread_cond_timedwait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex, &timeout);
-                            // pthread_cond_wait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex);
+                                // struct timespec timeout;
+                                // clock_gettime(CLOCK_REALTIME, &timeout);
+                                // timeout.tv_sec += 1;
+                                // pthread_cond_timedwait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex, &timeout);
+                                pthread_cond_wait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex);
                             }
                                 // std::cout<<"-------------MAIN THREAD"<<std::endl;
 
                             pthread_mutex_unlock(&jobSchedulerDestroyMutex);
                             lastJobQueued[1] = false;
                         }
+                        if(path==1)
+                        {
+                            pthread_mutex_lock(&jobSchedulerDestroyMutex);
+                            while(!scheduler->isempty())
+                            {
+                                pthread_cond_wait(&jobSchedulerDestroyCond, &jobSchedulerDestroyMutex);
+                            }
+                            pthread_mutex_unlock(&jobSchedulerDestroyMutex);
+                        }
+
                         scheduler->~JobScheduler();
                         scheduler = NULL;
 
@@ -887,7 +1049,8 @@ IntermediateArray* handlepredicates(InputArray** inputArrays,char* part,int rela
                         delete[] t1;
                     if (t2 != NULL)
                         delete[] t2;
-                    result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
+                    // result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
+                    result* rslt = managejoin(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2);
                     if (rslt->lst->rows == 0) {
                         // no results
                         for(int i=0;i<cntr;i++)

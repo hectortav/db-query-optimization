@@ -49,6 +49,7 @@ bool JobQueue::isFull()
 
 int JobQueue::insertJobAtEnd(Job *job)
 {
+    // std::cout<<"+ "<<this->currentSize<<std::endl;
     if (currentSize == maxSize)
         return 1;
 
@@ -70,6 +71,7 @@ int JobQueue::insertJobAtEnd(Job *job)
 
 JobListNode *JobQueue::getNodeFromStart()
 {
+    // std::cout<<"- "<<this->currentSize<<std::endl;
     if (currentSize == 0)
         return NULL;
 
@@ -82,7 +84,10 @@ JobListNode *JobQueue::getNodeFromStart()
     }
 
     currentSize--;
-
+    // if(nodeToReturn->job->getJobId()==-1)
+    // {
+    //     std::cout<<this->currentSize<<std::endl;
+    // }
     return nodeToReturn;
 }
 
@@ -146,7 +151,14 @@ int JobScheduler::schedule(Job *job)
     //std::cout << "Job scheduled" << std::endl;
     return jobId;
 }
+bool JobScheduler::isempty()
+{
+    pthread_mutex_lock(&jobQueueMutex);
+    bool ret=(jobQueue->isEmpty());
+    pthread_mutex_unlock(&jobQueueMutex);
+    return ret;
 
+}
 void *threadWork(void *arg)
 {
     JobQueue *jobQueue = (JobQueue *)arg;

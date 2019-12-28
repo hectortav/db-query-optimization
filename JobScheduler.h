@@ -80,7 +80,7 @@ public:
     JobScheduler(int threadsNum, int jobsMaxNum);
     // Free all resources that are allocated by JobScheduler
     ~JobScheduler();
-
+    bool isempty();
     // Waits Until executed all jobs in the queue.void Barrier();
     // Add a job in the queue and returns a job id
     int schedule(Job *job);
