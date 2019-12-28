@@ -192,8 +192,11 @@ int main(void)
             lastJobDoneArrays[i][0] = false;
             lastJobDoneArrays[i][1] = false;
 
-            scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i), -1);
-            // handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
+            if (queryMode == serial) {
+                handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
+            } else if (queryMode == parallel) {
+                scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i), -1);
+            }
         }
 
         // for(int i=0;i<lines;i++)
@@ -205,22 +208,24 @@ int main(void)
         // }
         // std::cout<<"-------------MAIN THREAD: will wait for queries to finish"<<std::endl;
 
-        for(int i=0;i<lines;i++)
-        {
-            pthread_mutex_lock(&queryJobDoneMutex);
-            while (queryJobDoneArray[i] == false){
-                // pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
-                struct timespec timeout;
-                clock_gettime(CLOCK_REALTIME, &timeout);
-                timeout.tv_sec += 1;
-                pthread_cond_timedwait(&queryJobDoneCond, &queryJobDoneMutex, &timeout);
+        if (queryMode == parallel) {
+            for(int i=0;i<lines;i++)
+            {
+                pthread_mutex_lock(&queryJobDoneMutex);
+                while (queryJobDoneArray[i] == false){
+                    // pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
+                    struct timespec timeout;
+                    clock_gettime(CLOCK_REALTIME, &timeout);
+                    timeout.tv_sec += 1;
+                    pthread_cond_timedwait(&queryJobDoneCond, &queryJobDoneMutex, &timeout);
+                }
+                    // std::cout<<"-------------MAIN THREAD: finished query with index -> "<<i<<std::endl;
+
+                pthread_mutex_unlock(&queryJobDoneMutex);
+                queryJobDoneArray[i] == false;
+
+                delete[] lastJobDoneArrays[i];
             }
-                // std::cout<<"-------------MAIN THREAD: finished query with index -> "<<i<<std::endl;
-
-            pthread_mutex_unlock(&queryJobDoneMutex);
-            queryJobDoneArray[i] == false;
-
-            delete[] lastJobDoneArrays[i];
         }
         for(int i=0;i<lines;i++)
         {

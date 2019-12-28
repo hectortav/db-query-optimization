@@ -527,7 +527,6 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
     delete[] hist;
 }
 
-int path = 1;   //temp way to choose parallel modes
 static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
 {
@@ -596,9 +595,9 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
             bool isLastQuickSort = (lastQuicksortCallIndex == i && lastReorderCallIndex == -1);
             // std::cout<<isLastQuickSort<<" "<<lastQuicksortCallIndex<<std::endl;
             // std::cout<<"queryIndex = "<<queryIndex<<", reorderIndex: "<<reorderIndex<<", isLastQuickSort: "<<isLastQuickSort<<", lastQuicksortCallIndex: "<<lastQuicksortCallIndex<<", lastReorderCallIndex"<<lastReorderCallIndex<<std::endl;
-            if (path == 0)
+            if (quickSortMode == serial)
                 quickSort(array,start, psum[i]-1, -1, -1, isLastQuickSort);
-            else if (path == 1)
+            else if (quickSortMode == parallel)
             {
                 scheduler->schedule(new qJob(array,start, psum[i]-1, queryIndex, reorderIndex, isLastQuickSort), queryIndex);
                 //delete quick;
@@ -626,11 +625,11 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
     delete[] hist;
 }
 
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex, int queryIndex)
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, int reorderIndex, int queryIndex)
 {
-    if (t == serial)
+    if (reorderMode == serial)
         tuplereorder_serial(array, array2, offset, shift);
-    else if (t == parallel)
+    else if (reorderMode == parallel)
     {
         // if (scheduler == NULL)
         //     scheduler = new JobScheduler(32, 1000);
@@ -859,8 +858,6 @@ char** makeparts(char* query)
     return parts;
 }
 
-Type mode = parallel;
-
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 {
     // std::cout<<"thread "<<pthread_self()<<", inputArrays = "<<allrelations<<", inputArrays address = "<<&allrelations<<std::endl;
@@ -887,13 +884,12 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
         delete result;
     // delete[] parts;   
 
-    // if (mode == parallel) {
+    if (queryMode == parallel) {
         // std::cout<<std::endl;
         queryJobDoneArray[queryIndex]=true;
         pthread_cond_signal(&queryJobDoneCond);
                 // std::cout<<"query "<<queryIndex<<" ended"<<std::endl;
-
-    // }
+    }
 }
 void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 {
@@ -1050,7 +1046,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                     // std::cout<<"shouldSortRel1: "<<shouldSortRel1<<std::endl;
                     if (shouldSortRel1) {
                         t1=new tuple[rel1.num_tuples];
-                        tuplereorder(rel1.tuples,t1,rel1.num_tuples,0, mode, 0, queryIndex);  //add parallel
+                        tuplereorder(rel1.tuples,t1,rel1.num_tuples,0, 0, queryIndex);  //add parallel
                         //mid_func(rel1.tuples,t,rel1.num_tuples,0);
 
                         // delete[] t1;
@@ -1064,13 +1060,13 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                                         // std::cout<<"shouldSortRel2: "<<shouldSortRel2<<std::endl;
                     if (shouldSortRel2) {
                         t2=new tuple[rel2.num_tuples];
-                        tuplereorder(rel2.tuples,t2,rel2.num_tuples,0, mode, 1, queryIndex);  //add parallel
+                        tuplereorder(rel2.tuples,t2,rel2.num_tuples,0, 1, queryIndex);  //add parallel
                         //mid_func(rel2.tuples,t,rel2.num_tuples,0);
                         // delete[] t2;
                     }
                             //  std::cout<<"-------------MAIN THREAD3"<<std::endl;
 
-                    if (mode == parallel) {
+                    if (reorderMode == parallel) {
                         // std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
                         if (shouldSortRel1) {
                             pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
@@ -1137,9 +1133,13 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                         delete[] t1;
                     if (t2 != NULL)
                         delete[] t2;
-                    // result* rslt = join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
-                    result* rslt = managejoin(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2,queryIndex);
-
+                    result* rslt;
+                    if (joinMode == serial) {
+                        rslt= join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
+                    } else if (joinMode == parallel) {
+                        rslt = managejoin(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2,queryIndex);
+                    }
+                    
                     if (rslt->lst->rows == 0) {
                         // no results
                         for(int i=0;i<cntr;i++)

@@ -14,7 +14,12 @@
 #define MAX_INPUT_FILE_NAME_SIZE 100
 #define MAX_INPUT_ARRAYS_NUM 20
 
-enum Type {serial = 0, parallel = 1}; 
+enum RunningMode {serial = 0, parallel = 1};
+
+static RunningMode queryMode = serial;
+static RunningMode reorderMode = serial;
+static RunningMode quickSortMode = serial;
+static RunningMode joinMode = serial;
 
 typedef class list list;
 
@@ -261,7 +266,7 @@ result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,in
 // relation* re_ordered_2(relation*,relation*, int); //temporary
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift, Type t, int reorderIndex, int queryIndex);
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, int reorderIndex, int queryIndex);
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex, int queryIndex);
 
 

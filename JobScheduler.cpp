@@ -162,6 +162,10 @@ int JobScheduler::schedule(Job *job, int queryIndex)
     return jobId;
 }
 
+int JobScheduler::getThreadsNum() {
+    return threadsNum;
+}
+
 void *threadWork(void *arg)
 {
     JobQueue *jobQueue = (JobQueue *)arg;
