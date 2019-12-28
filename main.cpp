@@ -7,11 +7,11 @@ int main(int argc,char** argv)
 {
 
     params(argv,argc);
-    std::cout<<"Running in: "<<std::endl;
-    std::cout<<"  quicksort mode: "<<quickSortMode<<std::endl;
-    std::cout<<"  reorder mode: "<<reorderMode<<std::endl;
-    std::cout<<"  join mode: "<<joinMode<<std::endl;
-    std::cout<<"  query mode: "<<queryMode<<std::endl;
+    // std::cout<<"Running in: "<<std::endl;
+    // std::cout<<"  quicksort mode: "<<quickSortMode<<std::endl;
+    // std::cout<<"  reorder mode: "<<reorderMode<<std::endl;
+    // std::cout<<"  join mode: "<<joinMode<<std::endl;
+    // std::cout<<"  query mode: "<<queryMode<<std::endl;
     InputArray** inputArrays = readArrays();
 
     FILE * fp = fopen("read_arrays_end", "w");
@@ -25,7 +25,8 @@ int main(int argc,char** argv)
 
     int lines;
     // scheduler = new JobScheduler(16, 1000000000);
-    
+    pthread_mutex_init(&queryJobDoneMutex,NULL);
+    pthread_cond_init(&queryJobDoneCond,NULL);
     while(1)
     {
         lines=0;
@@ -43,9 +44,10 @@ int main(int argc,char** argv)
         lastJobDoneArrays = new bool*[lines];
         // queryJobDoneMutexes = new pthread_mutex_t[lines];
         // queryJobDoneConds = new pthread_cond_t[lines];
-        queryJobDoneArray = new bool[lines];
+        // queryJobDoneArray = new bool[lines];
         QueryResult=new char*[lines];
         jobsCounter = new int64_t[lines];
+        queryJobDone=lines;
         // std::cout<<"total queries: "<<lines<<std::endl;
         for (int i = 0; i < lines; i++) {
             pthread_mutex_init(&jobsCounterMutexes[i], NULL);
@@ -56,7 +58,7 @@ int main(int argc,char** argv)
             pthread_cond_init(&predicateJobsDoneConds[i], NULL);
             // queryJobDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
             // queryJobDoneConds[i] = PTHREAD_COND_INITIALIZER;
-            queryJobDoneArray[i] = false;
+            // queryJobDoneArray[i] = false;
 
             lastJobDoneArrays[i] = new bool[2];
             lastJobDoneArrays[i][0] = false;
@@ -79,26 +81,26 @@ int main(int argc,char** argv)
         // std::cout<<"-------------MAIN THREAD: will wait for queries to finish"<<std::endl;
 
         if (queryMode == parallel) {
-            for(int i=0;i<lines;i++)
-            {
-                pthread_mutex_lock(&queryJobDoneMutex);
-                while (queryJobDoneArray[i] == false){
-                    // pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
-                    struct timespec timeout;
-                    clock_gettime(CLOCK_REALTIME, &timeout);
-                    timeout.tv_sec += 1;
-                    pthread_cond_timedwait(&queryJobDoneCond, &queryJobDoneMutex, &timeout);
-                }
-                    // std::cout<<"-------------MAIN THREAD: finished query with index -> "<<i<<std::endl;
+            pthread_mutex_lock(&queryJobDoneMutex);
+            while (queryJobDone >0){
 
-                pthread_mutex_unlock(&queryJobDoneMutex);
-                queryJobDoneArray[i] == false;
-
-                delete[] lastJobDoneArrays[i];
+                pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
+                // struct timespec timeout;
+                // clock_gettime(CLOCK_REALTIME, &timeout);
+                // timeout.tv_sec += 1;
+                // pthread_cond_timedwait(&queryJobDoneCond, &queryJobDoneMutex, &timeout);
+                
             }
+                // std::cout<<"-------------MAIN THREAD: finished query with index -> "<<i<<std::endl;
+
+            pthread_mutex_unlock(&queryJobDoneMutex);
+            // queryJobDoneArray[i] == false;
+
+        
         }
         for(int i=0;i<lines;i++)
         {
+            delete[] lastJobDoneArrays[i];
             std::cout<<QueryResult[i]<<std::endl;
             delete[] QueryResult[i];
         }

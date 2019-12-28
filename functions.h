@@ -29,11 +29,12 @@ extern pthread_cond_t *predicateJobsDoneConds;
 extern pthread_cond_t *jobsCounterConds;
 // pthread_mutex_t* queryJobDoneMutexes;
 // pthread_cond_t* queryJobDoneConds;
-static pthread_mutex_t queryJobDoneMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t queryJobDoneCond = PTHREAD_COND_INITIALIZER;
+extern pthread_mutex_t queryJobDoneMutex;
+extern pthread_cond_t queryJobDoneCond;
 
 extern bool** lastJobDoneArrays;
-extern bool* queryJobDoneArray;
+// extern bool* queryJobDoneArray;
+extern int queryJobDone;
 extern char** QueryResult;
 extern JobScheduler *scheduler;
 

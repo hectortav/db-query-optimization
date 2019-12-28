@@ -10,9 +10,12 @@ RunningMode joinMode = serial;
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
 pthread_cond_t *jobsCounterConds;
+pthread_mutex_t queryJobDoneMutex;
+pthread_cond_t queryJobDoneCond;
 
 bool** lastJobDoneArrays;
-bool* queryJobDoneArray;
+// bool* queryJobDoneArray;
+int queryJobDone;
 char** QueryResult;
 JobScheduler *scheduler;
 
@@ -601,7 +604,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
             // std::cout<<isLastQuickSort<<" "<<lastQuicksortCallIndex<<std::endl;
             // std::cout<<"queryIndex = "<<queryIndex<<", reorderIndex: "<<reorderIndex<<", isLastQuickSort: "<<isLastQuickSort<<", lastQuicksortCallIndex: "<<lastQuicksortCallIndex<<", lastReorderCallIndex"<<lastReorderCallIndex<<std::endl;
             if (quickSortMode == serial)
-                quickSort(array,start, psum[i]-1, -1, -1, isLastQuickSort);
+                quickSort(array,start, psum[i]-1, queryIndex, reorderIndex, isLastQuickSort);
             else if (quickSortMode == parallel)
             {
                 scheduler->schedule(new qJob(array,start, psum[i]-1, queryIndex, reorderIndex, isLastQuickSort), queryIndex);
@@ -891,8 +894,12 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 
     if (queryMode == parallel) {
         // std::cout<<std::endl;
-        queryJobDoneArray[queryIndex]=true;
-        pthread_cond_signal(&queryJobDoneCond);
+        pthread_mutex_lock(&queryJobDoneMutex);
+        queryJobDone--;
+        if(queryJobDone==0)
+            pthread_cond_signal(&queryJobDoneCond);
+        pthread_mutex_unlock(&queryJobDoneMutex);
+
                 // std::cout<<"query "<<queryIndex<<" ended"<<std::endl;
     }
 }
@@ -1430,7 +1437,7 @@ void params(char** argv,int argc)
             joinMode=parallel;
         else if(strcmp(argv[i],"-all")==0)
         {
-            std::cout<<"here"<<std::endl;
+            // std::cout<<"here"<<std::endl;
             queryMode=parallel;
             reorderMode=parallel;
             joinMode=parallel;
