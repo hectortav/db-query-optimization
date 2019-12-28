@@ -2,6 +2,11 @@
 #include "JobScheduler.h"
 #include <unistd.h>
 
+RunningMode queryMode = serial;
+RunningMode reorderMode = serial;
+RunningMode quickSortMode = serial;
+RunningMode joinMode = serial;
+
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
 pthread_cond_t *jobsCounterConds;
@@ -294,7 +299,7 @@ result* managejoin(relation* R, relation* S, int queryIndex)
     // JobScheduler * scheduler=new JobScheduler(1,100000);
         // int partsize=1000;
         // int parts=(S->num_tuples/partsize)+1;
-    int parts=16;
+    int parts=scheduler->getThreadsNum();
     int partsize=(S->num_tuples/parts)+1;
     list** lst=new list*[parts];
     // bool* done=new bool[parts]{false};
@@ -1424,7 +1429,13 @@ void params(char** argv,int argc)
         else if(strcmp(argv[i],"-jn")==0)
             joinMode=parallel;
         else if(strcmp(argv[i],"-all")==0)
-            queryMode=reorderMode=joinMode=quickSortMode=parallel;
+        {
+            std::cout<<"here"<<std::endl;
+            queryMode=parallel;
+            reorderMode=parallel;
+            joinMode=parallel;
+            quickSortMode=parallel;
+        }
         else if(strcmp(argv[i],"-n")==0) {
             if (i + 1 >= argc) {
                 std::cout<<"Wrong arguments"<<std::endl;
@@ -1435,7 +1446,7 @@ void params(char** argv,int argc)
                 std::cout<<"Wrong arguments"<<std::endl;
                 exit(1);
             }
-            scheduler=new JobScheduler(threadsNum,10000000);
+            scheduler=new JobScheduler(threadsNum,1000000000);
             threadsNumGiven = true;
         }
     }

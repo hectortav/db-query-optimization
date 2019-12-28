@@ -16,10 +16,10 @@
 
 enum RunningMode {serial = 0, parallel = 1};
 
-static RunningMode queryMode = serial;
-static RunningMode reorderMode = serial;
-static RunningMode quickSortMode = serial;
-static RunningMode joinMode = serial;
+extern RunningMode queryMode;
+extern RunningMode reorderMode;
+extern RunningMode quickSortMode;
+extern RunningMode joinMode;
 
 typedef class list list;
 

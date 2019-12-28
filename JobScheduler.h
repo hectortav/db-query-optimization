@@ -88,7 +88,7 @@ public:
     // Waits Until executed all jobs in the queue.void Barrier();
     // Add a job in the queue and returns a job id
     int schedule(Job *job, int queryIndex);
-    int getThreadsNum();
+    int getThreadsNum(); 
     // void* threadWork(void*);
 };
 

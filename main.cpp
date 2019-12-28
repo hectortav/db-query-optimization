@@ -7,7 +7,11 @@ int main(int argc,char** argv)
 {
 
     params(argv,argc);
-
+    std::cout<<"Running in: "<<std::endl;
+    std::cout<<"  quicksort mode: "<<quickSortMode<<std::endl;
+    std::cout<<"  reorder mode: "<<reorderMode<<std::endl;
+    std::cout<<"  join mode: "<<joinMode<<std::endl;
+    std::cout<<"  query mode: "<<queryMode<<std::endl;
     InputArray** inputArrays = readArrays();
 
     FILE * fp = fopen("read_arrays_end", "w");
