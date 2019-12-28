@@ -151,9 +151,10 @@ int main(void)
     //         inputArrays[i]->print();
     //     }
     // }
-    srand(time(NULL));
+    // srand(time(NULL));
 
     int lines;
+    scheduler = new JobScheduler(16, 10000);
     while(1)
     {
         lines=0;
@@ -163,20 +164,80 @@ int main(void)
        // std::cout<<arr<<std::endl;
         // std::cout<<std::endl;
         //std::cout<<lines<<std::endl;
+        predicateJobsDoneMutexes = new pthread_mutex_t[lines];
+        predicateJobsDoneConds = new pthread_cond_t[lines];
+        lastJobDoneArrays = new bool*[lines];
+        // queryJobDoneMutexes = new pthread_mutex_t[lines];
+        // queryJobDoneConds = new pthread_cond_t[lines];
+        queryJobDoneArray = new bool[lines];
+        QueryResult=new char*[lines];
+        // std::cout<<"total queries: "<<lines<<std::endl;
+        for (int i = 0; i < lines; i++) {
+            QueryResult[i]=new char[100];
+            predicateJobsDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
+            predicateJobsDoneConds[i] = PTHREAD_COND_INITIALIZER;
+            // queryJobDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
+            // queryJobDoneConds[i] = PTHREAD_COND_INITIALIZER;
+            queryJobDoneArray[i] = false;
+
+            lastJobDoneArrays[i] = new bool[2];
+            lastJobDoneArrays[i][0] = false;
+            lastJobDoneArrays[i][1] = false;
+            scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i));
+
+        }
+
+        // for(int i=0;i<lines;i++)
+        // {
+        //     // std::cout<<"query index: "<<i<<std::endl;
+        //     //std::cout<<arr[i]<<std::endl;
+        //     // handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
+        //     // std::cout<<std::endl;
+        // }
+        // std::cout<<"-------------MAIN THREAD: will wait for queries to finish"<<std::endl;
+
         for(int i=0;i<lines;i++)
         {
-            //std::cout<<arr[i]<<std::endl;
-            handlequery(makeparts(arr[i]), inputArrays);
-            std::cout<<std::endl;
+            pthread_mutex_lock(&queryJobDoneMutex);
+            while (queryJobDoneArray[i] == false){
+                // pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
+                struct timespec timeout;
+                clock_gettime(CLOCK_REALTIME, &timeout);
+                timeout.tv_sec += 1;
+                pthread_cond_timedwait(&queryJobDoneCond, &queryJobDoneMutex, &timeout);
+            }
+                // std::cout<<"-------------MAIN THREAD: finished query with index -> "<<i<<std::endl;
+
+            pthread_mutex_unlock(&queryJobDoneMutex);
+            queryJobDoneArray[i] == false;
+
+            delete[] lastJobDoneArrays[i];
         }
+        for(int i=0;i<lines;i++)
+        {
+            std::cout<<QueryResult[i]<<std::endl;
+            delete[] QueryResult[i];
+        }
+        delete[] QueryResult;
+
+        // delete[] arr;
+        delete[] predicateJobsDoneMutexes;
+        delete[] predicateJobsDoneConds;
+        delete[] lastJobDoneArrays;
+
         for(int i=0;i<lines;i++)
             delete[] arr[i];
         delete[] arr;
         arr=NULL;
     }
+    // std::cout<<"-----------------------------------------------------------------------------OUT OF LOOP"<<std::endl;
+    delete scheduler;
+
     for(int i=0;i<MAX_INPUT_ARRAYS_NUM;i++)
     {
-        delete inputArrays[i];
+        if (inputArrays[i] != NULL) {
+            delete inputArrays[i];
+        }
     }
     delete[] inputArrays;
     remove("read_arrays_end");
