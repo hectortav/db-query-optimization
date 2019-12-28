@@ -502,9 +502,9 @@ int randomIndex(int startIndex, int stopIndex) {
 
 int partition(tuple* tuples, int startIndex, int stopIndex)
 { 
-    pthread_mutex_lock(&blah);
-    cntrcntr++;
-    pthread_mutex_unlock(&blah);
+    // pthread_mutex_lock(&blah);
+    // cntrcntr++;
+    // pthread_mutex_unlock(&blah);
     int pivotIndex = randomIndex(startIndex, stopIndex);
 
     uint64_t pivot = tuples[pivotIndex].payload;
@@ -696,10 +696,11 @@ char** makeparts(char* query)
     return parts;
 }
 
-Type mode = parallel;
+Type mode = serial;
 
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 {
+    // std::cout<<"thread "<<pthread_self()<<", inputArrays = "<<allrelations<<", inputArrays address = "<<&allrelations<<std::endl;
     /*for(int i=0;i<3;i++)
     {
         std::cout<<parts[i]<<std::endl;
@@ -707,7 +708,10 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
     int relationIds[MAX_INPUT_ARRAYS_NUM];
     int relationsnum;
     // std::cout<<"1, queryIndex: "<<queryIndex<<std::endl;
+    // pthread_mutex_lock(&blah);
     loadrelationIds(relationIds, parts[0], relationsnum);
+    // pthread_mutex_unlock(&blah);
+
         // std::cout<<"2, queryIndex: "<<queryIndex<<std::endl;
 
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds, queryIndex);
@@ -718,7 +722,7 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 
     if(result!=NULL)
         delete result;
-    delete[] parts;   
+    // delete[] parts;   
 
     // if (mode == parallel) {
         std::cout<<std::endl;
@@ -731,23 +735,41 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 {
     // std::cout<<"LOADRELATIONS: "<<part<<std::endl;
-    int cntr=1;
-    uint64_t*** relations;
+    // pthread_mutex_lock(&blah);
+    int cntr=1, start = 0;
     for(int i=0;part[i]!='\0';i++)
     {
         if(part[i]==' ')
+        {
+            part[i] = '\0';
+            relationIds[cntr - 1] = atoi(part + start);
+            start = i + 1;
             cntr++;
+        }
     }
-
-    char tempPart[strlen(part) + 1];
-    strcpy(tempPart, part);
-    int i = 0;
-    char* token = strtok(tempPart, " ");
-    while (token) {
-        relationIds[i++] = atoi(token);
-        token = strtok(NULL, " ");
-    }
+    relationIds[cntr - 1] = atoi(part + start);
     relationsnum=cntr;
+    // pthread_mutex_unlock(&blah);
+
+    // backup
+    // // char tempPart[strlen(part) + 1];
+    // std::cout<<"part: "<<part<<std::endl;
+    // char * tempPart = new char[strlen(part) + 1];
+    // mempcpy(tempPart, part, strlen(part) + 1);
+    // char *buffer;
+
+    // // char *buffer = new
+    // // strcpy(tempPart, part);
+    // int i = 0;
+    // char* token = strtok_r(tempPart, " ", &buffer);
+    // while (token) {
+    //     relationIds[i++] = atoi(token);
+    //     // cntr++;
+    //     std::cout<<"token: "<<token<<std::endl;
+    //     token = strtok_r(NULL, " ", &buffer);
+    // }
+    // std::cout<<"part: "<<part<<", relationsNum = "<<i<<std::endl;
+    // relationsnum=i;
 }
 
 bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin) {
@@ -781,7 +803,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
 
     InputArray** inputArraysRowIds = new InputArray*[relationsnum];
     for (int i = 0; i < relationsnum; i++) {
-        // std::cout<<"relationIds[i] = "<<relationIds[i]<<" ====================================================================="<<std::endl;
+        // std::cout<<"thread "<<pthread_self()<<", relationIds[i] = "<<relationIds[i]<<" ====================================================================="<<std::endl;
         inputArraysRowIds[i] = new InputArray(inputArrays[relationIds[i]]->rowsNum);
     }
 

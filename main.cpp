@@ -211,6 +211,8 @@ int main(void)
 
             delete[] lastJobDoneArrays[i];
         }
+
+        // delete[] arr;
         delete[] predicateJobsDoneMutexes;
         delete[] predicateJobsDoneConds;
         delete[] lastJobDoneArrays;
