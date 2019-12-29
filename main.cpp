@@ -36,7 +36,6 @@ int main(int argc,char** argv)
        // std::cout<<arr<<std::endl;
         // std::cout<<std::endl;
         //std::cout<<lines<<std::endl;
-        JoinQueued=new int[lines];
         jobsCounterMutexes = new pthread_mutex_t[lines];
         jobsCounterConds = new pthread_cond_t[lines];
         predicateJobsDoneMutexes = new pthread_mutex_t[lines];
@@ -112,7 +111,6 @@ int main(int argc,char** argv)
         delete[] lastJobDoneArrays;
         delete[] jobsCounter;
         delete[] jobsCounterMutexes;
-        delete[] JoinQueued;
 
         for(int i=0;i<lines;i++)
             delete[] arr[i];

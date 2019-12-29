@@ -68,6 +68,7 @@ read -p "Provide arguments for program run according to the following guide:
 -ro                                 (ReOrder) Run bucket reorder (radix-sort) in parallel
 -qs                                 (QuickSort) Run quicksorts independently
 -jn                                 (JoiN) Run joins in parallel (split arrays)
+-ft                                 (FilTer) Runs filters in parallel
 -all                                (ALL) Everything runs in parallel
 -n <threads>                        Specify number of threads to run
 [no argument or any other argument] Everything runs serial

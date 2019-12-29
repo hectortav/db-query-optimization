@@ -7,6 +7,7 @@ RunningMode reorderMode = serial;
 RunningMode quickSortMode = serial;
 RunningMode joinMode = serial;
 RunningMode projectionMode=serial;
+RunningMode filterMode = serial;
 
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
@@ -62,11 +63,11 @@ InputArray::~InputArray() {
     delete[] this->columns;
 }
 
-InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray) {
-    InputArray* newInputArrayRowIds = new InputArray(rowsNum);
-    uint64_t newInputArrayRowIndex = 0;
+InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex) {
+    InputArray* newInputArrayRowIds = new InputArray(stopIndex - startIndex);
 
-    for (uint64_t i = 0; i < rowsNum; i++) {
+    uint64_t newInputArrayRowIndex = 0;
+    for (uint64_t i = startIndex; i < stopIndex; i++) {
         uint64_t inputArrayRowId = columns[0][i];
         // std::cout<<"inputArrayRowId: "<<inputArrayRowId<<std::endl;
 
@@ -97,6 +98,40 @@ InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t n
 
     return newInputArrayRowIds;
 }
+
+// InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex) {
+//     InputArray* newInputArrayRowIds = new InputArray(rowsNum);
+//     uint64_t newInputArrayRowIndex = 0;
+
+//     for (uint64_t i = startIndex; i < stopIndex; i++) {
+//         uint64_t inputArrayRowId = columns[0][i];
+//         // std::cout<<"inputArrayRowId: "<<inputArrayRowId<<std::endl;
+
+//         uint64_t inputArrayFieldValue = pureInputArray->columns[fieldId][inputArrayRowId];
+//         bool filterApplies = false;
+//         switch (operation)
+//         {
+//         case 0: // '>'
+//             filterApplies = inputArrayFieldValue > numToCompare;
+//             break;
+//         case 1: // '<'
+//             filterApplies = inputArrayFieldValue < numToCompare;
+//             break;
+//         case 2: // '='
+//             filterApplies = inputArrayFieldValue == numToCompare;
+//             break;
+//         default:
+//             break;
+//         }
+
+//         if (!filterApplies)
+//             continue;
+
+//         newInputArrayRowIds->columns[0][newInputArrayRowIndex++] = inputArrayRowId;
+//     }
+
+//     newInputArrayRowIds->rowsNum = newInputArrayRowIndex; // update rowsNum because the other rows are useless
+// }
 
 InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, const InputArray* pureInputArray) {
     InputArray* newInputArrayRowIds = new InputArray(rowsNum);
@@ -293,11 +328,45 @@ IntermediateArray* IntermediateArray::selfJoin(int inputArray1Id, int inputArray
     return newIntermediateArray;
 }
 
+InputArray* combineInputArrayRowIds(InputArray** inputArrayRowIdsParts, int partsNum) {
+    uint64_t totalPartsRowsNum = 0;
+    for (int i = 0; i < partsNum; i++) {
+        totalPartsRowsNum += inputArrayRowIdsParts[i]->rowsNum;
+    }
+    
+    InputArray* combinedInputArrayRowIds = new InputArray(totalPartsRowsNum);
+    uint64_t combinedInputArrayRowIndex = 0;
+
+    for (int i = 0; i < partsNum - 1; i++) {
+        InputArray* part = inputArrayRowIdsParts[i];
+
+        memcpy(combinedInputArrayRowIds->columns[0] + combinedInputArrayRowIndex, part->columns[0], part->rowsNum*sizeof(uint64_t));
+        combinedInputArrayRowIndex += part->rowsNum;
+        delete part;
+
+        // for (int j = 0; j < equalPartsSize; j++) {
+        //     combinedInputArrayRowIds->columns[0][combinedInputArrayRowIndex++] = inputArrayRowIdsParts[i]->columns[0][j];
+        // }
+    }
+    InputArray* lastPart = inputArrayRowIdsParts[partsNum - 1];
+
+    memcpy(combinedInputArrayRowIds->columns[0] + combinedInputArrayRowIndex, lastPart->columns[0], lastPart->rowsNum*sizeof(uint64_t));
+
+    combinedInputArrayRowIndex += lastPart->rowsNum;
+    delete lastPart;
+    // for (int j = 0; j < lastPartSize; j++) {
+    //     combinedInputArrayRowIds->columns[combinedInputArrayRowIndex++] = 
+    // }
+
+    combinedInputArrayRowIds->rowsNum = combinedInputArrayRowIndex; // update rowsNum because the other rows are useless
+
+    return combinedInputArrayRowIds;
+}
+
 inline uint64_t hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
 
-int* JoinQueued;
 result* managejoin(relation* R, relation* S, int queryIndex)
 {
     // JobScheduler * scheduler=new JobScheduler(1,100000);
@@ -307,7 +376,7 @@ result* managejoin(relation* R, relation* S, int queryIndex)
     int partsize=(S->num_tuples/parts)+1;
     list** lst=new list*[parts];
     // bool* done=new bool[parts]{false};
-    JoinQueued[queryIndex]=parts;
+    jobsCounter[queryIndex]=parts;
     // pthread_mutex_lock(&DoneJoinMutex);
     // std::cout<<"start"<<std::endl;
     // std::cout<<parts<<std::endl;
@@ -327,7 +396,7 @@ result* managejoin(relation* R, relation* S, int queryIndex)
 
     }
     pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
-    while(JoinQueued[queryIndex]>0)
+    while(jobsCounter[queryIndex]>0)
     {
         pthread_cond_wait(&predicateJobsDoneConds[queryIndex],&predicateJobsDoneMutexes[queryIndex]);
     }
@@ -419,8 +488,8 @@ void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,
     }
     pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
     // std::cout<<"i'm done"<<std::endl;
-    JoinQueued[queryIndex]--;
-    if(JoinQueued[queryIndex]==0)
+    jobsCounter[queryIndex]--;
+    if(jobsCounter[queryIndex]==0)
         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
     // if(islast)
@@ -1000,8 +1069,41 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         int operation = preds[i][2];
         if (isFilter) {
             uint64_t numToCompare = field2Id;
-            InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, operation, numToCompare, inputArray1);
-            delete inputArray1RowIds;
+            InputArray* filteredInputArrayRowIds;
+            if (filterMode == serial) {
+                filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, operation, numToCompare, inputArray1, 0, inputArray1RowIds->rowsNum);
+                delete inputArray1RowIds;
+            } else if (filterMode == parallel) {
+                int threadsNum = scheduler->getThreadsNum();
+                InputArray* filteredInputArrayRowIdsParts[threadsNum];
+                jobsCounter[queryIndex] = threadsNum;
+                uint64_t equalPartsSize = inputArray1RowIds->rowsNum/threadsNum;
+                uint64_t remainingRowIds = inputArray1RowIds->rowsNum%threadsNum;
+                for (int j = 0; j < threadsNum; j++) {
+                    uint64_t startIndex = j*equalPartsSize;
+                    uint64_t stopIndex = startIndex + equalPartsSize;
+                    if (j == threadsNum - 1) {
+                        stopIndex += remainingRowIds;
+                    }
+                    // std::cout << "queryIndex: "<<queryIndex<<", creating filter job with startIndex: "<<startIndex<<" and stopIndex: "<<stopIndex<<std::endl;
+                    scheduler->schedule(new filterJob(field1Id, operation, numToCompare, inputArray1, startIndex, stopIndex, inputArray1RowIds, &filteredInputArrayRowIdsParts[j], queryIndex), -1);
+                }
+
+                // std::cout << "MAIN THREAD WILL WAIT"<<std::endl;
+                pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+                while (jobsCounter[queryIndex] > 0){
+                    // std::cout<<"jobs counter: "<<jobsCounter[queryIndex]<<std::endl;
+                    pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
+                }
+
+                pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+                                // std::cout << "MAIN THREAD CONTINUED"<<std::endl;
+
+                delete inputArray1RowIds;
+                                // std::cout << "MAIN THREAD CONTINUED1"<<std::endl;
+
+                filteredInputArrayRowIds = combineInputArrayRowIds(filteredInputArrayRowIdsParts, threadsNum);
+            }
             inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
             prevPredicateWasFilterOrSelfJoin = true;
             continue;
@@ -1526,6 +1628,7 @@ void usage(char** argv)
     std::cout<<"   -qs           (QuickSort)Run quicksorts independently"<<std::endl;
     std::cout<<"   -jn           (JoiN) Runs joins in parallel (split arrays)"<<std::endl;
     std::cout<<"   -pj           (ProJection) Runs projection checksums in parallel"<<std::endl;
+    std::cout<<"   -ft           (FilTer) Runs filters in parallel"<<std::endl;
     std::cout<<"   -all          (ALL) Everything runs in parallel"<<std::endl;  
     std::cout<<"   -n <threads>  Specify number of threads to run"<<std::endl;  
     std::cout<<"   -h            Displays this help message"<<std::endl<<std::endl;
@@ -1554,6 +1657,8 @@ void params(char** argv,int argc)
             joinMode=parallel;
         else if(strcmp(argv[i],"-pj")==0)
             projectionMode=parallel;
+        else if(strcmp(argv[i],"-ft")==0)
+            filterMode=parallel;
         else if(strcmp(argv[i],"-all")==0)
         {
             // std::cout<<"here"<<std::endl;
@@ -1562,6 +1667,7 @@ void params(char** argv,int argc)
             joinMode=parallel;
             quickSortMode=parallel;
             // projectionMode=parallel;
+            filterMode=parallel;
         }
         else if(strcmp(argv[i],"-n")==0) {
             if (i + 1 >= argc) {
@@ -1577,7 +1683,7 @@ void params(char** argv,int argc)
             threadsNumGiven = true;
         }
     }
-    if (!threadsNumGiven && (queryMode == parallel || reorderMode == parallel || quickSortMode == parallel || joinMode == parallel)) {
+    if (!threadsNumGiven && (queryMode == parallel || reorderMode == parallel || quickSortMode == parallel || joinMode == parallel || filterMode == parallel)) {
         std::cout<<"Wrong arguments. Please rerun the program with -n <threads> to specify the number of threads to run"<<std::endl;
         exit(1);
     }

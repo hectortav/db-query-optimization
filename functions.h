@@ -21,11 +21,10 @@ extern RunningMode reorderMode;
 extern RunningMode quickSortMode;
 extern RunningMode joinMode;
 extern RunningMode projectionMode;
-
+extern RunningMode filterMode;
 
 typedef class list list;
 
-extern int* JoinQueued;
 extern pthread_mutex_t *predicateJobsDoneMutexes;
 extern pthread_cond_t *predicateJobsDoneConds;
 extern pthread_cond_t *jobsCounterConds;
@@ -82,7 +81,9 @@ class InputArray
     InputArray(uint64_t rowsNum);  // initialization for storing row ids
     ~InputArray();
 
-    InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare,const InputArray* pureInputArray); // filtering when storing row ids
+    InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare,const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex); // filtering when storing row ids
+    // // filtering when storing row ids for multithreading use
+    // InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray, InputArray* newInputArrayRowIds, uint64_t startIndex, uint64_t stopIndex);
     InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id,const InputArray* pureInputArray); // inner join
     void extractColumnFromRowIds(relation& rel, uint64_t fieldId,const InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
     void print();
@@ -284,15 +285,62 @@ public:
         this->projcolunn=projcolumn;
         this->buffer=buffer;
         this->queryIndex=queryIndex;
-    }
 
+    }
     void run() override
     {
         handleprojectionparallel(rowarr,array,projarray,predicatearray,projcolunn,buffer,queryIndex);
         return;
+
     }
 };
 
+
+class filterJob : public Job
+{
+private:
+    uint64_t fieldId;
+    int operation;
+    uint64_t numToCompare;
+    const InputArray* pureInputArray;
+    uint64_t startIndex;
+    uint64_t stopIndex;
+    InputArray* oldInputArrayRowIds;
+    InputArray** newInputArrayRowIdsP;
+    int queryIndex;
+
+public:
+    filterJob(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex, InputArray* oldInputArrayRowIds, InputArray** newInputArrayRowIdsP, int queryIndex) : Job()
+    {
+        this->fieldId = fieldId;
+        this->operation = operation;
+        this->numToCompare = numToCompare;
+        this->pureInputArray = pureInputArray;
+        this->startIndex = startIndex;
+        this->stopIndex = stopIndex;
+        this->oldInputArrayRowIds = oldInputArrayRowIds;
+        this->newInputArrayRowIdsP = newInputArrayRowIdsP;
+        this->queryIndex = queryIndex;
+    }
+
+    void run() override
+    {
+        (*newInputArrayRowIdsP) = oldInputArrayRowIds->filterRowIds(fieldId, operation, numToCompare, pureInputArray, startIndex, stopIndex);
+
+        pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+        
+        jobsCounter[queryIndex]--;
+        if (jobsCounter[queryIndex] == 0) {
+            pthread_cond_signal(&jobsCounterConds[queryIndex]);
+        }
+
+        pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+
+        return;
+    }
+};
+
+InputArray* combineInputArrayRowIds(InputArray** inputArrayRowIdsParts, int partsNum);
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 // uint64_t** create_hist(relation*, int);
