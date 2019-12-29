@@ -667,7 +667,11 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
             // std::cout<<"will scheduler new reorder -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
-            scheduler->schedule(new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex), queryIndex);
+            if(reorderMode==parallel)
+                scheduler->schedule(new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex), queryIndex);
+            else
+                tuplereorder_parallel(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex);
+                // tuplereorder_serial(array+start,array2+start,psum[i]-start,shift+1);
             // delete reorder;
         } else {
             bool isLastQuickSort = (lastQuicksortCallIndex == i && lastReorderCallIndex == -1);
@@ -705,14 +709,15 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
 
 void tuplereorder(tuple* array,tuple* array2, int offset,int shift, int reorderIndex, int queryIndex)
 {
-    if (reorderMode == serial)
-        tuplereorder_serial(array, array2, offset, shift);
-    else if (reorderMode == parallel)
-    {
-        // if (scheduler == NULL)
-        //     scheduler = new JobScheduler(32, 1000);
-        tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex, queryIndex);
-    }
+    // if (reorderMode == serial)
+    //     tuplereorder_serial(array, array2, offset, shift);
+    // else if (reorderMode == parallel)
+    // {
+    //     // if (scheduler == NULL)
+    //     //     scheduler = new JobScheduler(32, 1000);
+    // }
+            tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex, queryIndex);
+
 }
 
 void swap(tuple* tuple1, tuple* tuple2)
@@ -1183,7 +1188,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                     }
                             //  std::cout<<"-------------MAIN THREAD3"<<std::endl;
 
-                    if (reorderMode == parallel) {
+                    if (reorderMode == parallel || quickSortMode==parallel) {
                         // std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
                         if (shouldSortRel1) {
                             pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
