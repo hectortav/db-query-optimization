@@ -12,6 +12,8 @@ int main(int argc,char** argv)
     // std::cout<<"  reorder mode: "<<reorderMode<<std::endl;
     // std::cout<<"  join mode: "<<joinMode<<std::endl;
     // std::cout<<"  query mode: "<<queryMode<<std::endl;
+    // std::cout<<"  filter mode: "<<filterMode<<std::endl;
+    // std::cout<<"  projection mode: "<<projectionMode<<std::endl;
     InputArray** inputArrays = readArrays();
 
     FILE * fp = fopen("read_arrays_end", "w");

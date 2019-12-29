@@ -955,7 +955,9 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
     IntermediateArray* result=handlepredicates(allrelations,parts[1],relationsnum, relationIds, queryIndex);
         // std::cout<<"3, queryIndex: "<<queryIndex<<std::endl;
 
-    handleprojection(result,allrelations,parts[2], relationIds,queryIndex);
+    // handleprojection(result,allrelations,parts[2], relationIds,queryIndex);
+    manageprojection(result,allrelations,parts[2], relationIds,queryIndex);
+
             // std::cout<<"4, queryIndex: "<<queryIndex<<std::endl;
 
     if(result!=NULL)
@@ -1391,13 +1393,16 @@ void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* p
     if(projectionMode==parallel)
     {
         for(int i=0;part[i]!='\0';i++)
-            projectionscount++;
-
+        {
+            if(part[i]=='.')
+                projectionscount++;
+        }
+        
         buffer=new char*[projectionscount];
         jobsCounter[queryIndex]=projectionscount;
     }
 
-    for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
+    for(int i=0,start=0,projid=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
     {
         if(part[i]=='.')
         {
@@ -1422,9 +1427,10 @@ void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* p
             
             if(projectionMode==parallel)
             {
-                buffer[i]=new char[100];
-                buffer[i][0]='\0';
-                scheduler->schedule(new pJob(rowarr,array,projarray,predicatearray,projcolumn,buffer[i],queryIndex),-1);
+                buffer[projid]=new char[100];
+                buffer[projid][0]='\0';
+                scheduler->schedule(new pJob(rowarr,array,projarray,predicatearray,projcolumn,buffer[projid],queryIndex),-1);
+                projid++;
             }
             else
             {
@@ -1493,6 +1499,7 @@ void handleprojectionparallel(IntermediateArray* rowarr,const InputArray** array
     pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
     // std::cout<<"i'm done"<<std::endl;
     jobsCounter[queryIndex]--;
+
     if(jobsCounter[queryIndex]==0)
         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
@@ -1666,7 +1673,7 @@ void params(char** argv,int argc)
             reorderMode=parallel;
             joinMode=parallel;
             quickSortMode=parallel;
-            // projectionMode=parallel;
+            projectionMode=parallel;
             filterMode=parallel;
         }
         else if(strcmp(argv[i],"-n")==0) {

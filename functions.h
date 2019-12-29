@@ -377,5 +377,7 @@ relation* re_ordered_2(relation *rel, relation* new_rel, int no_used);
 void mid_func(tuple *t1, tuple *t2, int num, int not_used);
 void usage(char** argv);
 void params(char** argv,int argc);
+void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex);
+
 
 #endif
