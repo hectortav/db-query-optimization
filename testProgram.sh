@@ -1,13 +1,20 @@
 #!/bin/bash
 
 startProgramAndCalculateTime() {
-    (cat $initFile $workFile | ./final > $outputFile )&
+    initS=$(sed -e "$ ! s#^#$pathPrefix/#" "$initFile")
+    initS="$initS\n"
+    workS=$(cat $workFile)
+    (echo -e "${initS}${workS}" | ./final $args > $outputFile )&
     
     while read path action file
     do
         if [[ $file == "read_arrays_end" ]]; then
             startTimestamp=$(date +%s%N)
         elif [[ $file == $outputFile ]] && [[ $action == "MODIFY" ]]; then
+            if grep -q "Wrong arguments" "$outputFile"; then
+                cat $outputFile
+                kill -SIGINT -$$
+            fi
             if [[ $(wc -l < $resultsFile) == $(wc -l < $outputFile) ]]; then
                 endTimestamp=$(date +%s%N)
                 elapsedTimeNanoseconds=$((endTimestamp-startTimestamp))
@@ -56,6 +63,16 @@ done
 
 echo
 
+read -p "Provide arguments for program run according to the following guide: 
+-qr                                 (QueRy) Run in queries of every batch in parallel
+-ro                                 (ReOrder) Run bucket reorder (radix-sort) in parallel
+-qs                                 (QuickSort) Run quicksorts independently
+-jn                                 (JoiN) Run joins in parallel (split arrays)
+-all                                (ALL) Everything runs in parallel
+-n <threads>                        Specify number of threads to run
+[no argument or any other argument] Everything runs serial
+-> " args
+
 workloadsPath=""
 while [[ $workloadsPath == "" ]]
 do
@@ -80,6 +97,7 @@ do
             initFile="$workloadsPath/small/small.init"
             resultsFile="$workloadsPath/small/small.result"
             workFile="$workloadsPath/small/small.work"
+            pathPrefix="$workloadsPath/small"
             outputFile="small_ouput.txt"
             startProgramAndCalculateTime
             ;;
@@ -89,6 +107,7 @@ do
             initFile="$workloadsPath/medium/medium.init"
             resultsFile="$workloadsPath/medium/medium.result"
             workFile="$workloadsPath/medium/medium.work"
+            pathPrefix="$workloadsPath/medium"
             outputFile="medium_ouput.txt"
             startProgramAndCalculateTime
             ;;

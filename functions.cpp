@@ -1458,7 +1458,7 @@ void params(char** argv,int argc)
         }
     }
     if (!threadsNumGiven && (queryMode == parallel || reorderMode == parallel || quickSortMode == parallel || joinMode == parallel)) {
-        std::cout<<"Please rerun the program with -n <threads> to specify the number of threads to run"<<std::endl;
+        std::cout<<"Wrong arguments. Please rerun the program with -n <threads> to specify the number of threads to run"<<std::endl;
         exit(1);
     }
 }
