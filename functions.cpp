@@ -6,6 +6,7 @@ RunningMode queryMode = serial;
 RunningMode reorderMode = serial;
 RunningMode quickSortMode = serial;
 RunningMode joinMode = serial;
+RunningMode projectionMode=serial;
 
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
@@ -1279,6 +1280,121 @@ void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* p
         }
     }
 }
+void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex)
+{
+    QueryResult[queryIndex][0]='\0';
+    int projarray,projcolumn,predicatearray;
+    int projectionscount=0;
+    char** buffer;
+    if(projectionMode==parallel)
+    {
+        for(int i=0;part[i]!='\0';i++)
+            projectionscount++;
+
+        buffer=new char*[projectionscount];
+        jobsCounter[queryIndex]=projectionscount;
+    }
+
+    for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
+    {
+        if(part[i]=='.')
+        {
+            part[i]='\0';
+            projarray=relationIds[atoi(part+start)];
+            predicatearray=atoi(part+start);
+            part[i]='.';
+            start=i+1;
+        }
+        if(part[i]==' '||part[i]=='\0')
+        {
+            int flg=0;
+            if(part[i]==' ')
+            {
+                part[i]='\0';
+                flg=1;
+            }
+            projcolumn=atoi(part+start);
+            if(flg)
+                part[i]=' ';
+            start=i+1;
+            
+            if(projectionMode==parallel)
+            {
+                buffer[i]=new char[100];
+                buffer[i][0]='\0';
+                scheduler->schedule(new pJob(rowarr,array,projarray,predicatearray,projcolumn,buffer[i],queryIndex),-1);
+            }
+            else
+            {
+                uint64_t sum=0;
+                if(rowarr!=NULL)
+                {
+                    uint64_t key;
+                    key=rowarr->predicateArrayIds[predicatearray];
+                    for(uint64_t i =0;i<rowarr->rowsNum;i++)
+                    {
+                        sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
+                    }
+                }
+                if(sum!=0)
+                    sprintf(QueryResult[queryIndex],"%s%" PRIu64,QueryResult[queryIndex],sum);
+                else
+                    sprintf(QueryResult[queryIndex],"%sNULL",QueryResult[queryIndex]);
+                if(part[i]!='\0')
+                    sprintf(QueryResult[queryIndex],"%s ",QueryResult[queryIndex]);
+            }
+            // handleprojectionparallel(rowarr,array,projarray,predicatearray,projcolumn,buffer[i]);
+            //std::cout<<projarray<<"."<<projcolumn<<": ";
+            // if(sum!=0)
+            //     std::cout<<sum;
+            // else
+            //     std::cout<<"NULL";
+            // if(part[i]!='\0')
+            //     std::cout<<" ";
+        }
+    }
+    if(projectionMode==parallel)
+    {
+        pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+        while(jobsCounter[queryIndex]>0)
+        {
+            pthread_cond_wait(&predicateJobsDoneConds[queryIndex],&predicateJobsDoneMutexes[queryIndex]);
+        }
+        pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+        sprintf(QueryResult[queryIndex],"%s",buffer[0]);
+        for(int i=1;i<projectionscount;i++)
+        {
+            sprintf(QueryResult[queryIndex],"%s %s",QueryResult[queryIndex],buffer[i]);
+            delete[] buffer[i];
+        }
+        delete[] buffer;
+    }
+    
+}
+void handleprojectionparallel(IntermediateArray* rowarr,const InputArray** array,int projarray,int predicatearray,int projcolumn,char* buffer,int queryIndex)
+{
+    uint64_t sum=0;
+    if(rowarr!=NULL)
+    {
+        uint64_t key;
+        key=rowarr->predicateArrayIds[predicatearray];
+        for(uint64_t i =0;i<rowarr->rowsNum;i++)
+        {
+            sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
+        }
+    }
+    if(sum!=0)
+        sprintf(buffer,"%" PRIu64 ,sum);
+    else
+        sprintf(buffer,"NULL");
+
+    pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+    // std::cout<<"i'm done"<<std::endl;
+    jobsCounter[queryIndex]--;
+    if(jobsCounter[queryIndex]==0)
+        pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
+    pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+}
 uint64_t** splitpreds(char* ch,int& cn)
 {
     int cntr=1;
@@ -1409,6 +1525,7 @@ void usage(char** argv)
     std::cout<<"   -ro           (ReOrder)Run bucket reorder (radix-sort) in parallel"<<std::endl;
     std::cout<<"   -qs           (QuickSort)Run quicksorts independently"<<std::endl;
     std::cout<<"   -jn           (JoiN) Runs joins in parallel (split arrays)"<<std::endl;
+    std::cout<<"   -pj           (ProJection) Runs projection checksums in parallel"<<std::endl;
     std::cout<<"   -all          (ALL) Everything runs in parallel"<<std::endl;  
     std::cout<<"   -n <threads>  Specify number of threads to run"<<std::endl;  
     std::cout<<"   -h            Displays this help message"<<std::endl<<std::endl;
@@ -1435,6 +1552,8 @@ void params(char** argv,int argc)
             quickSortMode=parallel;
         else if(strcmp(argv[i],"-jn")==0)
             joinMode=parallel;
+        else if(strcmp(argv[i],"-pj")==0)
+            projectionMode=parallel;
         else if(strcmp(argv[i],"-all")==0)
         {
             // std::cout<<"here"<<std::endl;
@@ -1442,6 +1561,7 @@ void params(char** argv,int argc)
             reorderMode=parallel;
             joinMode=parallel;
             quickSortMode=parallel;
+            // projectionMode=parallel;
         }
         else if(strcmp(argv[i],"-n")==0) {
             if (i + 1 >= argc) {

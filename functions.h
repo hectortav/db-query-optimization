@@ -20,6 +20,8 @@ extern RunningMode queryMode;
 extern RunningMode reorderMode;
 extern RunningMode quickSortMode;
 extern RunningMode joinMode;
+extern RunningMode projectionMode;
+
 
 typedef class list list;
 
@@ -134,6 +136,8 @@ void handlequery(char** ,const InputArray** , int);
 void tuplereorder_parallel(tuple*, tuple*, int, int, bool, int, int);
 void quickSort(tuple*, int, int, int, int, bool);
 void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,int queryIndex);
+void handleprojectionparallel(IntermediateArray* rowarr,const InputArray** array,int projarray,int predicatearray,int projcolumn,char* buffer,int queryIndex);
+
 
 
 class queryJob : public Job {
@@ -259,6 +263,36 @@ public:
         return;
     }
 };
+
+class pJob : public Job
+{
+private:
+    IntermediateArray* rowarr;
+    const InputArray** array;
+    int projarray;
+    int predicatearray;
+    int projcolunn;
+    char* buffer;
+    int queryIndex;
+public:
+    pJob(IntermediateArray* rowarr,const InputArray** array,int projarray,int predicatearray,int projcolumn,char* buffer,int queryIndex) : Job()
+    {
+        this->rowarr=rowarr;
+        this->array=array;
+        this->projarray=projarray;
+        this->predicatearray=predicatearray;
+        this->projcolunn=projcolumn;
+        this->buffer=buffer;
+        this->queryIndex=queryIndex;
+    }
+
+    void run() override
+    {
+        handleprojectionparallel(rowarr,array,projarray,predicatearray,projcolunn,buffer,queryIndex);
+        return;
+    }
+};
+
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 // uint64_t** create_hist(relation*, int);
