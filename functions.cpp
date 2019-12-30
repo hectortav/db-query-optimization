@@ -1267,12 +1267,10 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
             // std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
             if (shouldSortRel1) {
                 waitForReorderJobsToBeQueued(queryIndex, 0);
-                delete[] t1;
             }
             // std::cout<<"middle"<<std::endl;
             if (shouldSortRel2){
                 waitForReorderJobsToBeQueued(queryIndex, 1);
-                delete[] t2;
             }
             // sleep(1);
             // pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
@@ -1292,10 +1290,10 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
 
         // std::cout<<"-------------MAIN THREAD5"<<std::endl;
         
-        // if (t1 != NULL)
-        //     delete[] t1;
-        // if (t2 != NULL)
-        //     delete[] t2;
+        if (t1 != NULL)
+            delete[] t1;
+        if (t2 != NULL)
+            delete[] t2;
         result* rslt;
         if (joinMode == serial) {
             rslt= join(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
