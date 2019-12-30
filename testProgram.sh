@@ -66,6 +66,7 @@ echo
 read -p "Provide arguments for program run according to the following guide: 
 -qr                                 (QueRy) Run in queries of every batch in parallel
 -ro                                 (ReOrder) Run bucket reorder (radix-sort) in parallel
+-pb                                 (Reorder -> New job Per Bucket) (\"-ro\" should be provided) Create a new parallel job for each new bucket
 -qs                                 (QuickSort) Run quicksorts independently
 -jn                                 (JoiN) Run joins in parallel (split arrays)
 -ft                                 (FilTer) Runs filters in parallel

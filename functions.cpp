@@ -8,6 +8,7 @@ RunningMode quickSortMode = serial;
 RunningMode joinMode = serial;
 RunningMode projectionMode=serial;
 RunningMode filterMode = serial;
+bool newJobPerBucket = false;
 
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
@@ -667,7 +668,7 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
             // std::cout<<"will scheduler new reorder -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
-            if(reorderMode==parallel)
+            if(reorderMode==parallel && ( newJobPerBucket || shift%2 == 0 ))
                 scheduler->schedule(new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex), queryIndex);
             else
                 tuplereorder_parallel(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex);
@@ -1635,8 +1636,9 @@ void usage(char** argv)
 {
     std::cout<<"Query Optimziation Program with thread support"<<std::endl;
     std::cout<<"Usage: "<<argv[0]<<" [OPTIONS] "<<std::endl;
-    std::cout<<"   -qr           (QueRy)Run in queries of every batch in parallel"<<std::endl;
-    std::cout<<"   -ro           (ReOrder)Run bucket reorder (radix-sort) in parallel"<<std::endl;
+    std::cout<<"   -qr           (QueRy) Run in queries of every batch in parallel"<<std::endl;
+    std::cout<<"   -ro           (ReOrder) Run bucket reorder (radix-sort) in parallel"<<std::endl;
+    std::cout<<"   -pb           (Reorder -> New job Per Bucket) (\"-ro\" should be provided) Create a new parallel job for each new bucket"<<std::endl;
     std::cout<<"   -qs           (QuickSort)Run quicksorts independently"<<std::endl;
     std::cout<<"   -jn           (JoiN) Runs joins in parallel (split arrays)"<<std::endl;
     std::cout<<"   -pj           (ProJection) Runs projection checksums in parallel"<<std::endl;
@@ -1671,6 +1673,8 @@ void params(char** argv,int argc)
             projectionMode=parallel;
         else if(strcmp(argv[i],"-ft")==0)
             filterMode=parallel;
+        else if(strcmp(argv[i],"-pb")==0)
+            newJobPerBucket=true;
         else if(strcmp(argv[i],"-all")==0)
         {
             // std::cout<<"here"<<std::endl;

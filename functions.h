@@ -22,6 +22,7 @@ extern RunningMode quickSortMode;
 extern RunningMode joinMode;
 extern RunningMode projectionMode;
 extern RunningMode filterMode;
+extern bool newJobPerBucket;
 
 typedef class list list;
 
