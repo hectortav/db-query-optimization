@@ -49,6 +49,7 @@ InputArray::InputArray(uint64_t rowsNum, uint64_t columnsNum) {
     for (uint64_t i = 0; i < columnsNum; i++) {
         this->columns[i] = new uint64_t[rowsNum];
     }
+    columnsStats = NULL;
 }
 
 InputArray::InputArray(uint64_t rowsNum) : InputArray(rowsNum, 1) {
@@ -62,6 +63,10 @@ InputArray::~InputArray() {
         delete[] this->columns[i];
     }
     delete[] this->columns;
+
+    if (columnsStats != NULL) {
+        delete[] columnsStats;
+    }
 }
 
 InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex) {
@@ -164,6 +169,10 @@ void InputArray::extractColumnFromRowIds(relation& rel, uint64_t fieldId, const 
         rel.tuples[i].key = inputArrayRowId;
         rel.tuples[i].payload = pureInputArray->columns[fieldId][inputArrayRowId];
     }
+}
+
+void InputArray::initStatistics() {
+    columnsStats = new ColumnStats[columnsNum];
 }
 
 IntermediateArray::IntermediateArray(uint64_t columnsNum) {
@@ -878,19 +887,58 @@ InputArray** readArrays() {
             return NULL;
         }
 
-        inputArrays[inputArraysIndex] = new InputArray(rowsNum, columnsNum);
+        InputArray* curInputArray = new InputArray(rowsNum, columnsNum);
+        curInputArray->initStatistics();
+        ColumnStats* curColumnsStats = curInputArray->columnsStats;
 
         for (uint64_t i = 0; i < columnsNum; i++) {
+            ColumnStats* curStats = &curColumnsStats[i];
+            curStats->valuesNum = rowsNum;
+            curStats->maxValue = 0;
+            curStats->minValue = UINT64_MAX;
+
             for (uint64_t j = 0; j < rowsNum; j++) {
-                if ((rtn = fread(&inputArrays[inputArraysIndex]->columns[i][j], sizeof(uint64_t), 1, fileP)) < 0)
+                if ((rtn = fread(&curInputArray->columns[i][j], sizeof(uint64_t), 1, fileP)) < 0)
                 {
                     printf("fread for file <%s> returned %ld\n", fileName, rtn);
                     return NULL;
+                }
+                
+                uint64_t curValue = curInputArray->columns[i][j];
+                if (curValue < curStats->minValue) {
+                    curStats->minValue = curValue;
+                }
+                if (curValue > curStats->maxValue) {
+                    curStats->maxValue = curValue;
+                }
+            }
+
+            uint64_t boolArraySize = curStats->maxValue - curStats->minValue + 1;
+            bool arraySizeCut = false;
+            if (boolArraySize > MAX_BOOLEAN_ARRAY_SIZE) {
+                boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
+                arraySizeCut = true;
+            }
+
+            curStats->distinctValuesNum = curStats->valuesNum;
+            bool boolArray[boolArraySize] = {false};
+            for (uint64_t j = 0; j < rowsNum; j++) {
+                uint64_t boolArrayIndex = curInputArray->columns[i][j] - curStats->minValue;
+                if (arraySizeCut) {
+                    boolArrayIndex %= MAX_BOOLEAN_ARRAY_SIZE;
+                }
+
+                if (!boolArray[boolArrayIndex]) {
+                    boolArray[boolArrayIndex] = true;
+                } else {
+                    curStats->distinctValuesNum--;
                 }
             }
         }
 
         fclose(fileP);
+        
+        inputArrays[inputArraysIndex] = curInputArray;
 
         inputArraysIndex++;
     }

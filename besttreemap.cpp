@@ -42,9 +42,7 @@ Value::Value(int* arr, int sz)
 }
 Value::~Value()
 {
-    std::cout<<"value dest"<<std::endl;
     delete this->ValueArray;
-    std::cout<<"hm"<<std::endl;
     if(stats!=NULL)
         delete stats;
 }
@@ -77,7 +75,6 @@ bool Map::insert(int* key,int keysize,int* value,int valuesize)
     int ifExistsKey=exists(key,keysize);
     if(ifExistsKey>=0)
     {
-        std::cout<<"ifexists"<<std::endl;
         delete values[ifExistsKey];
         values[ifExistsKey]=new Value(value,valuesize);
     }

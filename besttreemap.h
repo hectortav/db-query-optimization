@@ -5,10 +5,10 @@
 class Statistics
 {
 public:
-    int min;
-    int max;
-    int numdiscrete;
-    int size;
+    uint64_t min;
+    uint64_t max;
+    uint64_t numdiscrete;
+    uint64_t size;
 
     Statistics(int min,int max,int numdiscrete,int size);
     ~Statistics();
