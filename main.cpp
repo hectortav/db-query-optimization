@@ -6,6 +6,31 @@
 int main(int argc,char** argv)
 {
 
+    // Map mymap(3);
+    // int k[3]={0,1,2};
+    // int v[3]={2,3,3};
+    // int v2[4]={2,2,2,5};
+    // int k2[1]={0};
+    // mymap.insert(k,3,v,3);
+    // mymap.print();
+    // std::cout<<std::endl;
+    // std::cout<<mymap.exists(k,3);
+    //     std::cout<<std::endl;
+
+    // mymap.insert(k,3,v2,4);
+    // mymap.print();
+    //     std::cout<<std::endl;
+
+    // mymap.insert(k2,1,v2,4);
+    // mymap.print();
+    //     std::cout<<std::endl;
+
+    // mymap.insert(k2,1,v,3);
+    // mymap.print();
+    //     std::cout<<std::endl;
+
+
+    // return 0;
     params(argv,argc);
     // std::cout<<"Running in: "<<std::endl;
     // std::cout<<"  quicksort mode: "<<quickSortMode<<std::endl;
