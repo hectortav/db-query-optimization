@@ -384,6 +384,7 @@ public:
 };
 
 InputArray* combineInputArrayRowIds(InputArray** inputArrayRowIdsParts, int partsNum);
+void waitForJobsToFinish(int queryIndex);
 InputArray* parallelFilterOrInnerJoin(int queryIndex, InputArray* inputArrayRowIds, bool isFilterJob, int field1Id, int field2Id, int operation, uint64_t numToCompare, const InputArray* pureInputArray);
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
@@ -409,6 +410,9 @@ char** makeparts(char* query);
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex);
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
 bool shouldSort(uint64_t** predicates, int predicatesNum, int curPredicateIndex, int curPredicateArrayId, int curFieldId, bool prevPredicateWasFilterOrSelfJoin);
+bool handleReorderRel(relation* rel, tuple** t, uint64_t** preds, int cntr, int i, int predicateArrayId, int fieldId, bool prevPredicateWasFilterOrSelfJoin, int queryIndex, int reorderIndex);
+void waitForReorderJobsToBeQueued(int queryIndex, int reorderIndex);
+void handleDelete(uint64_t** preds, int cntr, int relationsnum, InputArray** inputArraysRowIds, result* rslt, bool onlyResult);
 IntermediateArray* handlepredicates(const InputArray** relations,char* part,int relationsnum, int* relationIds, int queryIndex);
 void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex);
 uint64_t** splitpreds(char* ch,int& cn);

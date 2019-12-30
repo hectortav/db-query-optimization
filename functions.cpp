@@ -365,6 +365,17 @@ InputArray* combineInputArrayRowIds(InputArray** inputArrayRowIdsParts, int part
     return combinedInputArrayRowIds;
 }
 
+void waitForJobsToFinish(int queryIndex) {
+        // std::cout << "MAIN THREAD WILL WAIT"<<std::endl;
+    pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+    while (jobsCounter[queryIndex] > 0){
+        // std::cout<<"jobs counter: "<<jobsCounter[queryIndex]<<std::endl;
+        pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
+    }
+
+    pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+}
+
 InputArray* parallelFilterOrInnerJoin(int queryIndex, InputArray* inputArrayRowIds, bool isFilterJob, int field1Id, int field2Id, int operation, uint64_t numToCompare, const InputArray* pureInputArray) {
     int threadsNum = scheduler->getThreadsNum();
     InputArray* filteredInputArrayRowIdsParts[threadsNum];
@@ -387,14 +398,7 @@ InputArray* parallelFilterOrInnerJoin(int queryIndex, InputArray* inputArrayRowI
         scheduler->schedule(job, -1);
     }
 
-    // std::cout << "MAIN THREAD WILL WAIT"<<std::endl;
-    pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
-    while (jobsCounter[queryIndex] > 0){
-        // std::cout<<"jobs counter: "<<jobsCounter[queryIndex]<<std::endl;
-        pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
-    }
-
-    pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+    waitForJobsToFinish(queryIndex);
                     // std::cout << "MAIN THREAD CONTINUED"<<std::endl;
 
     delete inputArrayRowIds;
@@ -1081,7 +1085,51 @@ bool isRelationOrdered(relation &rel) {
     return true;
 }
 
+bool handleReorderRel(relation* rel, tuple** t, uint64_t** preds, int cntr, int i, int predicateArrayId, int fieldId, bool prevPredicateWasFilterOrSelfJoin, int queryIndex, int reorderIndex) {
+    bool shouldSortRel = shouldSort(preds, cntr, i, predicateArrayId, fieldId, prevPredicateWasFilterOrSelfJoin);
+    // tuple* t = NULL;
+    // std::cout<<"num_tuples: "<<rel->num_tuples<<std::endl;
+    // std::cout<<"shouldSortRel1: "<<shouldSortRel1<<std::endl;
+    if (shouldSortRel) {
+        (*t)=new tuple[rel->num_tuples];
+        tuplereorder(rel->tuples,*t,rel->num_tuples,0, reorderIndex, queryIndex);  //add parallel
+        //mid_func(rel1.tuples,t,rel1.num_tuples,0);
 
+        // delete[] t1;
+    }
+
+    return shouldSortRel;
+}
+
+void waitForReorderJobsToBeQueued(int queryIndex, int reorderIndex) {
+    pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+    while (lastJobDoneArrays[queryIndex][reorderIndex] == false){
+        pthread_cond_wait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex]);
+    }
+        // std::cout<<"-------------MAIN THREAD1"<<std::endl;
+
+    pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+    lastJobDoneArrays[queryIndex][reorderIndex] = false;
+}
+
+void handleDelete(uint64_t** preds, int cntr, int relationsnum, InputArray** inputArraysRowIds, result* rslt, bool onlyResult) {
+    if (rslt != NULL) {
+        delete rslt->lst;
+        delete rslt;
+    }
+
+    if (onlyResult)
+        return;
+
+    for(int i=0;i<cntr;i++)
+    {
+        delete[] preds[i];
+    }
+    delete[] preds;
+    for(int i=0;i<relationsnum;i++)
+        delete inputArraysRowIds[i];
+    delete[] inputArraysRowIds;
+}
 
 IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,int relationsnum, int* relationIds, int queryIndex)
 {
@@ -1130,200 +1178,164 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
 
         // std::cout<<"predicateArray1Id: "<<predicateArray1Id<<", predicateArray2Id: "<<predicateArray2Id<<std::endl;
 
-        switch (operation)
-        {
-        case 2: // '='
-                if (predicateArray1Id == predicateArray2Id) {
-                    // self-join of InputArray
-                    InputArray* filteredInputArrayRowIds;
-                    if (filterMode == serial) {
-                        filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1, 0, inputArray1RowIds->rowsNum);
-                        delete inputArray1RowIds;
-                    } else if (filterMode == parallel) {
-                        filteredInputArrayRowIds = parallelFilterOrInnerJoin(queryIndex, inputArray1RowIds, false, field1Id, field2Id, -1, 0, inputArray1);
-                    }
+        // switch (operation)
+        // {
+        // case 2: // '='
 
-                    inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
-                    prevPredicateWasFilterOrSelfJoin = true;
-                    continue;
-                }
+        // Below we are handling only the '=' operation
+        if (predicateArray1Id == predicateArray2Id) {
+            // self-join of InputArray
+            InputArray* filteredInputArrayRowIds;
+            if (filterMode == serial) {
+                filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1, 0, inputArray1RowIds->rowsNum);
+                delete inputArray1RowIds;
+            } else if (filterMode == parallel) {
+                filteredInputArrayRowIds = parallelFilterOrInnerJoin(queryIndex, inputArray1RowIds, false, field1Id, field2Id, -1, 0, inputArray1);
+            }
 
-                if (inputArray1Id != inputArray2Id && 
-                    (curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id)
-                    && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id))) {
-                    // self-join of IntermediateArray
-                    IntermediateArray* filteredIntermediateArray = curIntermediateArray->selfJoin(inputArray1Id, inputArray2Id, field1Id, field2Id, inputArray1, inputArray2);
-                    delete curIntermediateArray;
-                    curIntermediateArray = filteredIntermediateArray;
-                    prevPredicateWasFilterOrSelfJoin = true;
-                    continue;
-                }
-
-                {
-                    relation rel1, rel2;
-                    bool rel2ExistsInIntermediateArray = false;
-
-                    // fill rel1
-                    if (curIntermediateArray == NULL || !curIntermediateArray->hasInputArrayId(inputArray1Id)) {
-                        inputArray1RowIds->extractColumnFromRowIds(rel1, field1Id, inputArray1);
-                    } else {
-                        curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, predicateArray1Id, field1Id);
-                    }
-
-                    // fill rel2
-                    if (curIntermediateArray == NULL || inputArray1Id == inputArray2Id || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
-                        inputArray2RowIds->extractColumnFromRowIds(rel2, field2Id, inputArray2);
-                    } else {
-                        rel2ExistsInIntermediateArray = true;
-                        curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, predicateArray2Id, field2Id);
-                    }
-
-                    relation* newRel1 = new relation();
-                    relation* reorderedRel1=&rel1;
-                    // std::cout<<"rel1 size: "<<reorderedRel1->num_tuples<<std::endl;
-                    tuple* t1 = NULL;
-                    bool shouldSortRel1 = shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin);
-                    // std::cout<<"shouldSortRel1: "<<shouldSortRel1<<std::endl;
-                    if (shouldSortRel1) {
-                        t1=new tuple[rel1.num_tuples];
-                        tuplereorder(rel1.tuples,t1,rel1.num_tuples,0, 0, queryIndex);  //add parallel
-                        //mid_func(rel1.tuples,t,rel1.num_tuples,0);
-
-                        // delete[] t1;
-                    }
-                    
-                    relation* newRel2 = new relation();
-                    relation* reorderedRel2=&rel2;
-                    // std::cout<<"rel2 size: "<<reorderedRel2->num_tuples<<std::endl;
-                    tuple* t2 = NULL;
-                    bool shouldSortRel2 = shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin);
-                                        // std::cout<<"shouldSortRel2: "<<shouldSortRel2<<std::endl;
-                    if (shouldSortRel2) {
-                        t2=new tuple[rel2.num_tuples];
-                        tuplereorder(rel2.tuples,t2,rel2.num_tuples,0, 1, queryIndex);  //add parallel
-                        //mid_func(rel2.tuples,t,rel2.num_tuples,0);
-                        // delete[] t2;
-                    }
-                            //  std::cout<<"-------------MAIN THREAD3"<<std::endl;
-
-                    if (reorderMode == parallel || quickSortMode==parallel) {
-                        // std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
-                        if (shouldSortRel1) {
-                            pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
-                            while (lastJobDoneArrays[queryIndex][0] == false){
-                                pthread_cond_wait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex]);
-                            }
-                                // std::cout<<"-------------MAIN THREAD1"<<std::endl;
-
-                            pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
-                            lastJobDoneArrays[queryIndex][0] = false;
-                        }
-                        // std::cout<<"middle"<<std::endl;
-                        if (shouldSortRel2){
-                            pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
-                            while (lastJobDoneArrays[queryIndex][1] == false) {
-                                // std::cout<<"-------------lastJobQueued1: "<<lastJobQueued[1]<<std::endl;
-
-                                // struct timespec timeout;
-                                // clock_gettime(CLOCK_REALTIME, &timeout);
-                                // timeout.tv_sec += 1;
-                                // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex], &timeout);
-                            pthread_cond_wait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex]);
-                            }
-                                // std::cout<<"-------------MAIN THREAD"<<std::endl;
-
-                            pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
-                            lastJobDoneArrays[queryIndex][1] = false;
-                        }
-                        // sleep(1);
-                        // pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
-                        pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
-                        while (jobsCounter[queryIndex] != 0){
-                            // pthread_mutex_unlock(&jobsCounterMutex);
-                            // struct timespec timeout;
-                                // clock_gettime(CLOCK_REALTIME, &timeout);
-                                // timeout.tv_sec += 1;
-                                // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &predicateJobsDoneMutexes[queryIndex], &timeout);
-                                // pthread_cond_timedwait(&predicateJobsDoneConds[queryIndex], &jobsCounterMutexes[queryIndex], &timeout);
-                            // pthread_mutex_lock(&jobsCounterMutex);
-
-                            pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
-                            // std::cout<<"jobsCounter -> "<<jobsCounter[queryIndex]<<" queryindex: "<<queryIndex<<std::endl;
-
-                        }
-                            // std::cout<<"-------------MAIN THREAD1"<<std::endl;
-
-                        pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
-                        // while(1)
-                        //     std::cout<<"jobcntr "<<jobsCounter[queryIndex]<<" "<<queryIndex<<std::endl;
-
-                        // pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
-
-                        // std::cout<<"query "<<queryIndex<<" stopped waiting for predicate jobs to finish"<<std::endl;
-
-                        // scheduler->~JobScheduler();
-                        // scheduler = NULL;
-
-                    }
-                    // std::cout<<cntrcntr<<std::endl;
-
-                    // std::cout<<"-------------MAIN THREAD5"<<std::endl;
-                    
-                    if (t1 != NULL)
-                        delete[] t1;
-                    if (t2 != NULL)
-                        delete[] t2;
-                    result* rslt;
-                    if (joinMode == serial) {
-                        rslt= join(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
-                    } else if (joinMode == parallel) {
-                        rslt = managejoin(rel2ExistsInIntermediateArray ? reorderedRel2 : reorderedRel1, rel2ExistsInIntermediateArray ? reorderedRel1 : reorderedRel2,queryIndex);
-                    }
-                    
-                    if (rslt->lst->rows == 0) {
-                        // no results
-                        for(int i=0;i<cntr;i++)
-                        {
-                            delete[] preds[i];
-                        }
-                        delete[] preds;
-                        for(int i=0;i<relationsnum;i++)
-                            delete inputArraysRowIds[i];
-                        delete[] inputArraysRowIds;
-                        delete newRel1;
-                        delete newRel2;
-                        delete rslt->lst;
-                        delete rslt;
-                        return NULL;
-                    }
-                    uint64_t** resultArray=rslt->lst->lsttoarr();
-                    uint64_t rows=rslt->lst->rows;
-                    uint64_t rowsz=rslt->lst->rowsz;
-                    delete rslt->lst;
-                    delete rslt;
-                    delete newRel1;
-                    delete newRel2;                    
-                    
-                    if (curIntermediateArray == NULL) {
-                        // first join
-                        curIntermediateArray = new IntermediateArray(2);
-                        curIntermediateArray->populate(resultArray, rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
-                    } else {
-                        IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1);
-                        newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
-                        delete curIntermediateArray;
-                        curIntermediateArray = newIntermediateArray;
-                    }
-                    prevPredicateWasFilterOrSelfJoin = false;
-
-                    for(int i=0;i<rowsz;i++)
-                        delete[] resultArray[i];
-                    delete[] resultArray;
-                }
-            break;
-        default:
-            break;
+            inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
+            prevPredicateWasFilterOrSelfJoin = true;
+            continue;
         }
+
+        if (inputArray1Id != inputArray2Id && 
+            (curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray1Id)
+            && curIntermediateArray != NULL && curIntermediateArray->hasInputArrayId(inputArray2Id))) {
+            // self-join of IntermediateArray
+            IntermediateArray* filteredIntermediateArray = curIntermediateArray->selfJoin(inputArray1Id, inputArray2Id, field1Id, field2Id, inputArray1, inputArray2);
+            delete curIntermediateArray;
+            curIntermediateArray = filteredIntermediateArray;
+            prevPredicateWasFilterOrSelfJoin = true;
+            continue;
+        }
+
+        // {
+        relation rel1, rel2;
+        bool rel2ExistsInIntermediateArray = false;
+
+        // fill rel1
+        if (curIntermediateArray == NULL || !curIntermediateArray->hasInputArrayId(inputArray1Id)) {
+            inputArray1RowIds->extractColumnFromRowIds(rel1, field1Id, inputArray1);
+        } else {
+            curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, predicateArray1Id, field1Id);
+        }
+
+        // fill rel2
+        if (curIntermediateArray == NULL || inputArray1Id == inputArray2Id || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
+            inputArray2RowIds->extractColumnFromRowIds(rel2, field2Id, inputArray2);
+        } else {
+            rel2ExistsInIntermediateArray = true;
+            curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, predicateArray2Id, field2Id);
+        }
+
+        // relation* newRel1 = new relation();
+        // relation* reorderedRel1=&rel1;
+        // std::cout<<"rel1 size: "<<reorderedRel1->num_tuples<<std::endl;
+        tuple* t1 = NULL;
+        bool shouldSortRel1 = handleReorderRel(&rel1, &t1, preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin, queryIndex, 0);
+        // tuple* t1 = NULL;
+        // bool shouldSortRel1 = shouldSort(preds, cntr, i, predicateArray1Id, field1Id, prevPredicateWasFilterOrSelfJoin);
+        // // std::cout<<"shouldSortRel1: "<<shouldSortRel1<<std::endl;
+        // if (shouldSortRel1) {
+        //     t1=new tuple[rel1.num_tuples];
+        //     tuplereorder(rel1.tuples,t1,rel1.num_tuples,0, 0, queryIndex);  //add parallel
+        //     //mid_func(rel1.tuples,t,rel1.num_tuples,0);
+
+        //     // delete[] t1;
+        // }
+
+        
+        
+        // relation* newRel2 = new relation();
+        // relation* reorderedRel2=&rel2;
+        // std::cout<<"rel2 size: "<<reorderedRel2->num_tuples<<std::endl;
+        tuple* t2 = NULL;
+        bool shouldSortRel2 = handleReorderRel(&rel2, &t2, preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin, queryIndex, 1);
+
+        // tuple* t2 = NULL;
+        // bool shouldSortRel2 = shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin);
+        //                     // std::cout<<"shouldSortRel2: "<<shouldSortRel2<<std::endl;
+        // if (shouldSortRel2) {
+        //     t2=new tuple[rel2.num_tuples];
+        //     tuplereorder(rel2.tuples,t2,rel2.num_tuples,0, 1, queryIndex);  //add parallel
+        //     //mid_func(rel2.tuples,t,rel2.num_tuples,0);
+        //     // delete[] t2;
+        // }
+                //  std::cout<<"-------------MAIN THREAD3"<<std::endl;
+
+        if (reorderMode == parallel || quickSortMode==parallel) {
+            // std::cout<<"query "<<queryIndex<<" is waiting for predicate jobs to finish... shouldSortRel1 = "<<shouldSortRel1<<", shouldSortRel2 = "<<shouldSortRel2<<std::endl;
+            if (shouldSortRel1) {
+                waitForReorderJobsToBeQueued(queryIndex, 0);
+                delete[] t1;
+            }
+            // std::cout<<"middle"<<std::endl;
+            if (shouldSortRel2){
+                waitForReorderJobsToBeQueued(queryIndex, 1);
+                delete[] t2;
+            }
+            // sleep(1);
+            // pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+            waitForJobsToFinish(queryIndex);
+            // while(1)
+            //     std::cout<<"jobcntr "<<jobsCounter[queryIndex]<<" "<<queryIndex<<std::endl;
+
+            // pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+
+            // std::cout<<"query "<<queryIndex<<" stopped waiting for predicate jobs to finish"<<std::endl;
+
+            // scheduler->~JobScheduler();
+            // scheduler = NULL;
+
+        }
+        // std::cout<<cntrcntr<<std::endl;
+
+        // std::cout<<"-------------MAIN THREAD5"<<std::endl;
+        
+        // if (t1 != NULL)
+        //     delete[] t1;
+        // if (t2 != NULL)
+        //     delete[] t2;
+        result* rslt;
+        if (joinMode == serial) {
+            rslt= join(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
+        } else if (joinMode == parallel) {
+            rslt = managejoin(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2,queryIndex);
+        }
+        
+        if (rslt->lst->rows == 0) {
+            // no results
+            handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, false);
+            return NULL;
+        }
+        uint64_t** resultArray=rslt->lst->lsttoarr();
+        uint64_t rows=rslt->lst->rows;
+        uint64_t rowsz=rslt->lst->rowsz;
+        handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, true);
+
+        // delete newRel1;
+        // delete newRel2;                    
+        
+        if (curIntermediateArray == NULL) {
+            // first join
+            curIntermediateArray = new IntermediateArray(2);
+            curIntermediateArray->populate(resultArray, rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
+        } else {
+            IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1);
+            newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
+            delete curIntermediateArray;
+            curIntermediateArray = newIntermediateArray;
+        }
+        prevPredicateWasFilterOrSelfJoin = false;
+
+        for(int i=0;i<rowsz;i++)
+            delete[] resultArray[i];
+        delete[] resultArray;
+        //         }
+        //     break;
+        // default:
+        //     break;
+        // }
         
         /*******TO ANTONIS******************/
         //kathe grammi edo einai ena predicate olokliro
@@ -1340,18 +1352,9 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         /***********END***************************/
     }
 
-    for(int i=0;i<cntr;i++)
-    {
-        delete[] preds[i];
-    }
-    delete[] preds;
-    for(int i=0;i<relationsnum;i++)
-        delete inputArraysRowIds[i];
-    delete[] inputArraysRowIds;
+    handleDelete(preds, cntr, relationsnum, inputArraysRowIds, NULL, false);
+
     return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
-
-
-
 }
 void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex)
 {
