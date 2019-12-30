@@ -9,6 +9,7 @@
 #include <math.h>
 #include "JobScheduler.h"
 #include <inttypes.h>
+#include "besttreemap.h"
 
 
 #define MAX_INPUT_FILE_NAME_SIZE 100
