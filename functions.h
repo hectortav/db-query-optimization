@@ -13,6 +13,7 @@
 
 #define MAX_INPUT_FILE_NAME_SIZE 100
 #define MAX_INPUT_ARRAYS_NUM 20
+#define MAX_BOOLEAN_ARRAY_SIZE 50000000 // max size of the array that is used to find distinct values of a column of InputArray
 
 enum RunningMode {serial = 0, parallel = 1};
 
@@ -72,11 +73,24 @@ public:
     list* lst;
 };
 
+class ColumnStats {
+    public:
+        uint64_t minValue, maxValue, valuesNum, distinctValuesNum;
+
+        ColumnStats() {
+            minValue = 0;
+            maxValue = 0;
+            valuesNum = 0;
+            distinctValuesNum = 0;
+        }
+};
+
 class InputArray
 {
     public:
     uint64_t rowsNum, columnsNum;
     uint64_t** columns;
+    ColumnStats* columnsStats;
 
     InputArray(uint64_t rowsNum, uint64_t columnsNum);
     InputArray(uint64_t rowsNum);  // initialization for storing row ids
@@ -88,6 +102,7 @@ class InputArray
     InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id,const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex); // inner join
     void extractColumnFromRowIds(relation& rel, uint64_t fieldId,const InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
     void print();
+    void initStatistics();
 };
 
 class IntermediateArray {
