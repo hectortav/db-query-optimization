@@ -134,11 +134,11 @@ InputArray* InputArray::filterRowIds(uint64_t fieldId, int operation, uint64_t n
 //     newInputArrayRowIds->rowsNum = newInputArrayRowIndex; // update rowsNum because the other rows are useless
 // }
 
-InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, const InputArray* pureInputArray) {
-    InputArray* newInputArrayRowIds = new InputArray(rowsNum);
+InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex) {
+    InputArray* newInputArrayRowIds = new InputArray(stopIndex - startIndex);
     uint64_t newInputArrayRowIndex = 0;
 
-    for (uint64_t i = 0; i < rowsNum; i++) {
+    for (uint64_t i = startIndex; i < stopIndex; i++) {
         uint64_t inputArrayRowId = columns[0][i];
         uint64_t inputArrayField1Value = pureInputArray->columns[field1Id][inputArrayRowId];
         uint64_t inputArrayField2Value = pureInputArray->columns[field2Id][inputArrayRowId];
@@ -151,6 +151,7 @@ InputArray* InputArray::filterRowIds(uint64_t field1Id, uint64_t field2Id, const
     }
 
     newInputArrayRowIds->rowsNum = newInputArrayRowIndex; // update rowsNum because the other rows are useless
+
     return newInputArrayRowIds;
 }
 
@@ -362,6 +363,44 @@ InputArray* combineInputArrayRowIds(InputArray** inputArrayRowIdsParts, int part
     combinedInputArrayRowIds->rowsNum = combinedInputArrayRowIndex; // update rowsNum because the other rows are useless
 
     return combinedInputArrayRowIds;
+}
+
+InputArray* parallelFilterOrInnerJoin(int queryIndex, InputArray* inputArrayRowIds, bool isFilterJob, int field1Id, int field2Id, int operation, uint64_t numToCompare, const InputArray* pureInputArray) {
+    int threadsNum = scheduler->getThreadsNum();
+    InputArray* filteredInputArrayRowIdsParts[threadsNum];
+    jobsCounter[queryIndex] = threadsNum;
+    uint64_t equalPartsSize = inputArrayRowIds->rowsNum/threadsNum;
+    uint64_t remainingRowIds = inputArrayRowIds->rowsNum%threadsNum;
+    for (int j = 0; j < threadsNum; j++) {
+        uint64_t startIndex = j*equalPartsSize;
+        uint64_t stopIndex = startIndex + equalPartsSize;
+        if (j == threadsNum - 1) {
+            stopIndex += remainingRowIds;
+        }
+        // std::cout << "queryIndex: "<<queryIndex<<", creating filter job with startIndex: "<<startIndex<<" and stopIndex: "<<stopIndex<<std::endl;
+        Job* job;
+        if (isFilterJob) {
+            job = new filterJob(field1Id, operation, numToCompare, pureInputArray, startIndex, stopIndex, inputArrayRowIds, &filteredInputArrayRowIdsParts[j], queryIndex);
+        } else {
+            job = new innerJoinJob(field1Id, field2Id, pureInputArray, startIndex, stopIndex, inputArrayRowIds, &filteredInputArrayRowIdsParts[j], queryIndex);
+        }
+        scheduler->schedule(job, -1);
+    }
+
+    // std::cout << "MAIN THREAD WILL WAIT"<<std::endl;
+    pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+    while (jobsCounter[queryIndex] > 0){
+        // std::cout<<"jobs counter: "<<jobsCounter[queryIndex]<<std::endl;
+        pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
+    }
+
+    pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+                    // std::cout << "MAIN THREAD CONTINUED"<<std::endl;
+
+    delete inputArrayRowIds;
+                    // std::cout << "MAIN THREAD CONTINUED1"<<std::endl;
+
+    return combineInputArrayRowIds(filteredInputArrayRowIdsParts, threadsNum);
 }
 
 inline uint64_t hashFunction(uint64_t payload, int shift) {
@@ -1082,35 +1121,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
                 filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, operation, numToCompare, inputArray1, 0, inputArray1RowIds->rowsNum);
                 delete inputArray1RowIds;
             } else if (filterMode == parallel) {
-                int threadsNum = scheduler->getThreadsNum();
-                InputArray* filteredInputArrayRowIdsParts[threadsNum];
-                jobsCounter[queryIndex] = threadsNum;
-                uint64_t equalPartsSize = inputArray1RowIds->rowsNum/threadsNum;
-                uint64_t remainingRowIds = inputArray1RowIds->rowsNum%threadsNum;
-                for (int j = 0; j < threadsNum; j++) {
-                    uint64_t startIndex = j*equalPartsSize;
-                    uint64_t stopIndex = startIndex + equalPartsSize;
-                    if (j == threadsNum - 1) {
-                        stopIndex += remainingRowIds;
-                    }
-                    // std::cout << "queryIndex: "<<queryIndex<<", creating filter job with startIndex: "<<startIndex<<" and stopIndex: "<<stopIndex<<std::endl;
-                    scheduler->schedule(new filterJob(field1Id, operation, numToCompare, inputArray1, startIndex, stopIndex, inputArray1RowIds, &filteredInputArrayRowIdsParts[j], queryIndex), -1);
-                }
-
-                // std::cout << "MAIN THREAD WILL WAIT"<<std::endl;
-                pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
-                while (jobsCounter[queryIndex] > 0){
-                    // std::cout<<"jobs counter: "<<jobsCounter[queryIndex]<<std::endl;
-                    pthread_cond_wait(&jobsCounterConds[queryIndex], &jobsCounterMutexes[queryIndex]);
-                }
-
-                pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
-                                // std::cout << "MAIN THREAD CONTINUED"<<std::endl;
-
-                delete inputArray1RowIds;
-                                // std::cout << "MAIN THREAD CONTINUED1"<<std::endl;
-
-                filteredInputArrayRowIds = combineInputArrayRowIds(filteredInputArrayRowIdsParts, threadsNum);
+                filteredInputArrayRowIds = parallelFilterOrInnerJoin(queryIndex, inputArray1RowIds, true, field1Id, 0, operation, numToCompare, inputArray1);
             }
             inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
             prevPredicateWasFilterOrSelfJoin = true;
@@ -1124,8 +1135,14 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         case 2: // '='
                 if (predicateArray1Id == predicateArray2Id) {
                     // self-join of InputArray
-                    InputArray* filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1);
-                    delete inputArray1RowIds;
+                    InputArray* filteredInputArrayRowIds;
+                    if (filterMode == serial) {
+                        filteredInputArrayRowIds = inputArray1RowIds->filterRowIds(field1Id, field2Id, inputArray1, 0, inputArray1RowIds->rowsNum);
+                        delete inputArray1RowIds;
+                    } else if (filterMode == parallel) {
+                        filteredInputArrayRowIds = parallelFilterOrInnerJoin(queryIndex, inputArray1RowIds, false, field1Id, field2Id, -1, 0, inputArray1);
+                    }
+
                     inputArraysRowIds[predicateArray1Id] = filteredInputArrayRowIds;
                     prevPredicateWasFilterOrSelfJoin = true;
                     continue;

@@ -85,7 +85,7 @@ class InputArray
     InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare,const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex); // filtering when storing row ids
     // // filtering when storing row ids for multithreading use
     // InputArray* filterRowIds(uint64_t fieldId, int operation, uint64_t numToCompare, const InputArray* pureInputArray, InputArray* newInputArrayRowIds, uint64_t startIndex, uint64_t stopIndex);
-    InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id,const InputArray* pureInputArray); // inner join
+    InputArray* filterRowIds(uint64_t field1Id, uint64_t field2Id,const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex); // inner join
     void extractColumnFromRowIds(relation& rel, uint64_t fieldId,const InputArray* pureInputArray); // column extraction from the initial input array (pureInputArray)
     void print();
 };
@@ -341,7 +341,50 @@ public:
     }
 };
 
+class innerJoinJob : public Job
+{
+private:
+    uint64_t field1Id;
+    uint64_t field2Id;
+    const InputArray* pureInputArray;
+    uint64_t startIndex;
+    uint64_t stopIndex;
+    InputArray* oldInputArrayRowIds;
+    InputArray** newInputArrayRowIdsP;
+    int queryIndex;
+
+public:
+    innerJoinJob(uint64_t field1Id, uint64_t field2Id, const InputArray* pureInputArray, uint64_t startIndex, uint64_t stopIndex, InputArray* oldInputArrayRowIds, InputArray** newInputArrayRowIdsP, int queryIndex) : Job()
+    {
+        this->field1Id = field1Id;
+        this->field2Id = field2Id;
+        this->pureInputArray = pureInputArray;
+        this->startIndex = startIndex;
+        this->stopIndex = stopIndex;
+        this->oldInputArrayRowIds = oldInputArrayRowIds;
+        this->newInputArrayRowIdsP = newInputArrayRowIdsP;
+        this->queryIndex = queryIndex;
+    }
+
+    void run() override
+    {
+        (*newInputArrayRowIdsP) = oldInputArrayRowIds->filterRowIds(field1Id, field2Id, pureInputArray, startIndex, stopIndex);
+
+        pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
+        
+        jobsCounter[queryIndex]--;
+        if (jobsCounter[queryIndex] == 0) {
+            pthread_cond_signal(&jobsCounterConds[queryIndex]);
+        }
+
+        pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
+
+        return;
+    }
+};
+
 InputArray* combineInputArrayRowIds(InputArray** inputArrayRowIdsParts, int partsNum);
+InputArray* parallelFilterOrInnerJoin(int queryIndex, InputArray* inputArrayRowIds, bool isFilterJob, int field1Id, int field2Id, int operation, uint64_t numToCompare, const InputArray* pureInputArray);
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
 // uint64_t** create_hist(relation*, int);
