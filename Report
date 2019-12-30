@@ -1,0 +1,46 @@
+Introduction    
+    
+    The following study was executed as part of the course on software development for information systems 
+in the Notional and Kapodistrian University of Athens. The aim of this study was to create a subset of a database
+that manages data entirely in the main memory. The whole task was split in three parts. In the first part
+we implemented a Sort Merge Join Algorithm, in the second one we performed a query analysis, similar to the one used 
+in the SIGMOD 2018 competition, while in the last part we implemented CPU personalization and a query optimizer.
+
+    The project is hosted in GitHub (https://github.com/hectortav/Project2020) and contains a Makefile for compilation
+and a bash script (testProgram.sh) to easily test the program. To run the executable , produced by the Makefile,
+called "final", you can use one or more of the following flags to provide cli arguments:
+
+    -qr                                 (QueRy) Run in queries of every batch in parallel
+    -ro                                 (ReOrder) Run bucket reorder (radix-sort) in parallel
+    -pb                                 (Reorder -> New job Per Bucket) ("-ro" should be provided) Create a new parallel job for each new bucket
+    -qs                                 (QuickSort) Run quicksorts independently
+    -jn                                 (JoiN) Run joins in parallel (split arrays)
+    -ft                                 (FilTer) Runs filters in parallel
+    -pj                                 (ProJection) Runs Projection checksums in parallel
+    -all                                (ALL) Everything runs in parallel
+    -n <threads>                        Specify number of threads to run
+
+Observations and choices during implementation
+
+    We implemented and tested two different methods for sorting buckets during the first and second part.
+One of the was using recursion while the other one was using a loop to break the buckets into smaller ones when needed.
+After thorough testing we decided two use the recursive one since we managed to achieve better execution times and convolution 
+while we also managed to keep each thread work on a different memory part at any time, reducing the need for semaphores which 
+would slow the execution further since each thread would have to wait to access the memory.
+
+    Another part of the execution that we tried to parallelize was the copy from one tuple to another during each call 
+of the Reorder function (tuplereorder_parallel @ functions.cpp), but we finally decided not to keep the change since it 
+significantly slowed the program because all the extra threads that would be used to execute the copy could be used more 
+efficiently by another function that is waiting in the scheduler.
+
+#################### add code snippet ####################
+    for(int i=0;i<offset;i++)
+    {
+        uint64_t hash=hashFunction(array[i].payload,7-shift);
+        array2[psum[hash]].key = array[i].key;
+        array2[psum[hash]].payload = array[i].payload;
+        psum[hash]++;
+    }
+    memcpy(array,array2,offset*sizeof(tuple));
+##########################################################
+
