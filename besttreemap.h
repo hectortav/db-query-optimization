@@ -53,9 +53,9 @@ public:
     void print();
 };
 
+class InputArray;
 
-
-
+uint64_t** BestPredicateOrder(uint64_t**,int,int,int*,InputArray** );
 
 
 #endif

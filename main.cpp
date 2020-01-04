@@ -5,7 +5,8 @@
 
 int main(int argc,char** argv)
 {
-
+    // BestPredicateOrder(NULL,0,0,NULL,NULL);
+    // return 0;
     // Map mymap(3);
     // int k[3]={0,1,2};
     // int v[3]={2,3,3};

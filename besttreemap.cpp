@@ -141,3 +141,102 @@ void Map::print()
         std::cout<<std::endl;
     }
 }
+class Ri{
+    int array;
+    int fieldid;
+};
+void rec(std::string s,int length,int maxlength,int Rnum)
+{
+    if(length==maxlength)
+        return;
+    std::string tmp="";
+    for(int i=length;i<Rnum;i++)
+    {
+        tmp=s+std::to_string(i);
+        std::cout<<tmp<<std::endl;
+    }
+    for(int i=length;i<Rnum;i++)
+    {
+        tmp=s+std::to_string(i);
+        rec(tmp,length+1,maxlength,Rnum);
+    }
+    
+}
+
+uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,InputArray** inputarr )
+{
+    int Rnum=4;
+    // Ri* theRs;
+    // for(int i=0;i<Rnum;i++)
+    // {   
+    //     //MAP.insert(theRs[i]);
+    // }
+    
+    std::string s="";
+    rec(s,0,Rnum-1,Rnum);
+    // char ch=getchar();
+
+    // for(int i=0;i<Rnum-1;i++)
+    // {
+    //     std::cout<<"Length i: "<<i<<std::endl;
+    //     int total=i;
+    //     for(int j=0;j<=Rnum;j++)
+    //     {
+    //         total=i;
+    //         for(int k=j+1;k<=Rnum;k++)
+    //         {
+    //             if(total<=0)
+    //                 break;
+    //             total--;
+    //             std::cout<<j<<" "<<k<<std::endl;
+    //         }
+    //         std::cout<<std::endl;
+    //     }
+    //     std::cout<<"End length i: "<<i<<std::endl<<std::endl;
+        
+    // }
+    // for(int i=0;i<Rnum;i++)
+    // {
+    //     for(int j=0;j<Rnum;j++)
+    //     {
+    //         for(int k=0;k<Rnum;k++)
+    //             std::cout<<i<<" "<<j<<" "<<k<<std::endl;
+    //     }
+    // }
+    // std::string s;
+    // for(int i=0;i<Rnum;i++)
+    // {
+    //     s="";
+    //     for(int j=0;j<Rnum;j++)
+    //         ;
+    // }
+    // int size = 5;
+    // int maxSize = 3;
+
+    // for (int i = 0; i < size; i++) {
+    //     int nextIndex = i + 1;
+    //     while (nextIndex < size && nextIndex + maxSize - 1 <= size) {
+    //         // if (nextIndex + maxSize - 1 > size)
+    //         //     break;
+    //         std::cout<<i;
+    //         // System.out.print(i);
+    //         if (maxSize == 1) {
+    //             std::cout<<std::endl;
+    //             // System.out.println("");
+    //             break;
+    //         }
+    //         int tempSize = maxSize;
+    //         for (int j = nextIndex; j < size; j++) {
+    //             tempSize--;
+    //             if (tempSize <= 0)
+    //                 break;
+    //             std::cout<<" "<<j;
+    //             // System.out.print(" " + j);
+    //         }
+    //         // System.out.println("");
+    //         std::cout<<std::endl;
+    //         nextIndex += (maxSize - 1);
+    //     }
+    // }
+}
+
