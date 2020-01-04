@@ -38,6 +38,18 @@ void PredicateOperandArray::init(PredicateOperandArray* operandArray, int size) 
     this->size = size;
 }
 
+bool PredicateOperandArray::contains(PredicateOperand operand) {
+    for (int i = 0; i < size; i++) {
+        if (array[i].fieldId == operand.fieldId && array[i].predicateArrayId == operand.predicateArrayId)
+            return true;
+    }
+    return false;
+}
+
+void PredicateOperandArray::populate(PredicateOperandArray *newOperandArray) {
+    memcpy(array, newOperandArray->array, sizeof(PredicateOperand)*newOperandArray->size);
+}
+
 Key::Key(int* arr,int sz)
 {
     this->KeyArray=new PredicateOperandArray(sz);
@@ -365,15 +377,41 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,i
         // delete[] tempPredicateOperandArray.array;
         // std::cout<<"nextindex: "<<nextIndex<<std::endl;
         
+        // used for printing
+        // for (int j = 0; j < curCombinationsNum; j++) {
+        //     std::cout<<"j: "<<j<<": ";
+        //     PredicateOperandArray* curArray = &resultArray[j];
+        //     for (int k = 0; k < curArray->size; k++) {
+        //         std::cout<<curArray->array[k].predicateArrayId<<"."<<curArray->array[k].fieldId<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        // }
+
         for (int j = 0; j < curCombinationsNum; j++) {
-            std::cout<<"j: "<<j<<": ";
-            PredicateOperandArray* curArray = &resultArray[j];
-            for (int k = 0; k < curArray->size; k++) {
-                std::cout<<curArray->array[k].predicateArrayId<<"."<<curArray->array[k].fieldId<<" ";
+            PredicateOperandArray* curCombination = &resultArray[j];
+            for (int k = 0; k < predicateOperandArray.size; k++) {
+                PredicateOperand* curPredicateOperand = &predicateOperandArray.array[k];
+                if (curCombination->contains(*curPredicateOperand))
+                    continue;
+
+                // TODO: if (NoCrossProducts && !connected(curPredicateOperand, curCombination))
+                //          continue;
+
+                // TODO: CurrTree = CreateJoinTree(Map(S), curPredicateOperand)
+
+                // S' = S U {Rj}
+                // ( S' = newPredicateOperandArray )
+                PredicateOperandArray newPredicateOperandArray(curCombination->size + 1);
+                newPredicateOperandArray.populate(curCombination);
+                newPredicateOperandArray.array[newPredicateOperandArray.size - 1].fieldId = curPredicateOperand->fieldId;
+                newPredicateOperandArray.array[newPredicateOperandArray.size - 1].predicateArrayId = curPredicateOperand->predicateArrayId;
+
+                // TODO: if (Map(S') == NULL || cost(Map(S')) > cost(CurrTree))
+                //          Map(S') = CurrTree;
             }
-            std::cout<<std::endl;
         }
-        // delete[] resultArray;
+
+        delete[] resultArray;
     }
 // std::cout<<getPermutationsNum(4)<<std::endl;
     

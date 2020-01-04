@@ -29,6 +29,8 @@ public:
     PredicateOperandArray(int size);
     ~PredicateOperandArray();
     void init(PredicateOperandArray* operandArray, int size);
+    bool contains(PredicateOperand operand);
+    void populate(PredicateOperandArray *newArray);
 };
 
 class Key{
