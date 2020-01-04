@@ -14,18 +14,26 @@ public:
     ~Statistics();
 };
 
-class Array
+class PredicateOperand {
+    public:
+        int predicateArrayId;
+        int fieldId;
+};
+
+class PredicateOperandArray
 {
 public:
-    int* array;
+    PredicateOperand* array;
     int size;
-    Array();
-    ~Array();
+    PredicateOperandArray();
+    PredicateOperandArray(int size);
+    ~PredicateOperandArray();
+    void init(PredicateOperandArray* operandArray, int size);
 };
 
 class Key{
 public:
-    Array* KeyArray;
+    PredicateOperandArray* KeyArray;
     Key(int*,int);
     ~Key();
 };
@@ -33,7 +41,7 @@ public:
 class Value
 {
 public:
-    Array* ValueArray;
+    PredicateOperandArray* ValueArray;
     Statistics* stats;
     Value(int* ,int);
     ~Value();
@@ -47,9 +55,9 @@ public:
     Key** keys;
     Map(int queryArraysNum);
     ~Map();
-    bool insert(int* key,int keysize,int* value,int valuesize);
-    Value* retrieve(int *key ,int size);
-    int exists(int * key,int keysize);
+    // bool insert(int* key,int keysize,int* value,int valuesize);
+    // Value* retrieve(int *key ,int size);
+    // int exists(int * key,int keysize);
     void print();
 };
 
