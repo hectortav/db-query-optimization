@@ -422,9 +422,31 @@ inline uint64_t hashFunction(uint64_t payload, int shift) {
 
 result* managejoin(relation* R, relation* S, int queryIndex)
 {
-    // JobScheduler * scheduler=new JobScheduler(1,100000);
+    /*
+    int parts = scheduler->getThreadsNum();
+    //psum would be helpful here
+    int size = power / parts; //size of each join portion
+    int i = 0, start = 0, end = size, starting_index = 0;
+    list** lst=new list*[parts];
+    jobsCounter[queryIndex]=parts;
+    for (int j = 0; j < parts; j++)
+    {
+        lst[j] = new list(131072, 2); //probably not correct
+        if (j == parts - 1)
+            scheduler->schedule(new jJob(R->tuples,S->tuples,R->num_tuples,starting_index,S->num_tuples,lst[j],queryIndex),-1); 
+        while (j < parts - 1 && i < S->num_tuples && hashFunction(S->tuples[i].payload, 0) < end)
+            i++;
+        std::cout << ">>> " << S->num_tuples << " - " << starting_index << " - " << i << std::endl;
+        scheduler->schedule(new jJob(R->tuples,S->tuples,R->num_tuples,starting_index,i,lst[j],queryIndex),-1); 
+
+        //change ending and starting hash
+        start = end+1;
+        end = end+size;
+        starting_index = i + 1;
+    }*/
+        // JobScheduler * scheduler=new JobScheduler(1,100000);
         // int partsize=1000;
-        // int parts=(S->num_tuples/partsize)+1;
+        // int parts=(S->num_tuples/partsize)+1;    
     int parts=scheduler->getThreadsNum();
     int partsize=(S->num_tuples/parts)+1;
     list** lst=new list*[parts];
@@ -446,7 +468,6 @@ result* managejoin(relation* R, relation* S, int queryIndex)
         scheduler->schedule(new jJob(R->tuples,S->tuples,R->num_tuples,start,end,lst[i],queryIndex),-1); 
         // std::cout<<start<<" "<<end<<" "<<S->num_tuples<<std::endl;
         // joinparallel(R->tuples,S->tuples,R->num_tuples,start,end,lst[i],&b);
-
     }
     pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
     while(jobsCounter[queryIndex]>0)
@@ -515,8 +536,7 @@ void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,
                         samestart=-1;
             }
             if(s+1<Send&&S[s].payload==S[s+1].payload)
-                s++;
-            
+                s++;      
             else
             {
                 r++;
