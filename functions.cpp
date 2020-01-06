@@ -422,7 +422,7 @@ inline uint64_t hashFunction(uint64_t payload, int shift) {
 
 result* managejoin(relation* R, relation* S, int queryIndex)
 {
-    /*
+    /* //not ready
     int parts = scheduler->getThreadsNum();
     //psum would be helpful here
     int size = power / parts; //size of each join portion
