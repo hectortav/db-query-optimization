@@ -14,28 +14,34 @@ public:
     ~Statistics();
 };
 
-class PredicateOperand {
+class Predicate {
     public:
-        int predicateArrayId;
-        int fieldId;
+        int predicateArray1Id, predicateArray2Id;
+        int field1Id, field2Id;
+
+        bool operator ==(Predicate &predicate);
+        bool hasCommonArray(Predicate &predicate);
+        void print(bool printEndl);
 };
 
-class PredicateOperandArray
+class PredicateArray
 {
 public:
-    PredicateOperand* array;
+    Predicate* array;
     int size;
-    PredicateOperandArray();
-    PredicateOperandArray(int size);
-    ~PredicateOperandArray();
-    void init(PredicateOperandArray* operandArray, int size);
-    bool contains(PredicateOperand operand);
-    void populate(PredicateOperandArray *newArray);
+    PredicateArray();
+    PredicateArray(int size);
+    ~PredicateArray();
+    void init(PredicateArray* predicateArray, int size);
+    bool contains(Predicate predicate);
+    bool isConnectedWith(Predicate& predicate);
+    void populate(PredicateArray *newArray);
+    void print();
 };
 
 class Key{
 public:
-    PredicateOperandArray* KeyArray;
+    PredicateArray* KeyArray;
     Key(int*,int);
     ~Key();
 };
@@ -43,7 +49,7 @@ public:
 class Value
 {
 public:
-    PredicateOperandArray* ValueArray;
+    PredicateArray* ValueArray;
     Statistics* stats;
     Value(int* ,int);
     ~Value();
