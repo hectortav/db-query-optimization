@@ -134,6 +134,51 @@ Map::~Map()
     delete[] keys;
 }
 
+bool Map::insert(PredicateArray* key,PredicateArray* value)
+{
+    int ifexists=exists(key);
+    if(ifexists)
+    {
+        delete values[ifexists];
+        values[ifexists]->ValueArray=value;
+        values[ifexists]->stats=NULL;//
+    }
+    else
+    {
+        values[cursize]->ValueArray=value;
+        values[cursize]->stats=NULL;//
+        keys[cursize]->KeyArray=key;
+        cursize++;
+    }
+}
+Value* Map::retrieve(PredicateArray* key)
+{
+    int ifexists=exists(key);
+    if(ifexists)
+        return values[ifexists];
+}
+int Map::exists(PredicateArray* key)
+{
+    bool found;
+    for(int i=0;i<cursize;i++)
+    {
+        found=1;
+        if(keys[i]->KeyArray->size==key->size && key->size>0)
+        {
+            for(int j=0;j<keys[i]->KeyArray->size;j++)
+            {
+                if(!(keys[i]->KeyArray->array[j]==key->array[j]))
+                {
+                    found=0;
+                    break;
+                }
+            }
+            if(found)
+                return i;
+        }
+    }
+    return -1;
+}
 // needs fix
 // bool Map::insert(int* key,int keysize,int* value,int valuesize)
 // {

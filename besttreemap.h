@@ -63,6 +63,9 @@ public:
     Key** keys;
     Map(int queryArraysNum);
     ~Map();
+    bool insert(PredicateArray* key,PredicateArray* value);
+    Value* retrieve(PredicateArray* key);
+    int exists(PredicateArray* key);
     // bool insert(int* key,int keysize,int* value,int valuesize);
     // Value* retrieve(int *key ,int size);
     // int exists(int * key,int keysize);
