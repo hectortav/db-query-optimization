@@ -12,47 +12,82 @@ Statistics::~Statistics()
 
 }
 
-PredicateOperandArray::PredicateOperandArray() {
+bool Predicate::operator ==(Predicate &predicate) {
+    return predicateArray1Id == predicate.predicateArray1Id && field1Id == predicate.field1Id &&
+        predicateArray2Id == predicate.predicateArray2Id && field2Id == predicate.field2Id;
+}
+
+bool Predicate::hasCommonArray(Predicate &predicate) {
+    return predicateArray1Id == predicate.predicateArray1Id || predicateArray1Id == predicate.predicateArray2Id ||
+        predicateArray2Id == predicate.predicateArray1Id || predicateArray2Id == predicate.predicateArray2Id;
+}
+
+void Predicate::print(bool printEndl) {
+    std::cout<<predicateArray1Id<<"."<<field1Id<<"<op>"<<predicateArray2Id<<"."<<field2Id;
+    if (printEndl) {
+        std::cout<<std::endl;
+    }
+}
+
+PredicateArray::PredicateArray() {
     this->size = 0;
     this->array = NULL;
 }
 
-PredicateOperandArray::PredicateOperandArray(int size)
+PredicateArray::PredicateArray(int size)
 {
     this->size = size;
-    this->array = new PredicateOperand[size];
+    this->array = new Predicate[size];
 }
-PredicateOperandArray::~PredicateOperandArray()
+PredicateArray::~PredicateArray()
 {
     delete[] array;
     array = NULL;
 }
 
-void PredicateOperandArray::init(PredicateOperandArray* operandArray, int size) {
+void PredicateArray::init(PredicateArray* predicateArray, int size) {
     // std::cout<<"b size: "<<size<<std::endl;
-    this->array = new PredicateOperand[size];
+    this->array = new Predicate[size];
         // std::cout<<"e"<<std::endl;
 
-    if (operandArray != NULL)
-        memcpy(this->array, operandArray->array, sizeof(PredicateOperand)*size);
+    if (predicateArray != NULL)
+        memcpy(this->array, predicateArray->array, sizeof(Predicate)*size);
     this->size = size;
 }
 
-bool PredicateOperandArray::contains(PredicateOperand operand) {
+bool PredicateArray::contains(Predicate predicate) {
     for (int i = 0; i < size; i++) {
-        if (array[i].fieldId == operand.fieldId && array[i].predicateArrayId == operand.predicateArrayId)
+        // if (array[i].field1Id == predicate.field1Id && array[i].predicateArray1Id == predicate.predicateArray1Id &&
+        //     array[i].field2Id == predicate.field2Id && array[i].predicateArray2Id == predicate.predicateArray2Id)
+        if (array[i] == predicate)
             return true;
     }
     return false;
 }
 
-void PredicateOperandArray::populate(PredicateOperandArray *newOperandArray) {
-    memcpy(array, newOperandArray->array, sizeof(PredicateOperand)*newOperandArray->size);
+bool PredicateArray::isConnectedWith(Predicate& predicate) {
+    for (int i = 0; i < size; i++) {
+        if (array[i].hasCommonArray(predicate))
+            return true;
+    }
+    return false;
+}
+
+void PredicateArray::populate(PredicateArray *newPredicateArray) {
+    memcpy(array, newPredicateArray->array, sizeof(Predicate)*newPredicateArray->size);
+}
+
+void PredicateArray::print() {
+    for (int i = 0; i < size; i++) {
+        array[i].print(false);
+        std::cout<<" ";
+    }
+    std::cout<<std::endl;
 }
 
 Key::Key(int* arr,int sz)
 {
-    this->KeyArray=new PredicateOperandArray(sz);
+    this->KeyArray=new PredicateArray(sz);
     // this->KeyArray->array=arr;
     // this->KeyArray->size=sz;
 }
@@ -64,7 +99,7 @@ Key::~Key()
 
 Value::Value(int* arr, int sz)
 {
-    this->ValueArray=new PredicateOperandArray(sz);
+    this->ValueArray=new PredicateArray(sz);
     // this->ValueArray->array=arr;
     // this->ValueArray->size=sz;
     this->stats=NULL;
@@ -160,16 +195,18 @@ void Map::print()
         {
             std::cout<<"empty key"<<std::endl;
         }
-        std::cout<<keys[i]->KeyArray->array[0].predicateArrayId<<"."<<keys[i]->KeyArray->array[0].fieldId;
+        keys[i]->KeyArray->array[0].print(false);
         for(int j=1;j<keys[i]->KeyArray->size;j++)
         {
-            std::cout<<", "<<keys[i]->KeyArray->array[j].predicateArrayId<<"."<<keys[i]->KeyArray->array[j].fieldId;
+            std::cout<<", ";
+            keys[i]->KeyArray->array[j].print(false);
         }
         std::cout<<"  -->  ";
-        std::cout<<values[i]->ValueArray->array[0].predicateArrayId<<"."<<values[i]->ValueArray->array[0].fieldId;
+        values[i]->ValueArray->array[0].print(false);
         for(int j=1;j<values[i]->ValueArray->size;j++)
         {
-            std::cout<<", "<<values[i]->ValueArray->array[j].predicateArrayId<<"."<<values[i]->ValueArray->array[j].fieldId;
+            std::cout<<", ";
+            values[i]->ValueArray->array[j].print(false);
         }
         std::cout<<std::endl;
     }
@@ -196,17 +233,19 @@ void rec(std::string s,int length,int maxlength,int Rnum)
     
 }
 
-void swap(PredicateOperandArray *operandArray, int a, int b) {
-    PredicateOperand tmp = operandArray->array[a];
-    operandArray->array[a].fieldId = operandArray->array[b].fieldId;
-    operandArray->array[a].predicateArrayId = operandArray->array[b].predicateArrayId;
-    operandArray->array[b].fieldId = tmp.fieldId;
-    operandArray->array[b].predicateArrayId = tmp.predicateArrayId;
+void swap(PredicateArray *predicateArray, int a, int b) {
+    Predicate tmp = predicateArray->array[a];
+    // predicateArray->array[a].fieldId = predicateArray->array[b].fieldId;
+    // predicateArray->array[a].predicateArrayId = predicateArray->array[b].predicateArrayId;
+    predicateArray->array[a] = predicateArray->array[b];
+    // predicateArray->array[b].fieldId = tmp.fieldId;
+    // predicateArray->array[b].predicateArrayId = tmp.predicateArrayId;
+    predicateArray->array[b] = tmp;
 }
 
 int nextIndex = 0;
 
-void getAllPermutations(int size, int permutationSize, PredicateOperandArray* elements, PredicateOperandArray* resultArray) {
+void getAllPermutations(int size, int permutationSize, PredicateArray* elements, PredicateArray* resultArray) {
     // if size becomes 1 then prints the obtained 
     // permutation 
     if (size == 1) 
@@ -214,7 +253,8 @@ void getAllPermutations(int size, int permutationSize, PredicateOperandArray* el
         // printArr(a, n); 
         std::cout<<"index: "<<nextIndex<<std::endl;
         for (int j = 0; j < permutationSize; j++) {
-            std::cout<<elements->array[j].predicateArrayId<<"."<<elements->array[j].fieldId<<" ";
+            elements->array[j].print(false);
+            std::cout<<" ";
         }
         std::cout<<std::endl;
         resultArray[nextIndex++].init(elements, permutationSize);
@@ -255,7 +295,7 @@ int getPermutationsNum(int size) {
     return sum;
 }
 
-int getCombinatiosNum(int size, int combinationSize) {
+int getCombinationsNum(int size, int combinationSize) {
     // int sum = 0;
     // for (int i = 1; i < size; i++) {
     //     sum += (factorial(size)/factorial(size - i));
@@ -288,8 +328,8 @@ int getCombinatiosNum(int size, int combinationSize) {
    index  ---> Current index in data[] 
    data[] ---> Temporary array to store current combination 
    i      ---> index of current element in arr[]     */
-void getCombinations(PredicateOperandArray* elements, int n, int r, int index, PredicateOperandArray& data,
-                     PredicateOperandArray* resultArray, int i) 
+void getCombinations(PredicateArray* elements, int n, int r, int index, PredicateArray* data,
+                     PredicateArray* resultArray, int i) 
 { 
     // Current cobination is ready, print it 
     if (index == r) { 
@@ -298,15 +338,12 @@ void getCombinations(PredicateOperandArray* elements, int n, int r, int index, P
         // printf("\n"); 
             // std::cout<<"1a nextIndex: "<<nextIndex<<std::endl;
 
-        resultArray[nextIndex++].init(&data, r);
+        resultArray[nextIndex++].init(data, r);
             // std::cout<<"1b"<<std::endl;
 
         // for (int i = 0; i < nextIndex; i ++) {
         //     // std::cout<<"i: "<<i<<": ";
-        //     for (int k = 0; k < resultArray[i].size; k++) {
-        //         std::cout<<resultArray[i].array[k].predicateArrayId<<"."<<resultArray[i].array[k].fieldId<<" ";
-        //     }
-        //     std::cout<<std::endl;
+        //     resultArray[i].print();
         // }
         return; 
     } 
@@ -318,10 +355,12 @@ void getCombinations(PredicateOperandArray* elements, int n, int r, int index, P
     // current is included, put next at next location 
     // data[index] = arr[i]; 
     // std::cout<<"1"<<std::endl;
-    data.array[index].fieldId = elements->array[i].fieldId;
-        // std::cout<<"2"<<std::endl;
 
-    data.array[index].predicateArrayId = elements->array[i].predicateArrayId;
+    data->array[index].field1Id = elements->array[i].field1Id;
+    data->array[index].predicateArray1Id = elements->array[i].predicateArray1Id;
+    data->array[index].field2Id = elements->array[i].field2Id;
+    data->array[index].predicateArray2Id = elements->array[i].predicateArray2Id;
+    // data.array[index] = elements->array[i];
             // std::cout<<"3"<<std::endl;
 
     getCombinations(elements, n, r, index + 1, data, resultArray, i + 1); 
@@ -347,64 +386,83 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,i
 
     // }
 
-    PredicateOperandArray predicateOperandArray(4);
+    PredicateArray predicateArray(4);
     // predicateOperandArray.array = new PredicateOperand[4];
     // predicateOperandArray.size = 4;
     // for (int i = 0; i < relationsum; i++) {
-        predicateOperandArray.array[0].predicateArrayId = 3;
-        predicateOperandArray.array[0].fieldId = 0;
-        predicateOperandArray.array[1].predicateArrayId = 2;
-        predicateOperandArray.array[1].fieldId = 1;
-        predicateOperandArray.array[2].predicateArrayId = 0;
-        predicateOperandArray.array[2].fieldId = 2;
-        predicateOperandArray.array[3].predicateArrayId = 4;
-        predicateOperandArray.array[3].fieldId = 3;
+        predicateArray.array[0].predicateArray1Id = 3;
+        predicateArray.array[0].field1Id = 0;
+        predicateArray.array[0].predicateArray2Id = 1;
+        predicateArray.array[0].field2Id = 0;
+        predicateArray.array[1].predicateArray1Id = 2;
+        predicateArray.array[1].field1Id = 1;
+        predicateArray.array[1].predicateArray2Id = 1;
+        predicateArray.array[1].field2Id = 1;
+        predicateArray.array[2].predicateArray1Id = 0;
+        predicateArray.array[2].field1Id = 2;
+        predicateArray.array[2].predicateArray2Id = 3;
+        predicateArray.array[2].field2Id = 2;
+        predicateArray.array[3].predicateArray1Id = 4;
+        predicateArray.array[3].field1Id = 3;
+        predicateArray.array[3].predicateArray2Id = 5;
+        predicateArray.array[3].field2Id = 1;
     // }
-    
+        //     PredicateArray* resultArray = new PredicateArray[4];
+        // // for (int j = 0; j < curCombinationsNum; j++)
+        // //     resultArray[j].init(NULL, i);
+
+        // PredicateArray tempPredicateArray(1);
+
+        // getCombinations(&predicateArray, predicateArray.size, 1, 0, &tempPredicateArray, resultArray, 0);
+        // // delete[] tempPredicateArray.array;
+        // // std::cout<<"nextindex: "<<nextIndex<<std::endl;
+        
+        // // used for printing
+        // for (int j = 0; j < 4; j++) {
+        //     std::cout<<"j: "<<j<<": ";
+        //     resultArray[j].print();
+        // }
 
     for (int i = 1; i < 4; i++) {
         nextIndex = 0;
-        int curCombinationsNum = getCombinatiosNum(4, i);
+        int curCombinationsNum = getCombinationsNum(4, i);
         // std::cout<<curCombinationsNum<<std::endl;
-        PredicateOperandArray* resultArray = new PredicateOperandArray[curCombinationsNum];
+        PredicateArray* resultArray = new PredicateArray[curCombinationsNum];
         // for (int j = 0; j < curCombinationsNum; j++)
         //     resultArray[j].init(NULL, i);
 
-        PredicateOperandArray tempPredicateOperandArray(i);
-        // tempPredicateOperandArray.size = i;
-        // tempPredicateOperandArray.array = new PredicateOperand[i];
-        getCombinations(&predicateOperandArray, predicateOperandArray.size, i, 0, tempPredicateOperandArray, resultArray, 0);
-        // delete[] tempPredicateOperandArray.array;
+        PredicateArray tempPredicateArray(i);
+        // tempPredicateArray.size = i;
+        // tempPredicateArray.array = new Predicate[i];
+        getCombinations(&predicateArray, predicateArray.size, i, 0, &tempPredicateArray, resultArray, 0);
+        // delete[] tempPredicateArray.array;
         // std::cout<<"nextindex: "<<nextIndex<<std::endl;
-        
+
         // used for printing
         // for (int j = 0; j < curCombinationsNum; j++) {
         //     std::cout<<"j: "<<j<<": ";
-        //     PredicateOperandArray* curArray = &resultArray[j];
-        //     for (int k = 0; k < curArray->size; k++) {
-        //         std::cout<<curArray->array[k].predicateArrayId<<"."<<curArray->array[k].fieldId<<" ";
-        //     }
-        //     std::cout<<std::endl;
+        //     resultArray[j].print();
         // }
 
         for (int j = 0; j < curCombinationsNum; j++) {
-            PredicateOperandArray* curCombination = &resultArray[j];
-            for (int k = 0; k < predicateOperandArray.size; k++) {
-                PredicateOperand* curPredicateOperand = &predicateOperandArray.array[k];
-                if (curCombination->contains(*curPredicateOperand))
+            PredicateArray* curCombination = &resultArray[j];
+            for (int k = 0; k < predicateArray.size; k++) {
+                Predicate* curPredicate = &predicateArray.array[k];
+                if (curCombination->contains(*curPredicate) || curCombination->isConnectedWith(*curPredicate))
                     continue;
 
-                // TODO: if (NoCrossProducts && !connected(curPredicateOperand, curCombination))
+                // TODO: if (NoCrossProducts && !connected(curPredicate, curCombination))
                 //          continue;
 
-                // TODO: CurrTree = CreateJoinTree(Map(S), curPredicateOperand)
+                // TODO: CurrTree = CreateJoinTree(Map(S), curPredicate) // CreateJoinTree() will create a Value object and it will calculate the cost of the new tree
 
                 // S' = S U {Rj}
-                // ( S' = newPredicateOperandArray )
-                PredicateOperandArray newPredicateOperandArray(curCombination->size + 1);
-                newPredicateOperandArray.populate(curCombination);
-                newPredicateOperandArray.array[newPredicateOperandArray.size - 1].fieldId = curPredicateOperand->fieldId;
-                newPredicateOperandArray.array[newPredicateOperandArray.size - 1].predicateArrayId = curPredicateOperand->predicateArrayId;
+                // ( S' = newPredicateArray )
+                PredicateArray newPredicateArray(curCombination->size + 1);
+                newPredicateArray.populate(curCombination);
+                // newPredicateArray.array[newPredicateArray.size - 1].fieldId = curPredicate->fieldId;
+                // newPredicateArray.array[newPredicateArray.size - 1].predicateArrayId = curPredicate->predicateArrayId;
+                newPredicateArray.array[newPredicateArray.size - 1] = (*curPredicate);
 
                 // TODO: if (Map(S') == NULL || cost(Map(S')) > cost(CurrTree))
                 //          Map(S') = CurrTree;
