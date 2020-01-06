@@ -42,7 +42,7 @@ public:
 class Key{
 public:
     PredicateArray* KeyArray;
-    Key(int*,int);
+    Key(int);
     ~Key();
 };
 
@@ -51,7 +51,7 @@ class Value
 public:
     PredicateArray* ValueArray;
     Statistics* stats;
-    Value(int* ,int);
+    Value(int);
     ~Value();
 };
 

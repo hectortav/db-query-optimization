@@ -85,7 +85,7 @@ void PredicateArray::print() {
     std::cout<<std::endl;
 }
 
-Key::Key(int* arr,int sz)
+Key::Key(int sz)
 {
     this->KeyArray=new PredicateArray(sz);
     // this->KeyArray->array=arr;
@@ -97,7 +97,7 @@ Key::~Key()
     delete[] this->KeyArray;
 }
 
-Value::Value(int* arr, int sz)
+Value::Value(int sz)
 {
     this->ValueArray=new PredicateArray(sz);
     // this->ValueArray->array=arr;
