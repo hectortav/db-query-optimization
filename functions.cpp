@@ -422,28 +422,57 @@ inline uint64_t hashFunction(uint64_t payload, int shift) {
 
 result* managejoin(relation* R, relation* S, int queryIndex)
 {
-    /* //not ready
+    uint64_t* hist=histcreate(S->tuples, S->num_tuples, 0);
+    uint64_t* psum=psumcreate(hist);
     int parts = scheduler->getThreadsNum();
-    //psum would be helpful here
     int size = power / parts; //size of each join portion
-    int i = 0, start = 0, end = size, starting_index = 0;
+    int i = 0, start = 0, end = size;
     list** lst=new list*[parts];
     jobsCounter[queryIndex]=parts;
     for (int j = 0; j < parts; j++)
     {
         lst[j] = new list(131072, 2); //probably not correct
         if (j == parts - 1)
-            scheduler->schedule(new jJob(R->tuples,S->tuples,R->num_tuples,starting_index,S->num_tuples,lst[j],queryIndex),-1); 
-        while (j < parts - 1 && i < S->num_tuples && hashFunction(S->tuples[i].payload, 0) < end)
-            i++;
-        std::cout << ">>> " << S->num_tuples << " - " << starting_index << " - " << i << std::endl;
-        scheduler->schedule(new jJob(R->tuples,S->tuples,R->num_tuples,starting_index,i,lst[j],queryIndex),-1); 
+            scheduler->schedule(new jJob(R->tuples, S->tuples, R->num_tuples, psum[start], S->num_tuples, lst[j], queryIndex), -1); 
+        else
+            scheduler->schedule(new jJob(R->tuples, S->tuples, R->num_tuples, psum[start], psum[end+1], lst[j], queryIndex), -1); 
 
         //change ending and starting hash
-        start = end+1;
+        start = end;
         end = end+size;
-        starting_index = i + 1;
-    }*/
+    }
+    pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+    while(jobsCounter[queryIndex]>0)
+        pthread_cond_wait(&predicateJobsDoneConds[queryIndex],&predicateJobsDoneMutexes[queryIndex]);
+    pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+
+    result* rslt=new result;
+    rslt->lst=NULL;
+    for(int i=0;i<parts;i++)
+    {
+        if(lst[i]->rows>0)
+        {
+            if(rslt->lst==NULL)
+                rslt->lst=lst[i];
+            else
+            {
+                rslt->lst->last->next=lst[i]->first;
+                rslt->lst->last=lst[i]->last;
+                rslt->lst->rows+=lst[i]->rows;
+                lst[i]->first=lst[i]->last=NULL;
+                delete lst[i];
+            }
+        }
+    }
+    delete[] lst;
+    if(rslt->lst==NULL)
+        rslt->lst=new list(1,2);
+    return rslt;
+}
+
+
+result* managejoin_2(relation* R, relation* S, int queryIndex)
+{
         // JobScheduler * scheduler=new JobScheduler(1,100000);
         // int partsize=1000;
         // int parts=(S->num_tuples/partsize)+1;    
@@ -515,6 +544,7 @@ result* managejoin(relation* R, relation* S, int queryIndex)
     return rslt;
     // int size=131072; //bytes
 }
+
 void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,int queryIndex)
 {
     // std::cout<<"join parl "<<std::endl;
