@@ -420,7 +420,8 @@ inline uint64_t hashFunction(uint64_t payload, int shift) {
     return (payload >> (8 * shift)) & 0xFF;
 }
 
-result* managejoin(relation* R, relation* S, int queryIndex)
+//parallel join by splitting in parts according to their first byte
+result* managejoin_2(relation* R, relation* S, int queryIndex)
 {
     uint64_t* hist=histcreate(S->tuples, S->num_tuples, 0);
     uint64_t* psum=psumcreate(hist);
@@ -470,8 +471,8 @@ result* managejoin(relation* R, relation* S, int queryIndex)
     return rslt;
 }
 
-
-result* managejoin_2(relation* R, relation* S, int queryIndex)
+//parallel join by splitting tuples in equal parts
+result* managejoin(relation* R, relation* S, int queryIndex)
 {
         // JobScheduler * scheduler=new JobScheduler(1,100000);
         // int partsize=1000;
