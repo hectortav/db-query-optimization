@@ -421,6 +421,55 @@ inline uint64_t hashFunction(uint64_t payload, int shift) {
 }
 
 //parallel join by splitting in parts according to their first byte
+//same as described in class
+result* managejoin_3(relation* R, relation* S, int queryIndex)
+{
+    uint64_t* hist=histcreate(S->tuples, S->num_tuples, 0);
+    uint64_t* psum=psumcreate(hist);
+    int parts = scheduler->getThreadsNum();
+    int i = 0;
+    list** lst=new list*[power];    //if one is empty (probably not) then ???
+    jobsCounter[queryIndex]=power;
+    for (int j = 0; j < power; j++)
+    {
+        lst[j] = new list(131072, 2); //probably not correct
+        if (j == power - 1)
+            scheduler->schedule(new jJob(R->tuples, S->tuples, R->num_tuples, psum[j], S->num_tuples, lst[j], queryIndex), -1); 
+        else
+            scheduler->schedule(new jJob(R->tuples, S->tuples, R->num_tuples, psum[j], psum[j+1], lst[j], queryIndex), -1); 
+
+    }
+    pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
+    while(jobsCounter[queryIndex]>0)
+        pthread_cond_wait(&predicateJobsDoneConds[queryIndex],&predicateJobsDoneMutexes[queryIndex]);
+    pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
+
+    result* rslt=new result;
+    rslt->lst=NULL;
+    for(int i=0;i<parts;i++)
+    {
+        if(lst[i]->rows>0)
+        {
+            if(rslt->lst==NULL)
+                rslt->lst=lst[i];
+            else
+            {
+                rslt->lst->last->next=lst[i]->first;
+                rslt->lst->last=lst[i]->last;
+                rslt->lst->rows+=lst[i]->rows;
+                lst[i]->first=lst[i]->last=NULL;
+                delete lst[i];
+            }
+        }
+    }
+    delete[] lst;
+    if(rslt->lst==NULL)
+        rslt->lst=new list(1,2);
+    return rslt;
+}
+
+//parallel join by splitting in parts according to their first byte, 
+//but combine some parts together so threads == number of jobs 
 result* managejoin_2(relation* R, relation* S, int queryIndex)
 {
     uint64_t* hist=histcreate(S->tuples, S->num_tuples, 0);
@@ -438,7 +487,6 @@ result* managejoin_2(relation* R, relation* S, int queryIndex)
         else
             scheduler->schedule(new jJob(R->tuples, S->tuples, R->num_tuples, psum[start], psum[end+1], lst[j], queryIndex), -1); 
 
-        //change ending and starting hash
         start = end;
         end = end+size;
     }
