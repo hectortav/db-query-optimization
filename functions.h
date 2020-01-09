@@ -74,6 +74,19 @@ public:
     list* lst;
 };
 
+// To be filled with stats like fA etc.
+class ColumnEnumStats {
+    public:
+        // uint64_t minValue, maxValue, valuesNum, distinctValuesNum;
+
+        ColumnEnumStats() {
+            // minValue = 0;
+            // maxValue = 0;
+            // valuesNum = 0;
+            // distinctValuesNum = 0;
+        }
+};
+
 class ColumnStats {
     public:
         uint64_t minValue, maxValue, valuesNum, distinctValuesNum;
@@ -92,6 +105,7 @@ class InputArray
     uint64_t rowsNum, columnsNum;
     uint64_t** columns;
     ColumnStats* columnsStats;
+    ColumnEnumStats* columnsEnumStats;
 
     InputArray(uint64_t rowsNum, uint64_t columnsNum);
     InputArray(uint64_t rowsNum);  // initialization for storing row ids

@@ -46,11 +46,14 @@ public:
     ~Key();
 };
 
+class ColumnEnumStats;
+
 class Value
 {
 public:
     PredicateArray* ValueArray;
     Statistics* stats;
+    ColumnEnumStats** columnEnumStatsArray; // size: relationsnum x each InputArray's columnNum
     Value(int);
     ~Value();
 };
