@@ -20,7 +20,7 @@ bool** lastJobDoneArrays;
 // bool* queryJobDoneArray;
 int queryJobDone;
 char** QueryResult;
-JobScheduler *scheduler;
+JobScheduler *scheduler=NULL;
 
 void relation::print()
 {
@@ -888,7 +888,6 @@ InputArray** readArrays() {
 
         uint64_t rowsNum, columnsNum;
         FILE *fileP;
-
         fileP = fopen(fileName, "rb");
         if (fileP == NULL)
         {
@@ -939,9 +938,8 @@ InputArray** readArrays() {
                 boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
                 arraySizeCut = true;
             }
-
             curStats->distinctValuesNum = curStats->valuesNum;
-            bool boolArray[boolArraySize] = {false};
+            bool* boolArray=new bool[boolArraySize]{false};
             for (uint64_t j = 0; j < rowsNum; j++) {
                 uint64_t boolArrayIndex = curInputArray->columns[i][j] - curStats->minValue;
                 if (arraySizeCut) {
@@ -954,6 +952,7 @@ InputArray** readArrays() {
                     curStats->distinctValuesNum--;
                 }
             }
+            delete[] boolArray;
         }
 
         fclose(fileP);
