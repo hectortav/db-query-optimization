@@ -37,6 +37,7 @@ public:
     bool isConnectedWith(Predicate& predicate);
     void populate(PredicateArray *newArray);
     void print();
+    bool operator ==(PredicateArray& array);
 };
 
 class Key{
@@ -47,6 +48,7 @@ public:
 };
 
 class ColumnEnumStats;
+class ColumnStats;
 
 class Value
 {
@@ -77,7 +79,10 @@ public:
 
 class InputArray;
 
-uint64_t** BestPredicateOrder(uint64_t**,int,int,int*,InputArray** );
+uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats );
+uint64_t** OptimizePredicates(uint64_t**,int,int,int*,const InputArray**);
+void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats);
+
 
 
 #endif

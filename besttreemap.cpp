@@ -84,6 +84,43 @@ void PredicateArray::print() {
     }
     std::cout<<std::endl;
 }
+bool PredicateArray::operator ==(PredicateArray& array)
+{
+    if(this->size!=array.size)
+        return 0;
+
+    for(int i=0;i<this->size;i++)
+    {
+        int found=0;
+        for(int j=0;j<array.size;j++)
+        {
+            if(this->array[i]==array.array[j])
+            {
+                found=1;
+                break;
+            }
+        }
+        if(found==0)
+            return 0;
+    }
+    
+    // for(int i=0;i<array.size;i++)
+    // {
+    //     int found=0;
+    //     for(int j=0;j<this->size;j++)
+    //     {
+    //         if(this->array[j]==array.array[i])
+    //         {
+    //             found=1;
+    //             break;
+    //         }
+    //     }
+    //     if(found==0)
+    //         return 0;
+    // }
+    //MIGHT NEED UNCOMMENTING! WILL SEE
+    return 1;
+}
 
 Key::Key(int sz)
 {
@@ -159,23 +196,10 @@ Value* Map::retrieve(PredicateArray* key)
 }
 int Map::exists(PredicateArray* key)
 {
-    bool found;
     for(int i=0;i<cursize;i++)
     {
-        found=1;
-        if(keys[i]->KeyArray->size==key->size && key->size>0)
-        {
-            for(int j=0;j<keys[i]->KeyArray->size;j++)
-            {
-                if(!(keys[i]->KeyArray->array[j]==key->array[j]))
-                {
-                    found=0;
-                    break;
-                }
-            }
-            if(found)
-                return i;
-        }
+        if(key==this->keys[i]->KeyArray)
+            return i;
     }
     return -1;
 }
@@ -416,7 +440,7 @@ void getCombinations(PredicateArray* elements, int n, int r, int index, Predicat
     getCombinations(elements, n, r, index, data, resultArray, i + 1); 
 }
 
-uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,InputArray** inputarr )
+uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats )
 {
     int Rnum=4;
     // Ri* theRs;
@@ -527,3 +551,201 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,i
 
 }
 
+uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr)
+{
+    //******************************missing case for σ A=B ???? is it filter on bestpredicate function?
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<currentpreds[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+
+    // for(int i=0;i<relationsum;i++)
+    // {
+    //     std::cout<<i<<": "<<relationids[i]<<std::endl;
+    // }
+    ColumnStats** Stats=new ColumnStats*[relationsum];
+    for(int i=0;i<relationsum;i++)
+    {
+        Stats[i]=new ColumnStats[inputarr[relationids[i]]->columnsNum];
+        for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
+        {
+            memcpy(&Stats[i][j],&inputarr[relationids[i]]->columnsStats[j],sizeof(ColumnStats));
+        }
+    }
+    int FiltersNum=0;
+    for(int i=0;i<cntr;i++)
+    {
+        if(currentpreds[i][3]==(uint64_t)-1)
+            FiltersNum++;
+    }
+    // std::cout<<FiltersNum<<std::endl;
+    uint64_t** Filters=new uint64_t*[FiltersNum];
+    uint64_t** NonFilters=new uint64_t*[cntr-FiltersNum]; 
+    for(int i=0,findx=0,nfindex=0;i<cntr;i++)
+    {
+        if(currentpreds[i][3]==(uint64_t)-1)
+        {
+            //filter
+            Filters[findx]=currentpreds[i];
+            findx++;
+        }
+        else
+        {
+            NonFilters[nfindex]=currentpreds[i];
+            nfindex++;
+            //nofilter
+        }
+    }
+    // delete[] currentpreds;
+    // std::cout<<"Filters: "<<std::endl;
+    // for(int i=0;i<FiltersNum;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<Filters[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+    // std::cout<<"Non Filters: "<<std::endl;
+    // for(int i=0;i<cntr-FiltersNum;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<NonFilters[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+    FilterStats(Filters,FiltersNum,relationsum,relationids,inputarr,Stats);
+    BestPredicateOrder(NonFilters,cntr-FiltersNum,relationsum,relationids,inputarr,Stats);
+    // for(int i=0;i<relationsum;i++)
+    // {
+    //     for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
+    //     {
+    //         std::cout<<inputarr[relationids[i]]->columnsStats[j].distinctValuesNum<<std::endl;
+    //         std::cout<<Stats[i][j].distinctValuesNum<<std::endl;
+    //     }
+    // }
+
+}
+void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats)
+{
+    // std::cout<<"Filterstats"<<std::endl;
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<filterpreds[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+    // std::cout<<"Starting Stats "<<std::endl;
+    // for(int i=0;i<relationsum;i++)
+    // {
+    //     std::cout<<"About array: "<<relationids[i]<<" inquery: "<<i<<std::endl;
+    //     for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
+    //     {
+    //         std::cout<<"  Column: "<<j<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].minValue<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].maxValue<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].valuesNum<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].distinctValuesNum<<std::endl;
+    //     }
+    //     std::cout<<std::endl;
+    // }
+    for(int i=0;i<cntr;i++)
+    {
+        uint64_t array=filterpreds[i][0];
+        uint64_t field=filterpreds[i][1];
+        uint64_t operation=filterpreds[i][2];
+        uint64_t filternum=filterpreds[i][4];
+        uint64_t oldF; 
+        if(operation==2)
+        {
+            //=
+            // std::cout<<"="<<std::endl;
+            Stats[array][field].minValue=filternum;
+            Stats[array][field].maxValue=filternum;
+            bool found=0;
+            for(int j=0;j<inputarr[relationids[array]]->rowsNum;j++)
+            {
+                // std::cout<<j<<" of "<<std::endl;
+                if(inputarr[relationids[array]]->columns[field][j]==filternum)
+                {
+                    found=1;
+                    break;
+                }
+            }
+            oldF=Stats[array][field].valuesNum;
+            if(found)
+            {   //ROUND TO NEXT OR PREVIOUS
+                Stats[array][field].valuesNum  =  Stats[array][field].valuesNum  /  Stats[array][field].distinctValuesNum;
+                Stats[array][field].distinctValuesNum=1;
+            }
+            else
+            { 
+                Stats[array][field].valuesNum=0;
+                Stats[array][field].distinctValuesNum=0;
+            }
+            
+        }
+        else if(operation==0)
+        {
+            // >
+            // std::cout<<">"<<std::endl;
+            uint64_t k1=filternum;
+            uint64_t k2=Stats[array][field].maxValue;
+            oldF=Stats[array][field].valuesNum;
+            Stats[array][field].distinctValuesNum=Stats[array][field].distinctValuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
+            Stats[array][field].valuesNum=Stats[array][field].valuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
+
+            if(filternum>Stats[array][field].minValue)                
+                Stats[array][field].minValue=filternum;
+
+        }
+        else if(operation==1)
+        {
+            // <
+            // std::cout<<"<"<<std::endl;
+            uint64_t k1=Stats[array][field].minValue;
+            uint64_t k2=filternum;
+            oldF=Stats[array][field].valuesNum;
+            Stats[array][field].distinctValuesNum=Stats[array][field].distinctValuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
+            Stats[array][field].valuesNum=Stats[array][field].valuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
+
+            if(filternum<Stats[array][field].maxValue)
+                Stats[array][field].maxValue=filternum;
+
+        }
+        for(int j=0;j<inputarr[relationids[array]]->columnsNum;j++)
+        {
+            if(j==field)
+                continue;
+            //min same
+            //max same
+            uint64_t base=1-(Stats[array][field].valuesNum / oldF);
+            uint64_t exponent=Stats[array][j].valuesNum / Stats[array][j].distinctValuesNum;
+            Stats[array][j].distinctValuesNum=Stats[array][j].distinctValuesNum * (1-(pow(base,exponent)));
+            Stats[array][j].valuesNum=Stats[array][field].valuesNum;
+        }
+        
+    }
+    // std::cout<<"Ending Stats "<<std::endl;
+    // for(int i=0;i<relationsum;i++)
+    // {
+    //     std::cout<<"About array: "<<relationids[i]<<" inquery: "<<i<<std::endl;
+    //     for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
+    //     {
+    //         std::cout<<"  Column: "<<j<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].minValue<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].maxValue<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].valuesNum<<std::endl;
+    //         std::cout<<"    "<<Stats[i][j].distinctValuesNum<<std::endl;
+    //     }
+    //     std::cout<<std::endl;
+    // }
+
+}

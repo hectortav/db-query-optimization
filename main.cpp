@@ -5,6 +5,7 @@
 
 int main(int argc,char** argv)
 {
+    // OptimizePredicates(NULL,0,0,NULL,NULL);
     // BestPredicateOrder(NULL,0,0,NULL,NULL);
     // return 0;
     // Map mymap(3);
