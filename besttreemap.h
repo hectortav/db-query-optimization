@@ -55,7 +55,8 @@ class Value
 public:
     PredicateArray* ValueArray;
     Statistics* stats;
-    ColumnEnumStats** columnEnumStatsArray; // size: relationsnum x each InputArray's columnNum
+    ColumnStats** columnStatsArray; // size: relationsnum x each InputArray's columnNum
+    Value() {};
     Value(int);
     ~Value();
 };

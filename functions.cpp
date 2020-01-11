@@ -42,6 +42,33 @@ relation::~relation()
         delete [] tuples;
 }
 
+void ColumnStats::calculateDistinctValuesNum(const InputArray* inputArray, InputArray* inputArrayRowIds, uint64_t columnIndex) {
+    uint64_t boolArraySize = maxValue - minValue + 1;
+    bool arraySizeCut = false;
+    if (boolArraySize > MAX_BOOLEAN_ARRAY_SIZE) {
+        boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
+        arraySizeCut = true;
+    }
+    distinctValuesNum = valuesNum;
+    bool* boolArray=new bool[boolArraySize]{false};
+
+    uint64_t rowsNum = inputArrayRowIds != NULL ? inputArrayRowIds->rowsNum : inputArray->rowsNum;
+    for (uint64_t j = 0; j < rowsNum; j++) {
+        uint64_t pureRowIndex = inputArrayRowIds != NULL ? inputArrayRowIds->columns[0][j] : j;
+        uint64_t boolArrayIndex = inputArray->columns[columnIndex][pureRowIndex] - minValue;
+        if (arraySizeCut) {
+            boolArrayIndex %= MAX_BOOLEAN_ARRAY_SIZE;
+        }
+
+        if (!boolArray[boolArrayIndex]) {
+            boolArray[boolArrayIndex] = true;
+        } else {
+            distinctValuesNum--;
+        }
+    }
+    delete[] boolArray;
+}
+
 InputArray::InputArray(uint64_t rowsNum, uint64_t columnsNum) {
     this->rowsNum = rowsNum;
     this->columnsNum = columnsNum;
@@ -1011,27 +1038,28 @@ InputArray** readArrays() {
                 }
             }
 
-            uint64_t boolArraySize = curStats->maxValue - curStats->minValue + 1;
-            bool arraySizeCut = false;
-            if (boolArraySize > MAX_BOOLEAN_ARRAY_SIZE) {
-                boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
-                arraySizeCut = true;
-            }
-            curStats->distinctValuesNum = curStats->valuesNum;
-            bool* boolArray=new bool[boolArraySize]{false};
-            for (uint64_t j = 0; j < rowsNum; j++) {
-                uint64_t boolArrayIndex = curInputArray->columns[i][j] - curStats->minValue;
-                if (arraySizeCut) {
-                    boolArrayIndex %= MAX_BOOLEAN_ARRAY_SIZE;
-                }
+            curStats->calculateDistinctValuesNum(curInputArray, NULL, i);
+            // uint64_t boolArraySize = curStats->maxValue - curStats->minValue + 1;
+            // bool arraySizeCut = false;
+            // if (boolArraySize > MAX_BOOLEAN_ARRAY_SIZE) {
+            //     boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
+            //     arraySizeCut = true;
+            // }
+            // curStats->distinctValuesNum = curStats->valuesNum;
+            // bool* boolArray=new bool[boolArraySize]{false};
+            // for (uint64_t j = 0; j < rowsNum; j++) {
+            //     uint64_t boolArrayIndex = curInputArray->columns[i][j] - curStats->minValue;
+            //     if (arraySizeCut) {
+            //         boolArrayIndex %= MAX_BOOLEAN_ARRAY_SIZE;
+            //     }
 
-                if (!boolArray[boolArrayIndex]) {
-                    boolArray[boolArrayIndex] = true;
-                } else {
-                    curStats->distinctValuesNum--;
-                }
-            }
-            delete[] boolArray;
+            //     if (!boolArray[boolArrayIndex]) {
+            //         boolArray[boolArrayIndex] = true;
+            //     } else {
+            //         curStats->distinctValuesNum--;
+            //     }
+            // }
+            // delete[] boolArray;
         }
 
         fclose(fileP);
