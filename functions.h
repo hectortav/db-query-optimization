@@ -35,6 +35,7 @@ extern pthread_cond_t *jobsCounterConds;
 // pthread_cond_t* queryJobDoneConds;
 extern pthread_mutex_t queryJobDoneMutex;
 extern pthread_cond_t queryJobDoneCond;
+extern int available_threads;
 
 extern bool** lastJobDoneArrays;
 // extern bool* queryJobDoneArray;

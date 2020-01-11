@@ -15,6 +15,7 @@ pthread_cond_t* predicateJobsDoneConds;
 pthread_cond_t *jobsCounterConds;
 pthread_mutex_t queryJobDoneMutex;
 pthread_cond_t queryJobDoneCond;
+int available_threads;
 
 bool** lastJobDoneArrays;
 // bool* queryJobDoneArray;
@@ -1191,7 +1192,8 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
         // std::cout<<std::endl;
         pthread_mutex_lock(&queryJobDoneMutex);
         queryJobDone--;
-        if(queryJobDone==0)
+        available_threads++;
+        // if(queryJobDone==0)
             pthread_cond_signal(&queryJobDoneCond);
         pthread_mutex_unlock(&queryJobDoneMutex);
 
