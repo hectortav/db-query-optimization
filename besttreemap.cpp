@@ -93,6 +93,7 @@ void PredicateArray::print() {
 }
 bool PredicateArray::operator ==(PredicateArray& array)
 {
+    // std::cout<<"aa"<<std::endl;
     if(this->size!=array.size)
         return 0;
 
@@ -101,8 +102,11 @@ bool PredicateArray::operator ==(PredicateArray& array)
         int found=0;
         for(int j=0;j<array.size;j++)
         {
+            // this->array[i].print(true);
+            // array.array[j].print(true);
             if(this->array[i]==array.array[j])
             {
+                // std::cout<<"found"<<std::endl;
                 found=1;
                 break;
             }
@@ -180,16 +184,27 @@ Map::~Map()
 
 bool Map::insert(PredicateArray* key,Value* value)
 {
+    // std::cout<<"insert 1"<<std::endl;
     int ifexists=exists(key);
-    if(ifexists)
+        // std::cout<<"insert 2"<<std::endl;
+
+    if(ifexists != -1)
     {
+                // std::cout<<"insert exists"<<std::endl;
+
         delete values[ifexists];
         values[ifexists]=value;
     }
     else
     {
+        // std::cout<<"not exists 1"<<std::endl;
         values[cursize]=value;
+                // std::cout<<"not exists 2"<<std::endl;
+
+        keys[cursize] = new Key();
         keys[cursize]->KeyArray=key;
+                // std::cout<<"not exists 3"<<std::endl;
+
         cursize++;
     }
     return true;
@@ -197,15 +212,17 @@ bool Map::insert(PredicateArray* key,Value* value)
 Value* Map::retrieve(PredicateArray* key)
 {
     int ifexists=exists(key);
-    if(ifexists)
+    if(ifexists != -1)
         return values[ifexists];
     return NULL;
 }
 int Map::exists(PredicateArray* key)
 {
+    // key->print();
     for(int i=0;i<cursize;i++)
     {
-        if(key==this->keys[i]->KeyArray)
+        // keys[i]->KeyArray->print();
+        if((*key)==(*this->keys[i]->KeyArray))
             return i;
     }
     return -1;
@@ -447,44 +464,60 @@ void getCombinations(PredicateArray* elements, int n, int r, int index, Predicat
     getCombinations(elements, n, r, index, data, resultArray, i + 1); 
 }
 
-void updateColumnStats(const InputArray* pureInputArray, InputArray* inputArrayRowIds, uint64_t joinFieldId, int predicateArrayId,
-                         Value* valueP, Value* newValueP, ColumnStats** filterColumnStatsArray, uint64_t fieldDistinctValuesNumAfterFilter) {
+void updateColumnStats(const InputArray* pureInputArray, uint64_t joinFieldId, int predicateArrayId,
+                         Value* valueP, Value* newValueP, ColumnStats** filterColumnStatsArray, uint64_t fieldDistinctValuesNumAfterFilter, uint64_t fieldValuesNumBeforeFilter) {
     for (uint64_t j = 0; j < pureInputArray->columnsNum; j++) {
         if (j == joinFieldId)
             continue;
         
         ColumnStats* oldStatsP = &valueP->columnStatsArray[predicateArrayId][j];
-        if (oldStatsP->valuesNum == -1) { // predicate array is used for the first time
+        if (oldStatsP->changed == false) { // predicate array is used for the first time
             oldStatsP = &filterColumnStatsArray[predicateArrayId][j];
-        }
-
-        ColumnStats* valueStatsP = &newValueP->columnStatsArray[predicateArrayId][joinFieldId];
-
-        valueStatsP->minValue = UINT64_MAX;
-        valueStatsP->maxValue = 0;
-
-        for (uint64_t i = 0; i < inputArrayRowIds->rowsNum; i++) {
-            uint64_t curValue = pureInputArray->columns[j][inputArrayRowIds->columns[0][i]];
-            if (curValue < valueStatsP->minValue) {
-                valueStatsP->minValue = curValue;
-            }
-            if (curValue > valueStatsP->maxValue) {
-                valueStatsP->maxValue = curValue;
+            if (oldStatsP->changed == false) {
+                oldStatsP = &pureInputArray->columnsStats[j];
             }
         }
-        
+
+        ColumnStats* valueStatsP = &newValueP->columnStatsArray[predicateArrayId][j];
+        valueStatsP->changed = true;
         ColumnStats* fieldValueStatsP = &newValueP->columnStatsArray[predicateArrayId][joinFieldId];
-        valueStatsP->valuesNum = fieldValueStatsP->valuesNum;
+        
+        std::cout<<"fieldValueStatsP->valuesNum: "<<fieldValueStatsP->valuesNum<<", fieldValuesNumBeforeFilter: "<<fieldValuesNumBeforeFilter<<std::endl;
+        uint64_t base=1 - (fieldValueStatsP->valuesNum / fieldValuesNumBeforeFilter);
+                std::cout<<"aaaa2"<<std::endl;
 
-        valueStatsP->calculateDistinctValuesNum(pureInputArray, inputArrayRowIds, j);
-        uint64_t powOp = (uint64_t) pow((double) (1 - (fieldValueStatsP->distinctValuesNum / fieldDistinctValuesNumAfterFilter)), (double) (inputArrayRowIds->rowsNum / valueStatsP->distinctValuesNum));
+        uint64_t exponent=oldStatsP->valuesNum / oldStatsP->distinctValuesNum;
+        std::cout<<"base: "<<base<<", exponent: "<<exponent<<std::endl;
+        valueStatsP->distinctValuesNum=oldStatsP->distinctValuesNum * (1-((uint64_t) pow((double)base,(double)exponent)));
+        valueStatsP->valuesNum=fieldValueStatsP->valuesNum;
+
+        // valueStatsP->minValue = UINT64_MAX;
+        // valueStatsP->maxValue = 0;
+
+        // for (uint64_t i = 0; i < inputArrayRowIds->rowsNum; i++) {
+        //     uint64_t curValue = pureInputArray->columns[j][inputArrayRowIds->columns[0][i]];
+        //     if (curValue < valueStatsP->minValue) {
+        //         valueStatsP->minValue = curValue;
+        //     }
+        //     if (curValue > valueStatsP->maxValue) {
+        //         valueStatsP->maxValue = curValue;
+        //     }
+        // }
+        
+        // valueStatsP->valuesNum = fieldValueStatsP->valuesNum;
+
+        // valueStatsP->calculateDistinctValuesNum(pureInputArray, inputArrayRowIds, j);
+                std::cout<<"aaaaaaaaaa"<<std::endl;
+
+        uint64_t powOp = (uint64_t) pow((double) (1 - (fieldValueStatsP->distinctValuesNum / fieldDistinctValuesNumAfterFilter)), (double) (fieldValueStatsP->valuesNum / valueStatsP->distinctValuesNum));
+        std::cout<<"powOp: "<<powOp<<std::endl;
         valueStatsP->distinctValuesNum = valueStatsP->distinctValuesNum * (1 - powOp);
     }
 }
 
 Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* relationIds, int relationsnum, ColumnStats** filterColumnStatsArray, const InputArray** inputArrays) {
     Predicate* newPredicateP = &newPredicateArrayP->array[newPredicateArrayP->size - 1];
-
+    // std::cout<<"createJoinTree 1"<<std::endl;
     Value* newValueP = new Value();
     newValueP->ValueArray = newPredicateArrayP;
     newValueP->columnStatsArray = new ColumnStats*[relationsnum];
@@ -494,6 +527,7 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
             continue;
         memcpy(newValueP->columnStatsArray[i], valueP->columnStatsArray[i], inputArrays[relationIds[i]]->columnsNum * sizeof(ColumnStats));
     }
+    // std::cout<<"createJoinTree 2"<<std::endl;
 
     uint64_t inputArray1Id = relationIds[newPredicateP->predicateArray1Id];
     uint64_t inputArray2Id = relationIds[newPredicateP->predicateArray2Id];
@@ -501,50 +535,113 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
     uint64_t field2Id = newPredicateP->field2Id;
     uint64_t predicateArray1Id = newPredicateP->predicateArray1Id;
     uint64_t predicateArray2Id = newPredicateP->predicateArray2Id;
+    // std::cout<<"createJoinTree 3"<<std::endl;
 
     ColumnStats* field1OldStatsP = &valueP->columnStatsArray[predicateArray1Id][field1Id];
+        // std::cout<<"createJoinTree 3.1"<<std::endl;
+
     ColumnStats* field2OldStatsP = &valueP->columnStatsArray[predicateArray2Id][field2Id];
-    if (field1OldStatsP->valuesNum == -1) { // predicate array of 1st operand is used for the first time
+            // std::cout<<"createJoinTree 3.2"<<std::endl;
+    // std::cout<<"predicateArray1Id: "<<predicateArray1Id<<", field1Id: "<<field1Id<<", predicateArray2Id: "<<predicateArray2Id<<", field2Id: "<<field2Id<<std::endl;
+    if (field1OldStatsP->changed == false) { // predicate array of 1st operand is used for the first time
         field1OldStatsP = &filterColumnStatsArray[predicateArray1Id][field1Id];
+        if (field1OldStatsP->changed == false) {
+            field1OldStatsP = &inputArrays[inputArray1Id]->columnsStats[field1Id];
+        }
+        // std::cout<<"field1OldStatsP->valuesNum: "<<field1OldStatsP->valuesNum<<std::endl;
     }
-    if (field2OldStatsP->valuesNum == -1) { // predicate array of 2nd operand is used for the first time
+            // std::cout<<"createJoinTree 3.3"<<std::endl;
+    // valueP->ValueArray->print();
+    if (field2OldStatsP->changed == false) { // predicate array of 2nd operand is used for the first time
+                // std::cout<<"createJoinTree 3.35"<<std::endl;
+
         field2OldStatsP = &filterColumnStatsArray[predicateArray2Id][field2Id];
+        if (field2OldStatsP->changed == false) {
+            field2OldStatsP = &inputArrays[inputArray2Id]->columnsStats[field2Id];
+        }
+                // std::cout<<"field2OldStatsP->valuesNum: "<<field2OldStatsP->valuesNum<<std::endl;
+
     }
 
-    InputArray* inputArray1RowIds = new InputArray(inputArrays[inputArray1Id]->rowsNum);
-    InputArray* inputArray2RowIds = new InputArray(inputArrays[inputArray2Id]->rowsNum);
+    if (field1OldStatsP->valuesNum == 0 || field2OldStatsP->valuesNum == 0) {
+        newValueP->columnStatsArray[predicateArray1Id][field1Id].changed = true;
+        newValueP->columnStatsArray[predicateArray2Id][field2Id].changed = true;
+        return newValueP;
+    }
+
+            // std::cout<<"createJoinTree 3.4"<<std::endl;
+
+    // std::cout<<"createJoinTree 4"<<std::endl;
+
+    // InputArray* inputArray1RowIds = new InputArray(inputArrays[inputArray1Id]->rowsNum);
+    // InputArray* inputArray2RowIds = new InputArray(inputArrays[inputArray2Id]->rowsNum);
 
     uint64_t minMaxValue = field1OldStatsP->maxValue < field2OldStatsP->maxValue ? field1OldStatsP->maxValue : field2OldStatsP->maxValue;
     uint64_t maxMinValue = field1OldStatsP->minValue > field2OldStatsP->minValue ? field1OldStatsP->minValue : field2OldStatsP->minValue;
     uint64_t n = minMaxValue - maxMinValue + 1;
+    // std::cout<<"createJoinTree 5"<<std::endl;
 
     // filter 1st array
-    inputArray1RowIds->filterRowIds(field1Id, 1, minMaxValue, inputArrays[inputArray1Id], 0, inputArray1RowIds->rowsNum);
-    inputArray1RowIds->filterRowIds(field1Id, 0, maxMinValue, inputArrays[inputArray1Id], 0, inputArray1RowIds->rowsNum);
     
+    // inputArray1RowIds->filterRowIds(field1Id, 1, minMaxValue, inputArrays[inputArray1Id], 0, inputArray1RowIds->rowsNum);
+    // inputArray1RowIds->filterRowIds(field1Id, 0, maxMinValue, inputArrays[inputArray1Id], 0, inputArray1RowIds->rowsNum);
+    // >
+    // std::cout<<">"<<std::endl;
+
+        // std::cout<<"createJoinTree 6"<<std::endl;
+
     // filter 2nd array
-    inputArray2RowIds->filterRowIds(field1Id, 1, minMaxValue, inputArrays[inputArray2Id], 0, inputArray2RowIds->rowsNum);
-    inputArray2RowIds->filterRowIds(field1Id, 0, maxMinValue, inputArrays[inputArray2Id], 0, inputArray2RowIds->rowsNum);
+    // inputArray2RowIds->filterRowIds(field2Id, 1, minMaxValue, inputArrays[inputArray2Id], 0, inputArray2RowIds->rowsNum);
+    // inputArray2RowIds->filterRowIds(field2Id, 0, maxMinValue, inputArrays[inputArray2Id], 0, inputArray2RowIds->rowsNum);
+    // std::cout<<"createJoinTree 7"<<std::endl;
 
     // handle field1 and field2 columns
     ColumnStats* field1ValueStatsP = &newValueP->columnStatsArray[predicateArray1Id][field1Id];
     ColumnStats* field2ValueStatsP = &newValueP->columnStatsArray[predicateArray2Id][field2Id];
+    field1ValueStatsP->changed = true;
+    field2ValueStatsP->changed = true;
+    // std::cout<<"createJoinTree 7.1"<<std::endl;
 
+    // handle filter
+    uint64_t k1=maxMinValue;
+    uint64_t k2=minMaxValue;
+    // if(filternum>Stats[array][field].minValue)                
+    //     Stats[array][field].minValue=filternum;
+    uint64_t field1ValuesNumBeforeFilter = field1OldStatsP->valuesNum;
+    // std::cout<<"distinct: "<<field1ValueStatsP->distinctValuesNum<<std::endl;
+    field1ValueStatsP->distinctValuesNum=field1OldStatsP->distinctValuesNum* ((k2-k1)/(field1OldStatsP->maxValue-field1OldStatsP->minValue));
+    field1ValueStatsP->valuesNum=field1OldStatsP->valuesNum* ((k2-k1)/(field1OldStatsP->maxValue-field1OldStatsP->minValue));
+    // std::cout<<"distinct: "<<field1ValueStatsP->distinctValuesNum<<std::endl;
+
+    // if(filternum>Stats[array][field].minValue)                
+    //     Stats[array][field].minValue=filternum;
+    uint64_t field2ValuesNumBeforeFilter = field2OldStatsP->valuesNum;
+    field2ValueStatsP->distinctValuesNum=field2OldStatsP->distinctValuesNum* ((k2-k1)/(field2OldStatsP->maxValue-field2OldStatsP->minValue));
+    field2ValueStatsP->valuesNum=field2OldStatsP->valuesNum* ((k2-k1)/(field2OldStatsP->maxValue-field2OldStatsP->minValue));
+
+    // handle join
     field1ValueStatsP->minValue = field2ValueStatsP->minValue = maxMinValue;
     field1ValueStatsP->maxValue = field2ValueStatsP->maxValue = minMaxValue;
-    field1ValueStatsP->valuesNum = field2ValueStatsP->valuesNum = (inputArray1RowIds->rowsNum * inputArray2RowIds->rowsNum) / n;
+    
+    field1ValueStatsP->valuesNum = field2ValueStatsP->valuesNum = (field1ValueStatsP->valuesNum * field2ValueStatsP->valuesNum) / n;
     newValueP->cost = field1ValueStatsP->valuesNum;
+    // std::cout<<"createJoinTree 7.2"<<std::endl;
 
-    field1ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray1Id], inputArray1RowIds, field1Id);
-    field2ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray2Id], inputArray2RowIds, field2Id);
+    // field1ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray1Id], inputArray1RowIds, field1Id);
+    // field2ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray2Id], inputArray2RowIds, field2Id);
+        // std::cout<<"createJoinTree 7.25"<<std::endl;
+
     uint64_t field1DistinctValuesNumAfterFilter = field1ValueStatsP->distinctValuesNum;
     uint64_t field2DistinctValuesNumAfterFilter = field2ValueStatsP->distinctValuesNum;
     field1ValueStatsP->distinctValuesNum = field2ValueStatsP->distinctValuesNum = (field1ValueStatsP->distinctValuesNum * field2ValueStatsP->distinctValuesNum) / n;
     // field2ValueStatsP->distinctValuesNum = field1ValueStatsP->distinctValuesNum;
+    // std::cout<<"createJoinTree 7.3"<<std::endl;
 
     // handle rest of columns
-    updateColumnStats(inputArrays[inputArray1Id], inputArray1RowIds, field1Id, predicateArray1Id, valueP, newValueP, filterColumnStatsArray, field1DistinctValuesNumAfterFilter);
-    updateColumnStats(inputArrays[inputArray2Id], inputArray2RowIds, field2Id, predicateArray2Id, valueP, newValueP, filterColumnStatsArray, field2DistinctValuesNumAfterFilter);
+    updateColumnStats(inputArrays[inputArray1Id], field1Id, predicateArray1Id, valueP, newValueP, filterColumnStatsArray, field1DistinctValuesNumAfterFilter, field1ValuesNumBeforeFilter);
+    updateColumnStats(inputArrays[inputArray2Id], field2Id, predicateArray2Id, valueP, newValueP, filterColumnStatsArray, field2DistinctValuesNumAfterFilter, field2ValuesNumBeforeFilter);
+        // std::cout<<"createJoinTree 8"<<std::endl;
+
     // for (uint64_t j = 0; j < inputArrays[inputArray1Id]->columnsNum; j++) {
     //     if (j == field1Id)
     //         continue;
@@ -583,7 +680,7 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
 uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,int*relationids,const InputArray** inputArrays,ColumnStats** filterColumnStatsArray)
 {
     /////////// for testing
-    relationsnum = 4;
+    // relationsnum = 3;
     ///////////
 
     // int Rnum=4;
@@ -599,26 +696,29 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
 
     // }
 
-    PredicateArray predicateArray(4);
+    PredicateArray predicateArray(2);
     // predicateOperandArray.array = new PredicateOperand[4];
     // predicateOperandArray.size = 4;
     // for (int i = 0; i < relationsum; i++) {
-        predicateArray.array[0].predicateArray1Id = 3;
-        predicateArray.array[0].field1Id = 0;
-        predicateArray.array[0].predicateArray2Id = 1;
-        predicateArray.array[0].field2Id = 0;
-        predicateArray.array[1].predicateArray1Id = 2;
-        predicateArray.array[1].field1Id = 1;
-        predicateArray.array[1].predicateArray2Id = 1;
-        predicateArray.array[1].field2Id = 1;
-        predicateArray.array[2].predicateArray1Id = 0;
-        predicateArray.array[2].field1Id = 2;
-        predicateArray.array[2].predicateArray2Id = 3;
-        predicateArray.array[2].field2Id = 2;
-        predicateArray.array[3].predicateArray1Id = 4;
-        predicateArray.array[3].field1Id = 3;
-        predicateArray.array[3].predicateArray2Id = 5;
-        predicateArray.array[3].field2Id = 1;
+        // predicateArray.array[0].predicateArray1Id = 3;
+        // predicateArray.array[0].field1Id = 0;
+        // predicateArray.array[0].predicateArray2Id = 1;
+        // predicateArray.array[0].field2Id = 0;
+        // predicateArray.array[1].predicateArray1Id = 2;
+        // predicateArray.array[1].field1Id = 1;
+        // predicateArray.array[1].predicateArray2Id = 1;
+        // predicateArray.array[1].field2Id = 1;
+        // predicateArray.array[2].predicateArray1Id = 0;
+        // predicateArray.array[2].field1Id = 2;
+        // predicateArray.array[2].predicateArray2Id = 3;
+        // predicateArray.array[2].field2Id = 2;
+        // predicateArray.array[3].predicateArray1Id = 4;
+        // predicateArray.array[3].field1Id = 3;
+        // predicateArray.array[3].predicateArray2Id = 5;
+        // predicateArray.array[3].field2Id = 1;
+        // 3 0 1|0.2=1.0&0.1=2.0&0.2>3499
+        predicateArray.array[0].init(0, 2, 1, 0);
+        predicateArray.array[1].init(0, 1, 2, 0);
     // }
         //     PredicateArray* resultArray = new PredicateArray[4];
         // // for (int j = 0; j < curCombinationsNum; j++)
@@ -635,28 +735,43 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         //     std::cout<<"j: "<<j<<": ";
         //     resultArray[j].print();
         // }
-
+    // std::cout<<"1"<<std::endl;
     Map* bestTreeMap = new Map(relationsnum);
     for (int i = 0; i < relationsnum; i++) {
+                    // std::cout<<"outer loop i "<<i<<std::endl;
+
         PredicateArray* keyValuePredicateArray = new PredicateArray(1);
         keyValuePredicateArray->array[0] = predicateArray.array[i];
         Value* value = new Value(1);
         value->columnStatsArray = new ColumnStats*[relationsnum];
         for (int i = 0; i < relationsnum; i++) {
+            // std::cout<<"i "<<i<<std::endl;
             value->columnStatsArray[i] = new ColumnStats[inputArrays[relationids[i]]->columnsNum];
-            memcpy(value->columnStatsArray[i], filterColumnStatsArray[i], inputArrays[relationids[i]]->columnsNum * sizeof(ColumnStats));
+                        // std::cout<<"1, i "<<i<<std::endl;
+
+            // maybe unnecessary ???????????
+            // memcpy(value->columnStatsArray[i], filterColumnStatsArray[i], inputArrays[relationids[i]]->columnsNum * sizeof(ColumnStats));
+
         }
+        // 2xcolumns
+        value->ValueArray = keyValuePredicateArray;
+                        // std::cout<<"5, i "<<i<<std::endl;
 
         bestTreeMap->insert(keyValuePredicateArray, value);
     }
+    // std::cout<<"2"<<std::endl;
 
     for (int i = 1; i < relationsnum; i++) {
+        // std::cout<<"i "<<i<<std::endl;
         nextIndex = 0;
         int curCombinationsNum = getCombinationsNum(relationsnum, i);
+                // std::cout<<"1"<<std::endl;
+
         // std::cout<<curCombinationsNum<<std::endl;
         PredicateArray* resultArray = new PredicateArray[curCombinationsNum];
         // for (int j = 0; j < curCombinationsNum; j++)
         //     resultArray[j].init(NULL, i);
+                // std::cout<<"2"<<std::endl;
 
         PredicateArray tempPredicateArray(i);
         // tempPredicateArray.size = i;
@@ -664,6 +779,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         getCombinations(&predicateArray, predicateArray.size, i, 0, &tempPredicateArray, resultArray, 0);
         // delete[] tempPredicateArray.array;
         // std::cout<<"nextindex: "<<nextIndex<<std::endl;
+                // std::cout<<"3"<<std::endl;
 
         // used for printing
         // for (int j = 0; j < curCombinationsNum; j++) {
@@ -673,13 +789,21 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
 
         for (int j = 0; j < curCombinationsNum; j++) {
             PredicateArray* curCombination = &resultArray[j];
+                    std::cout<<"j "<<j<<std::endl;
+            std::cout<<"current combination: ";
+            curCombination->print();
             for (int k = 0; k < predicateArray.size; k++) {
                 Predicate* curPredicate = &predicateArray.array[k];
-                if (curCombination->contains(*curPredicate) || curCombination->isConnectedWith(*curPredicate))
+                // std::cout<<"k "<<k<<std::endl;
+                // curPredicate->print(true);
+                if (curCombination->contains(*curPredicate) || !curCombination->isConnectedWith(*curPredicate))
                     continue;
+                    // std::cout<<"1 k "<<k<<std::endl;
 
                 // TODO: if (NoCrossProducts && !connected(curPredicate, curCombination))
                 //          continue;
+
+                    // std::cout<<"2 k "<<k<<std::endl;
 
                 // S' = S U {Rj}
                 // ( S' = newPredicateArray )
@@ -688,10 +812,17 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                 // newPredicateArray.array[newPredicateArray.size - 1].fieldId = curPredicate->fieldId;
                 // newPredicateArray.array[newPredicateArray.size - 1].predicateArrayId = curPredicate->predicateArrayId;
                 newPredicateArray->array[newPredicateArray->size - 1] = (*curPredicate);
+                    // std::cout<<"3 k "<<k<<std::endl;
 
                 // Almost done: CurrTree = CreateJoinTree(Map(S), curPredicate) // CreateJoinTree() will create a Value object and it will calculate the cost of the new tree
-                Value* newValue = createJoinTree(bestTreeMap->retrieve(curCombination), newPredicateArray, relationids, relationsnum, filterColumnStatsArray, inputArrays);
+                Value* curCombinationValue = bestTreeMap->retrieve(curCombination);
+                                    // std::cout<<"3.5 k "<<k<<std::endl;
+                curCombinationValue->ValueArray->print();
+                                                    // std::cout<<"3.6 k "<<k<<std::endl;
 
+                Value* newValue = createJoinTree(curCombinationValue, newPredicateArray, relationids, relationsnum, filterColumnStatsArray, inputArrays);
+                    // std::cout<<"4 k "<<k<<std::endl;
+                    
                 // TODO: if (Map(S') == NULL || cost(Map(S')) > cost(CurrTree))
                 //          Map(S') = CurrTree;
                 Value* existingValue = bestTreeMap->retrieve(newPredicateArray);
@@ -700,7 +831,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                 }
             }
         }
-
+        // std::cout<<"before free"<<std::endl;
         delete[] resultArray;
     }
 // std::cout<<getPermutationsNum(4)<<std::endl;
@@ -854,6 +985,7 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
                 Stats[array][field].distinctValuesNum=0;
             }
             
+            Stats[array][field].changed = true;
         }
         else if(operation==0)
         {
@@ -868,6 +1000,7 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
             if(filternum>Stats[array][field].minValue)                
                 Stats[array][field].minValue=filternum;
 
+            Stats[array][field].changed = true;
         }
         else if(operation==1)
         {
@@ -882,6 +1015,7 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
             if(filternum<Stats[array][field].maxValue)
                 Stats[array][field].maxValue=filternum;
 
+            Stats[array][field].changed = true;
         }
         for(int j=0;j<inputarr[relationids[array]]->columnsNum;j++)
         {
@@ -893,6 +1027,7 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
             uint64_t exponent=Stats[array][j].valuesNum / Stats[array][j].distinctValuesNum;
             Stats[array][j].distinctValuesNum=Stats[array][j].distinctValuesNum * (1-(pow(base,exponent)));
             Stats[array][j].valuesNum=Stats[array][field].valuesNum;
+            Stats[array][j].changed = true;
         }
         
     }

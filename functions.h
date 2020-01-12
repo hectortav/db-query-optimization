@@ -93,15 +93,17 @@ class InputArray;
 class ColumnStats {
     public:
         uint64_t minValue, maxValue, valuesNum, distinctValuesNum;
+        bool changed;
 
         ColumnStats() {
             minValue = 0;
             maxValue = 0;
-            valuesNum = -1;
+            valuesNum = 0;
             distinctValuesNum = 0;
+            changed = false;
         }
 
-        void calculateDistinctValuesNum(const InputArray* inputArray, InputArray* inputArrayRowIds, uint64_t columnIndex);
+        void calculateDistinctValuesNum(const InputArray* inputArray, uint64_t columnIndex);
 };
 
 class InputArray
