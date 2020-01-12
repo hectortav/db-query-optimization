@@ -12,6 +12,13 @@ Statistics::~Statistics()
 
 }
 
+void Predicate::init(int predicateArray1Id, int field1Id, int predicateArray2Id, int field2Id) {
+    this->predicateArray1Id = predicateArray1Id;
+    this->predicateArray2Id = predicateArray2Id;
+    this->field1Id = field1Id;
+    this->field2Id = field2Id;
+}
+
 bool Predicate::operator ==(Predicate &predicate) {
     return predicateArray1Id == predicate.predicateArray1Id && field1Id == predicate.field1Id &&
         predicateArray2Id == predicate.predicateArray2Id && field2Id == predicate.field2Id;
@@ -447,7 +454,7 @@ void updateColumnStats(const InputArray* pureInputArray, InputArray* inputArrayR
             continue;
         
         ColumnStats* oldStatsP = &valueP->columnStatsArray[predicateArrayId][j];
-        if (oldStatsP->valuesNum == -1) { // predicate array of 1st operand is used for the first time
+        if (oldStatsP->valuesNum == -1) { // predicate array is used for the first time
             oldStatsP = &filterColumnStatsArray[predicateArrayId][j];
         }
 
@@ -469,7 +476,6 @@ void updateColumnStats(const InputArray* pureInputArray, InputArray* inputArrayR
         ColumnStats* fieldValueStatsP = &newValueP->columnStatsArray[predicateArrayId][joinFieldId];
         valueStatsP->valuesNum = fieldValueStatsP->valuesNum;
 
-        // if C attribute poy anhkei sto A h sto B ??
         valueStatsP->calculateDistinctValuesNum(pureInputArray, inputArrayRowIds, j);
         uint64_t powOp = (uint64_t) pow((double) (1 - (fieldValueStatsP->distinctValuesNum / fieldDistinctValuesNumAfterFilter)), (double) (inputArrayRowIds->rowsNum / valueStatsP->distinctValuesNum));
         valueStatsP->distinctValuesNum = valueStatsP->distinctValuesNum * (1 - powOp);
@@ -527,6 +533,7 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
     field1ValueStatsP->minValue = field2ValueStatsP->minValue = maxMinValue;
     field1ValueStatsP->maxValue = field2ValueStatsP->maxValue = minMaxValue;
     field1ValueStatsP->valuesNum = field2ValueStatsP->valuesNum = (inputArray1RowIds->rowsNum * inputArray2RowIds->rowsNum) / n;
+    newValueP->cost = field1ValueStatsP->valuesNum;
 
     field1ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray1Id], inputArray1RowIds, field1Id);
     field2ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray2Id], inputArray2RowIds, field2Id);
@@ -573,16 +580,20 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
     return newValueP;
 }
 
-uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputArrays,ColumnStats** filterColumnStatsArray)
+uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,int*relationids,const InputArray** inputArrays,ColumnStats** filterColumnStatsArray)
 {
-    int Rnum=4;
+    /////////// for testing
+    relationsnum = 4;
+    ///////////
+
+    // int Rnum=4;
     // Ri* theRs;
     // for(int i=0;i<Rnum;i++)
     // {   
     //     //MAP.insert(theRs[i]);
     // }
     
-    std::string s="";
+    // std::string s="";
     // rec(s,0,Rnum-1,Rnum);
     // for (int i = 1; i < relationsum; i++) {
 
@@ -625,9 +636,23 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,i
         //     resultArray[j].print();
         // }
 
-    for (int i = 1; i < 4; i++) {
+    Map* bestTreeMap = new Map(relationsnum);
+    for (int i = 0; i < relationsnum; i++) {
+        PredicateArray* keyValuePredicateArray = new PredicateArray(1);
+        keyValuePredicateArray->array[0] = predicateArray.array[i];
+        Value* value = new Value(1);
+        value->columnStatsArray = new ColumnStats*[relationsnum];
+        for (int i = 0; i < relationsnum; i++) {
+            value->columnStatsArray[i] = new ColumnStats[inputArrays[relationids[i]]->columnsNum];
+            memcpy(value->columnStatsArray[i], filterColumnStatsArray[i], inputArrays[relationids[i]]->columnsNum * sizeof(ColumnStats));
+        }
+
+        bestTreeMap->insert(keyValuePredicateArray, value);
+    }
+
+    for (int i = 1; i < relationsnum; i++) {
         nextIndex = 0;
-        int curCombinationsNum = getCombinationsNum(4, i);
+        int curCombinationsNum = getCombinationsNum(relationsnum, i);
         // std::cout<<curCombinationsNum<<std::endl;
         PredicateArray* resultArray = new PredicateArray[curCombinationsNum];
         // for (int j = 0; j < curCombinationsNum; j++)
@@ -665,10 +690,14 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,i
                 newPredicateArray->array[newPredicateArray->size - 1] = (*curPredicate);
 
                 // Almost done: CurrTree = CreateJoinTree(Map(S), curPredicate) // CreateJoinTree() will create a Value object and it will calculate the cost of the new tree
-                // Value* newValue = createJoinTree(/*map.retrieve(curCombination)*/, newPredicateArray, relationids, relationsum, filterColumnStatsArray, inputArrays);
+                Value* newValue = createJoinTree(bestTreeMap->retrieve(curCombination), newPredicateArray, relationids, relationsnum, filterColumnStatsArray, inputArrays);
 
                 // TODO: if (Map(S') == NULL || cost(Map(S')) > cost(CurrTree))
                 //          Map(S') = CurrTree;
+                Value* existingValue = bestTreeMap->retrieve(newPredicateArray);
+                if (existingValue == NULL || existingValue->cost > newValue->cost) {
+                    bestTreeMap->insert(newPredicateArray, newValue);
+                }
             }
         }
 
