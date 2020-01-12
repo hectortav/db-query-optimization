@@ -507,12 +507,13 @@ void updateColumnStats(const InputArray* pureInputArray, uint64_t joinFieldId, i
         ColumnStats* fieldValueStatsP = &newValueP->columnStatsArray[predicateArrayId][joinFieldId];
         
         std::cout<<"fieldValueStatsP->valuesNum: "<<fieldValueStatsP->valuesNum<<", fieldValuesNumBeforeFilter: "<<fieldValuesNumBeforeFilter<<std::endl;
-        uint64_t base=1 - (fieldValueStatsP->valuesNum / fieldValuesNumBeforeFilter);
+        double base=1 - ((double)fieldValueStatsP->valuesNum / (double)fieldValuesNumBeforeFilter);
                 std::cout<<"aaaa2"<<std::endl;
 
+        std::cout<<"oldStatsP->valuesNum: "<<oldStatsP->valuesNum<<", oldStatsP->distinctValuesNum: "<<oldStatsP->distinctValuesNum<<std::endl;
         uint64_t exponent=oldStatsP->valuesNum / oldStatsP->distinctValuesNum;
         std::cout<<"base: "<<base<<", exponent: "<<exponent<<std::endl;
-        valueStatsP->distinctValuesNum=oldStatsP->distinctValuesNum * (1-((uint64_t) pow((double)base,(double)exponent)));
+        valueStatsP->distinctValuesNum=oldStatsP->distinctValuesNum * ((double)(1-((uint64_t) pow(base,(double)exponent))));
         valueStatsP->valuesNum=fieldValueStatsP->valuesNum;
 
         // valueStatsP->minValue = UINT64_MAX;
@@ -532,7 +533,7 @@ void updateColumnStats(const InputArray* pureInputArray, uint64_t joinFieldId, i
 
         // valueStatsP->calculateDistinctValuesNum(pureInputArray, inputArrayRowIds, j);
                 std::cout<<"aaaaaaaaaa"<<std::endl;
-
+        std::cout<<"valueStatsP->distinctValuesNum: "<<valueStatsP->distinctValuesNum<<", valueStatsP->valuesNum: "<<valueStatsP->valuesNum<<std::endl;
         uint64_t powOp = (uint64_t) pow((double) (1 - (fieldValueStatsP->distinctValuesNum / fieldDistinctValuesNumAfterFilter)), (double) (fieldValueStatsP->valuesNum / valueStatsP->distinctValuesNum));
         std::cout<<"powOp: "<<powOp<<std::endl;
         valueStatsP->distinctValuesNum = valueStatsP->distinctValuesNum * (1 - powOp);
@@ -572,7 +573,7 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
         if (field1OldStatsP->changed == false) {
             field1OldStatsP = &inputArrays[inputArray1Id]->columnsStats[field1Id];
         }
-        // std::cout<<"field1OldStatsP->valuesNum: "<<field1OldStatsP->valuesNum<<std::endl;
+        std::cout<<"field1OldStatsP->valuesNum: "<<field1OldStatsP->valuesNum<<std::endl;
     }
             // std::cout<<"createJoinTree 3.3"<<std::endl;
     // valueP->ValueArray->print();
@@ -583,7 +584,7 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
         if (field2OldStatsP->changed == false) {
             field2OldStatsP = &inputArrays[inputArray2Id]->columnsStats[field2Id];
         }
-                // std::cout<<"field2OldStatsP->valuesNum: "<<field2OldStatsP->valuesNum<<std::endl;
+                std::cout<<"field2OldStatsP->valuesNum: "<<field2OldStatsP->valuesNum<<std::endl;
 
     }
 
@@ -1105,8 +1106,10 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
                 continue;
             //min same
             //max same
+
             uint64_t base=1-((double)Stats[array][field].valuesNum /(double) oldF);
             uint64_t exponent=(double)Stats[array][j].valuesNum / (double)Stats[array][j].distinctValuesNum;
+            std::cout<<"base: "<<base<<"exponent: "<<exponent<<std::endl;
             Stats[array][j].distinctValuesNum=(double)Stats[array][j].distinctValuesNum * (double)(1-(pow(base,exponent)));
             Stats[array][j].valuesNum=Stats[array][field].valuesNum;
             Stats[array][j].changed = true;
