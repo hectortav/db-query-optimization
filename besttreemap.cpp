@@ -171,28 +171,28 @@ Map::~Map()
     delete[] keys;
 }
 
-bool Map::insert(PredicateArray* key,PredicateArray* value)
+bool Map::insert(PredicateArray* key,Value* value)
 {
     int ifexists=exists(key);
     if(ifexists)
     {
         delete values[ifexists];
-        values[ifexists]->ValueArray=value;
-        values[ifexists]->stats=NULL;//
+        values[ifexists]=value;
     }
     else
     {
-        values[cursize]->ValueArray=value;
-        values[cursize]->stats=NULL;//
+        values[cursize]=value;
         keys[cursize]->KeyArray=key;
         cursize++;
     }
+    return true;
 }
 Value* Map::retrieve(PredicateArray* key)
 {
     int ifexists=exists(key);
     if(ifexists)
         return values[ifexists];
+    return NULL;
 }
 int Map::exists(PredicateArray* key)
 {
