@@ -713,15 +713,16 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
     int FiltersNum=0;
     for(int i=0;i<cntr;i++)
     {
-        if(currentpreds[i][3]==(uint64_t)-1)
+        if(currentpreds[i][3]==(uint64_t)-1||(currentpreds[i][0]==currentpreds[i][3]))
             FiltersNum++;
     }
     // std::cout<<FiltersNum<<std::endl;
     uint64_t** Filters=new uint64_t*[FiltersNum];
     uint64_t** NonFilters=new uint64_t*[cntr-FiltersNum]; 
+    uint64_t** Final=new uint64_t*[cntr];
     for(int i=0,findx=0,nfindex=0;i<cntr;i++)
     {
-        if(currentpreds[i][3]==(uint64_t)-1)
+        if(currentpreds[i][3]==(uint64_t)-1||(currentpreds[i][0]==currentpreds[i][3]))
         {
             //filter
             Filters[findx]=currentpreds[i];
@@ -754,7 +755,20 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
     //     std::cout<<std::endl;
     // }
     FilterStats(Filters,FiltersNum,relationsum,relationids,inputarr,Stats);
-    BestPredicateOrder(NonFilters,cntr-FiltersNum,relationsum,relationids,inputarr,Stats);
+    uint64_t** best=BestPredicateOrder(NonFilters,cntr-FiltersNum,relationsum,relationids,inputarr,Stats);
+    int next=0;
+    for(int i=0;i<FiltersNum;i++)
+    {
+        Final[next]=Filters[i];
+        next++;
+    }
+    for(int i=0;i<cntr-FiltersNum;i++)
+    {
+        Final[next]=best[i];
+        next++;
+    }
+    delete[] best;
+    return Final;
     // for(int i=0;i<relationsum;i++)
     // {
     //     for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
@@ -795,36 +809,62 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
         uint64_t array=filterpreds[i][0];
         uint64_t field=filterpreds[i][1];
         uint64_t operation=filterpreds[i][2];
+        uint64_t array2ifexists = filterpreds[i][3];
         uint64_t filternum=filterpreds[i][4];
         uint64_t oldF; 
         if(operation==2)
         {
             //=
             // std::cout<<"="<<std::endl;
-            Stats[array][field].minValue=filternum;
-            Stats[array][field].maxValue=filternum;
-            bool found=0;
-            for(int j=0;j<inputarr[relationids[array]]->rowsNum;j++)
+            if(array2ifexists==(uint64_t)-1)
             {
-                // std::cout<<j<<" of "<<std::endl;
-                if(inputarr[relationids[array]]->columns[field][j]==filternum)
+                Stats[array][field].minValue=filternum;
+                Stats[array][field].maxValue=filternum;
+                bool found=0;
+                for(int j=0;j<inputarr[relationids[array]]->rowsNum;j++)
                 {
-                    found=1;
-                    break;
+                    // std::cout<<j<<" of "<<std::endl;
+                    if(inputarr[relationids[array]]->columns[field][j]==filternum)
+                    {
+                        found=1;
+                        break;
+                    }
+                }
+                oldF=Stats[array][field].valuesNum;
+                if(found)
+                {   //ROUND TO NEXT OR PREVIOUS
+                    Stats[array][field].valuesNum  =  Stats[array][field].valuesNum  /  Stats[array][field].distinctValuesNum;
+                    Stats[array][field].distinctValuesNum=1;
+                }
+                else
+                { 
+                    Stats[array][field].valuesNum=0;
+                    Stats[array][field].distinctValuesNum=0;
                 }
             }
-            oldF=Stats[array][field].valuesNum;
-            if(found)
-            {   //ROUND TO NEXT OR PREVIOUS
-                Stats[array][field].valuesNum  =  Stats[array][field].valuesNum  /  Stats[array][field].distinctValuesNum;
-                Stats[array][field].distinctValuesNum=1;
-            }
             else
-            { 
-                Stats[array][field].valuesNum=0;
-                Stats[array][field].distinctValuesNum=0;
+            {
+                 if(Stats[array][field].minValue>Stats[array2ifexists][filternum].minValue)
+                    Stats[array2ifexists][filternum].minValue=Stats[array][field].minValue;
+                else Stats[array][field].minValue=Stats[array2ifexists][filternum].minValue;
+
+                if(Stats[array][field].maxValue<Stats[array2ifexists][filternum].maxValue)
+                    Stats[array2ifexists][filternum].maxValue=Stats[array][field].maxValue;
+                else Stats[array][field].maxValue=Stats[array2ifexists][filternum].maxValue;
+
+                oldF=Stats[array][field].valuesNum;
+                uint64_t n=Stats[array][field].maxValue-Stats[array][field].minValue+1;
+                Stats[array][field].valuesNum=Stats[array2ifexists][filternum].valuesNum=(Stats[array][field].valuesNum/n);
+
+
+
+                uint64_t base=1-(Stats[array][field].valuesNum / oldF);
+                uint64_t exponent=Stats[array][field].valuesNum / Stats[array][field].distinctValuesNum;
+
+                Stats[array][field].distinctValuesNum=Stats[array][filternum].distinctValuesNum=Stats[array][field].distinctValuesNum * (1-(pow(base,exponent)));
+
             }
-            
+                
         }
         else if(operation==0)
         {
@@ -856,7 +896,7 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
         }
         for(int j=0;j<inputarr[relationids[array]]->columnsNum;j++)
         {
-            if(j==field)
+            if(j==field||(array2ifexists!=(uint64_t)-1&&j==filternum))
                 continue;
             //min same
             //max same
