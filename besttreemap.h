@@ -19,6 +19,7 @@ class Predicate {
         int predicateArray1Id, predicateArray2Id;
         int field1Id, field2Id;
 
+        void init(int predicateArray1Id, int field1Id, int predicateArray2Id, int field2Id);
         bool operator ==(Predicate &predicate);
         bool hasCommonArray(Predicate &predicate);
         void print(bool printEndl);
