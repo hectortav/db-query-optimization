@@ -1097,17 +1097,23 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
             if(filternum<Stats[array][field].maxValue)
                 Stats[array][field].maxValue=filternum;
 
-            Stats[array][field].changed = true;
+            Stats[array][field].changed = true; 
         }
+        std::cout<<"before for"<<std::endl;
         for(int j=0;j<inputarr[relationids[array]]->columnsNum;j++)
         {
+            std::cout<<"for"<<j<<std::endl;
             if(j==field||(array2ifexists!=(uint64_t)-1&&j==filternum))
                 continue;
             //min same
             //max same
-            uint64_t base=1-((double)Stats[array][field].valuesNum /(double) oldF);
-            uint64_t exponent=(double)Stats[array][j].valuesNum / (double)Stats[array][j].distinctValuesNum;
-            Stats[array][j].distinctValuesNum=(double)Stats[array][j].distinctValuesNum * (double)(1-(pow(base,exponent)));
+            double base=(double)1-(double)((double)Stats[array][field].valuesNum /(double) oldF);
+            std::cout<<"valnum: "<<Stats[array][field].valuesNum<<std::endl;
+            std::cout<<"oldf: "<<oldF<<std::endl;
+            std::cout<<"base: "<<base<<std::endl;
+            double exponent=(double)Stats[array][j].valuesNum / (double)Stats[array][j].distinctValuesNum;
+            std::cout<<j<<" "<<Stats[array][j].distinctValuesNum<<std::endl;
+            Stats[array][j].distinctValuesNum=(double)Stats[array][j].distinctValuesNum * (double)((double)1-(double)(pow(base,exponent)));
             Stats[array][j].valuesNum=Stats[array][field].valuesNum;
             Stats[array][j].changed = true;
         }
