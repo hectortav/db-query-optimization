@@ -1313,7 +1313,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
     // xxx++;
     // if(xxx==1)
     // {
-    //     OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
+    //     preds = OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
     //     exit(1);
     // }
     InputArray** inputArraysRowIds = new InputArray*[relationsnum];

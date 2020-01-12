@@ -17,9 +17,9 @@ public:
 class Predicate {
     public:
         int predicateArray1Id, predicateArray2Id;
-        int field1Id, field2Id;
+        uint64_t field1Id, field2Id;
 
-        void init(int predicateArray1Id, int field1Id, int predicateArray2Id, int field2Id);
+        void init(int predicateArray1Id, uint64_t field1Id, int predicateArray2Id, uint64_t field2Id);
         bool operator ==(Predicate &predicate);
         bool hasCommonArray(Predicate &predicate);
         void print(bool printEndl);
@@ -32,6 +32,7 @@ public:
     int size;
     PredicateArray();
     PredicateArray(int size);
+    PredicateArray(int size, uint64_t** preds);
     ~PredicateArray();
     void init(PredicateArray* predicateArray, int size);
     bool contains(Predicate predicate);
@@ -39,6 +40,7 @@ public:
     void populate(PredicateArray *newArray);
     void print();
     bool operator ==(PredicateArray& array);
+    uint64_t** toUintArray();
 };
 
 class Key{

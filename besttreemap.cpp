@@ -12,7 +12,7 @@ Statistics::~Statistics()
 
 }
 
-void Predicate::init(int predicateArray1Id, int field1Id, int predicateArray2Id, int field2Id) {
+void Predicate::init(int predicateArray1Id, uint64_t field1Id, int predicateArray2Id, uint64_t field2Id) {
     this->predicateArray1Id = predicateArray1Id;
     this->predicateArray2Id = predicateArray2Id;
     this->field1Id = field1Id;
@@ -46,6 +46,16 @@ PredicateArray::PredicateArray(int size)
     this->size = size;
     this->array = new Predicate[size];
 }
+
+PredicateArray::PredicateArray(int size, uint64_t** joinPreds) {
+    this->size = size;
+    array = new Predicate[size];
+    for (int i = 0; i < size; i++) {
+        uint64_t* curPred = joinPreds[i];
+        array[i].init(curPred[0], curPred[1], curPred[3], curPred[4]);
+    }
+}
+
 PredicateArray::~PredicateArray()
 {
     delete[] array;
@@ -131,6 +141,20 @@ bool PredicateArray::operator ==(PredicateArray& array)
     // }
     //MIGHT NEED UNCOMMENTING! WILL SEE
     return 1;
+}
+
+uint64_t** PredicateArray::toUintArray() {
+    uint64_t** preds = new uint64_t*[size];
+    for (int i = 0; i < size; i++) {
+        preds[i] = new uint64_t[5];
+        preds[i][0] = array[i].predicateArray1Id;
+        preds[i][1] = array[i].field1Id;
+        preds[i][2] = 2; // '='
+        preds[i][3] = array[i].predicateArray2Id;
+        preds[i][4] = array[i].field2Id;
+    }
+
+    return preds;
 }
 
 Key::Key(int sz)
@@ -695,8 +719,8 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
     // for (int i = 1; i < relationsum; i++) {
 
     // }
-
-    PredicateArray predicateArray(2);
+    PredicateArray* joinPredicateArray = new PredicateArray(cntr, currentpreds);
+    // PredicateArray predicateArray(2);
     // predicateOperandArray.array = new PredicateOperand[4];
     // predicateOperandArray.size = 4;
     // for (int i = 0; i < relationsum; i++) {
@@ -717,8 +741,8 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         // predicateArray.array[3].predicateArray2Id = 5;
         // predicateArray.array[3].field2Id = 1;
         // 3 0 1|0.2=1.0&0.1=2.0&0.2>3499
-        predicateArray.array[0].init(0, 2, 1, 0);
-        predicateArray.array[1].init(0, 1, 2, 0);
+        // predicateArray.array[0].init(0, 2, 1, 0);
+        // predicateArray.array[1].init(0, 1, 2, 0);
     // }
         //     PredicateArray* resultArray = new PredicateArray[4];
         // // for (int j = 0; j < curCombinationsNum; j++)
@@ -741,7 +765,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                     // std::cout<<"outer loop i "<<i<<std::endl;
 
         PredicateArray* keyValuePredicateArray = new PredicateArray(1);
-        keyValuePredicateArray->array[0] = predicateArray.array[i];
+        keyValuePredicateArray->array[0] = joinPredicateArray->array[i];
         Value* value = new Value(1);
         value->columnStatsArray = new ColumnStats*[relationsnum];
         for (int i = 0; i < relationsnum; i++) {
@@ -776,7 +800,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         PredicateArray tempPredicateArray(i);
         // tempPredicateArray.size = i;
         // tempPredicateArray.array = new Predicate[i];
-        getCombinations(&predicateArray, predicateArray.size, i, 0, &tempPredicateArray, resultArray, 0);
+        getCombinations(joinPredicateArray, joinPredicateArray->size, i, 0, &tempPredicateArray, resultArray, 0);
         // delete[] tempPredicateArray.array;
         // std::cout<<"nextindex: "<<nextIndex<<std::endl;
                 // std::cout<<"3"<<std::endl;
@@ -789,11 +813,11 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
 
         for (int j = 0; j < curCombinationsNum; j++) {
             PredicateArray* curCombination = &resultArray[j];
-                    std::cout<<"j "<<j<<std::endl;
-            std::cout<<"current combination: ";
-            curCombination->print();
-            for (int k = 0; k < predicateArray.size; k++) {
-                Predicate* curPredicate = &predicateArray.array[k];
+                    // std::cout<<"j "<<j<<std::endl;
+            // std::cout<<"current combination: ";
+            // curCombination->print();
+            for (int k = 0; k < joinPredicateArray->size; k++) {
+                Predicate* curPredicate = &joinPredicateArray->array[k];
                 // std::cout<<"k "<<k<<std::endl;
                 // curPredicate->print(true);
                 if (curCombination->contains(*curPredicate) || !curCombination->isConnectedWith(*curPredicate))
@@ -817,7 +841,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                 // Almost done: CurrTree = CreateJoinTree(Map(S), curPredicate) // CreateJoinTree() will create a Value object and it will calculate the cost of the new tree
                 Value* curCombinationValue = bestTreeMap->retrieve(curCombination);
                                     // std::cout<<"3.5 k "<<k<<std::endl;
-                curCombinationValue->ValueArray->print();
+                // curCombinationValue->ValueArray->print();
                                                     // std::cout<<"3.6 k "<<k<<std::endl;
 
                 Value* newValue = createJoinTree(curCombinationValue, newPredicateArray, relationids, relationsnum, filterColumnStatsArray, inputArrays);
@@ -842,12 +866,15 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
     // swap(&predicateOperandArray, 0, 1);
     //     std::cout<<predicateOperandArray.array[0].predicateArrayId<<std::endl;
     //     std::cout<<predicateOperandArray.array[0].fieldId<<std::endl;
-
+    uint64_t** newJoinPreds = bestTreeMap->retrieve(joinPredicateArray)->ValueArray->toUintArray();
+    delete bestTreeMap;
+    return newJoinPreds;
 }
 
 uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr)
 {
     //******************************missing case for σ A=B ???? is it filter on bestpredicate function?
+    // std::cout<<"before optimization"<<std::endl;
     // for(int i=0;i<cntr;i++)
     // {
     //     for(int j=0;j<5;j++)
@@ -928,6 +955,15 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
         next++;
     }
     delete[] best;
+    // std::cout<<"after optimization"<<std::endl;
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<Final[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
     return Final;
     // for(int i=0;i<relationsum;i++)
     // {
