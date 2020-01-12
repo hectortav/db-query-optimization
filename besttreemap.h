@@ -57,6 +57,8 @@ public:
     PredicateArray* ValueArray;
     Statistics* stats;
     ColumnStats** columnStatsArray; // size: relationsnum x each InputArray's columnNum
+    uint64_t cost;
+    
     Value() {};
     Value(int);
     ~Value();

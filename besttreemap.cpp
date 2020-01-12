@@ -454,7 +454,7 @@ void updateColumnStats(const InputArray* pureInputArray, InputArray* inputArrayR
             continue;
         
         ColumnStats* oldStatsP = &valueP->columnStatsArray[predicateArrayId][j];
-        if (oldStatsP->valuesNum == -1) { // predicate array of 1st operand is used for the first time
+        if (oldStatsP->valuesNum == -1) { // predicate array is used for the first time
             oldStatsP = &filterColumnStatsArray[predicateArrayId][j];
         }
 
@@ -476,7 +476,6 @@ void updateColumnStats(const InputArray* pureInputArray, InputArray* inputArrayR
         ColumnStats* fieldValueStatsP = &newValueP->columnStatsArray[predicateArrayId][joinFieldId];
         valueStatsP->valuesNum = fieldValueStatsP->valuesNum;
 
-        // if C attribute poy anhkei sto A h sto B ??
         valueStatsP->calculateDistinctValuesNum(pureInputArray, inputArrayRowIds, j);
         uint64_t powOp = (uint64_t) pow((double) (1 - (fieldValueStatsP->distinctValuesNum / fieldDistinctValuesNumAfterFilter)), (double) (inputArrayRowIds->rowsNum / valueStatsP->distinctValuesNum));
         valueStatsP->distinctValuesNum = valueStatsP->distinctValuesNum * (1 - powOp);
@@ -534,6 +533,7 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
     field1ValueStatsP->minValue = field2ValueStatsP->minValue = maxMinValue;
     field1ValueStatsP->maxValue = field2ValueStatsP->maxValue = minMaxValue;
     field1ValueStatsP->valuesNum = field2ValueStatsP->valuesNum = (inputArray1RowIds->rowsNum * inputArray2RowIds->rowsNum) / n;
+    newValueP->cost = field1ValueStatsP->valuesNum;
 
     field1ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray1Id], inputArray1RowIds, field1Id);
     field2ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray2Id], inputArray2RowIds, field2Id);
@@ -695,7 +695,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                 // TODO: if (Map(S') == NULL || cost(Map(S')) > cost(CurrTree))
                 //          Map(S') = CurrTree;
                 Value* existingValue = bestTreeMap->retrieve(newPredicateArray);
-                if (existingValue == NULL || /*cost of existingValue > cost of newValue*/) {
+                if (existingValue == NULL || existingValue->cost > newValue->cost) {
                     bestTreeMap->insert(newPredicateArray, newValue);
                 }
             }
