@@ -986,20 +986,20 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
     //     }
     //     std::cout<<std::endl;
     // }
-    // std::cout<<"Starting Stats "<<std::endl;
-    // for(int i=0;i<relationsum;i++)
-    // {
-    //     std::cout<<"About array: "<<relationids[i]<<" inquery: "<<i<<std::endl;
-    //     for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
-    //     {
-    //         std::cout<<"  Column: "<<j<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].minValue<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].maxValue<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].valuesNum<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].distinctValuesNum<<std::endl;
-    //     }
-    //     std::cout<<std::endl;
-    // }
+    std::cout<<"Starting Stats "<<std::endl;
+    for(int i=0;i<1;i++)
+    {
+        std::cout<<"About array: "<<relationids[i]<<" inquery: "<<i<<std::endl;
+        for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
+        {
+            std::cout<<"  Column: "<<j<<std::endl;
+            std::cout<<"    "<<Stats[i][j].minValue<<std::endl;
+            std::cout<<"    "<<Stats[i][j].maxValue<<std::endl;
+            std::cout<<"    "<<Stats[i][j].valuesNum<<std::endl;
+            std::cout<<"    "<<Stats[i][j].distinctValuesNum<<std::endl;
+        }
+        std::cout<<std::endl;
+    }
     for(int i=0;i<cntr;i++)
     {
         uint64_t array=filterpreds[i][0];
@@ -1029,7 +1029,7 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
                 oldF=Stats[array][field].valuesNum;
                 if(found)
                 {   //ROUND TO NEXT OR PREVIOUS
-                    Stats[array][field].valuesNum  =  Stats[array][field].valuesNum  /  Stats[array][field].distinctValuesNum;
+                    Stats[array][field].valuesNum  =  (double)Stats[array][field].valuesNum  /  (double)Stats[array][field].distinctValuesNum;
                     Stats[array][field].distinctValuesNum=1;
                 }
                 else
@@ -1070,9 +1070,15 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
             uint64_t k1=filternum;
             uint64_t k2=Stats[array][field].maxValue;
             oldF=Stats[array][field].valuesNum;
-            Stats[array][field].distinctValuesNum=Stats[array][field].distinctValuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
-            Stats[array][field].valuesNum=Stats[array][field].valuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
+            Stats[array][field].distinctValuesNum=(double)Stats[array][field].distinctValuesNum* (double)((double)((double)k2-(double)k1)/(double)((double)Stats[array][field].maxValue-(double)Stats[array][field].minValue));
+            std::cout<<k2<<std::endl;
+            std::cout<<k1<<std::endl;
+            std::cout<<Stats[array][field].valuesNum<<std::endl;
+            std::cout<<k2-k1<<std::endl;
 
+            std::cout<<Stats[array][field].maxValue-Stats[array][field].minValue<<std::endl;
+            Stats[array][field].valuesNum=(double)Stats[array][field].valuesNum* (double)((double)((double)k2-(double)k1)/(double)((double)Stats[array][field].maxValue-(double)Stats[array][field].minValue));
+            
             if(filternum>Stats[array][field].minValue)                
                 Stats[array][field].minValue=filternum;
 
@@ -1085,8 +1091,8 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
             uint64_t k1=Stats[array][field].minValue;
             uint64_t k2=filternum;
             oldF=Stats[array][field].valuesNum;
-            Stats[array][field].distinctValuesNum=Stats[array][field].distinctValuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
-            Stats[array][field].valuesNum=Stats[array][field].valuesNum* ((k2-k1)/(Stats[array][field].maxValue-Stats[array][field].minValue));
+            Stats[array][field].distinctValuesNum=(double)Stats[array][field].distinctValuesNum* (double)((double)((double)k2-(double)k1)/(double)((double)Stats[array][field].maxValue-(double)Stats[array][field].minValue));
+            Stats[array][field].valuesNum=(double)Stats[array][field].valuesNum* (double)((double)((double)k2-(double)k1)/(double)((double)Stats[array][field].maxValue-(double)Stats[array][field].minValue));
 
             if(filternum<Stats[array][field].maxValue)
                 Stats[array][field].maxValue=filternum;
@@ -1099,27 +1105,27 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
                 continue;
             //min same
             //max same
-            uint64_t base=1-(Stats[array][field].valuesNum / oldF);
-            uint64_t exponent=Stats[array][j].valuesNum / Stats[array][j].distinctValuesNum;
-            Stats[array][j].distinctValuesNum=Stats[array][j].distinctValuesNum * (1-(pow(base,exponent)));
+            uint64_t base=1-((double)Stats[array][field].valuesNum /(double) oldF);
+            uint64_t exponent=(double)Stats[array][j].valuesNum / (double)Stats[array][j].distinctValuesNum;
+            Stats[array][j].distinctValuesNum=(double)Stats[array][j].distinctValuesNum * (double)(1-(pow(base,exponent)));
             Stats[array][j].valuesNum=Stats[array][field].valuesNum;
             Stats[array][j].changed = true;
         }
         
     }
-    // std::cout<<"Ending Stats "<<std::endl;
-    // for(int i=0;i<relationsum;i++)
-    // {
-    //     std::cout<<"About array: "<<relationids[i]<<" inquery: "<<i<<std::endl;
-    //     for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
-    //     {
-    //         std::cout<<"  Column: "<<j<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].minValue<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].maxValue<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].valuesNum<<std::endl;
-    //         std::cout<<"    "<<Stats[i][j].distinctValuesNum<<std::endl;
-    //     }
-    //     std::cout<<std::endl;
-    // }
+    std::cout<<"Ending Stats "<<std::endl;
+    for(int i=0;i<1;i++)
+    {
+        std::cout<<"About array: "<<relationids[i]<<" inquery: "<<i<<std::endl;
+        for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
+        {
+            std::cout<<"  Column: "<<j<<std::endl;
+            std::cout<<"    "<<Stats[i][j].minValue<<std::endl;
+            std::cout<<"    "<<Stats[i][j].maxValue<<std::endl;
+            std::cout<<"    "<<Stats[i][j].valuesNum<<std::endl;
+            std::cout<<"    "<<Stats[i][j].distinctValuesNum<<std::endl;
+        }
+        std::cout<<std::endl;
+    }
 
 }
