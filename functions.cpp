@@ -1304,18 +1304,18 @@ void handleDelete(uint64_t** preds, int cntr, int relationsnum, InputArray** inp
         delete inputArraysRowIds[i];
     delete[] inputArraysRowIds;
 }
-int xxx=0;
+// int xxx=0;
 IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,int relationsnum, int* relationIds, int queryIndex)
 {
     int cntr;
     uint64_t** preds=splitpreds(part,cntr);
-    // preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
-    xxx++;
-    if(xxx==1)
-    {
-        preds = OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
-        exit(1);
-    }
+    preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
+    // xxx++;
+    // if(xxx==1)
+    // {
+        // preds = OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
+        // exit(1);
+    // }
     InputArray** inputArraysRowIds = new InputArray*[relationsnum];
     for (int i = 0; i < relationsnum; i++) {
         // std::cout<<"thread "<<pthread_self()<<", relationIds[i] = "<<relationIds[i]<<" ====================================================================="<<std::endl;
@@ -1499,7 +1499,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
             curIntermediateArray->populate(resultArray, rows, NULL, inputArray1Id, inputArray2Id, predicateArray1Id, predicateArray2Id);
         } else {
             IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1);
-            newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, predicateArray1Id, predicateArray2Id);
+            newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, -1, rel2ExistsInIntermediateArray ? predicateArray1Id : predicateArray2Id);
             delete curIntermediateArray;
             curIntermediateArray = newIntermediateArray;
         }

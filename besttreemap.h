@@ -37,6 +37,7 @@ public:
     void init(PredicateArray* predicateArray, int size);
     bool contains(Predicate predicate);
     bool isConnectedWith(Predicate& predicate);
+    bool isConnected();
     void populate(PredicateArray *newArray);
     void print();
     bool operator ==(PredicateArray& array);
