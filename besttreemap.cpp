@@ -440,7 +440,140 @@ void getCombinations(PredicateArray* elements, int n, int r, int index, Predicat
     getCombinations(elements, n, r, index, data, resultArray, i + 1); 
 }
 
-uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats )
+void updateColumnStats(const InputArray* pureInputArray, InputArray* inputArrayRowIds, uint64_t joinFieldId, int predicateArrayId,
+                         Value* valueP, Value* newValueP, ColumnStats** filterColumnStatsArray, uint64_t fieldDistinctValuesNumAfterFilter) {
+    for (uint64_t j = 0; j < pureInputArray->columnsNum; j++) {
+        if (j == joinFieldId)
+            continue;
+        
+        ColumnStats* oldStatsP = &valueP->columnStatsArray[predicateArrayId][j];
+        if (oldStatsP->valuesNum == -1) { // predicate array of 1st operand is used for the first time
+            oldStatsP = &filterColumnStatsArray[predicateArrayId][j];
+        }
+
+        ColumnStats* valueStatsP = &newValueP->columnStatsArray[predicateArrayId][joinFieldId];
+
+        valueStatsP->minValue = UINT64_MAX;
+        valueStatsP->maxValue = 0;
+
+        for (uint64_t i = 0; i < inputArrayRowIds->rowsNum; i++) {
+            uint64_t curValue = pureInputArray->columns[j][inputArrayRowIds->columns[0][i]];
+            if (curValue < valueStatsP->minValue) {
+                valueStatsP->minValue = curValue;
+            }
+            if (curValue > valueStatsP->maxValue) {
+                valueStatsP->maxValue = curValue;
+            }
+        }
+        
+        ColumnStats* fieldValueStatsP = &newValueP->columnStatsArray[predicateArrayId][joinFieldId];
+        valueStatsP->valuesNum = fieldValueStatsP->valuesNum;
+
+        // if C attribute poy anhkei sto A h sto B ??
+        valueStatsP->calculateDistinctValuesNum(pureInputArray, inputArrayRowIds, j);
+        uint64_t powOp = (uint64_t) pow((double) (1 - (fieldValueStatsP->distinctValuesNum / fieldDistinctValuesNumAfterFilter)), (double) (inputArrayRowIds->rowsNum / valueStatsP->distinctValuesNum));
+        valueStatsP->distinctValuesNum = valueStatsP->distinctValuesNum * (1 - powOp);
+    }
+}
+
+Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* relationIds, int relationsnum, ColumnStats** filterColumnStatsArray, const InputArray** inputArrays) {
+    Predicate* newPredicateP = &newPredicateArrayP->array[newPredicateArrayP->size - 1];
+
+    Value* newValueP = new Value();
+    newValueP->ValueArray = newPredicateArrayP;
+    newValueP->columnStatsArray = new ColumnStats*[relationsnum];
+    for (int i = 0; i < relationsnum; i++) {
+        newValueP->columnStatsArray[i] = new ColumnStats[inputArrays[relationIds[i]]->columnsNum];
+        if (i == newPredicateP->predicateArray1Id || i == newPredicateP->predicateArray2Id) // these ColumnStats* will get updated afterwards
+            continue;
+        memcpy(newValueP->columnStatsArray[i], valueP->columnStatsArray[i], inputArrays[relationIds[i]]->columnsNum * sizeof(ColumnStats));
+    }
+
+    uint64_t inputArray1Id = relationIds[newPredicateP->predicateArray1Id];
+    uint64_t inputArray2Id = relationIds[newPredicateP->predicateArray2Id];
+    uint64_t field1Id = newPredicateP->field1Id;
+    uint64_t field2Id = newPredicateP->field2Id;
+    uint64_t predicateArray1Id = newPredicateP->predicateArray1Id;
+    uint64_t predicateArray2Id = newPredicateP->predicateArray2Id;
+
+    ColumnStats* field1OldStatsP = &valueP->columnStatsArray[predicateArray1Id][field1Id];
+    ColumnStats* field2OldStatsP = &valueP->columnStatsArray[predicateArray2Id][field2Id];
+    if (field1OldStatsP->valuesNum == -1) { // predicate array of 1st operand is used for the first time
+        field1OldStatsP = &filterColumnStatsArray[predicateArray1Id][field1Id];
+    }
+    if (field2OldStatsP->valuesNum == -1) { // predicate array of 2nd operand is used for the first time
+        field2OldStatsP = &filterColumnStatsArray[predicateArray2Id][field2Id];
+    }
+
+    InputArray* inputArray1RowIds = new InputArray(inputArrays[inputArray1Id]->rowsNum);
+    InputArray* inputArray2RowIds = new InputArray(inputArrays[inputArray2Id]->rowsNum);
+
+    uint64_t minMaxValue = field1OldStatsP->maxValue < field2OldStatsP->maxValue ? field1OldStatsP->maxValue : field2OldStatsP->maxValue;
+    uint64_t maxMinValue = field1OldStatsP->minValue > field2OldStatsP->minValue ? field1OldStatsP->minValue : field2OldStatsP->minValue;
+    uint64_t n = minMaxValue - maxMinValue + 1;
+
+    // filter 1st array
+    inputArray1RowIds->filterRowIds(field1Id, 1, minMaxValue, inputArrays[inputArray1Id], 0, inputArray1RowIds->rowsNum);
+    inputArray1RowIds->filterRowIds(field1Id, 0, maxMinValue, inputArrays[inputArray1Id], 0, inputArray1RowIds->rowsNum);
+    
+    // filter 2nd array
+    inputArray2RowIds->filterRowIds(field1Id, 1, minMaxValue, inputArrays[inputArray2Id], 0, inputArray2RowIds->rowsNum);
+    inputArray2RowIds->filterRowIds(field1Id, 0, maxMinValue, inputArrays[inputArray2Id], 0, inputArray2RowIds->rowsNum);
+
+    // handle field1 and field2 columns
+    ColumnStats* field1ValueStatsP = &newValueP->columnStatsArray[predicateArray1Id][field1Id];
+    ColumnStats* field2ValueStatsP = &newValueP->columnStatsArray[predicateArray2Id][field2Id];
+
+    field1ValueStatsP->minValue = field2ValueStatsP->minValue = maxMinValue;
+    field1ValueStatsP->maxValue = field2ValueStatsP->maxValue = minMaxValue;
+    field1ValueStatsP->valuesNum = field2ValueStatsP->valuesNum = (inputArray1RowIds->rowsNum * inputArray2RowIds->rowsNum) / n;
+
+    field1ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray1Id], inputArray1RowIds, field1Id);
+    field2ValueStatsP->calculateDistinctValuesNum(inputArrays[inputArray2Id], inputArray2RowIds, field2Id);
+    uint64_t field1DistinctValuesNumAfterFilter = field1ValueStatsP->distinctValuesNum;
+    uint64_t field2DistinctValuesNumAfterFilter = field2ValueStatsP->distinctValuesNum;
+    field1ValueStatsP->distinctValuesNum = field2ValueStatsP->distinctValuesNum = (field1ValueStatsP->distinctValuesNum * field2ValueStatsP->distinctValuesNum) / n;
+    // field2ValueStatsP->distinctValuesNum = field1ValueStatsP->distinctValuesNum;
+
+    // handle rest of columns
+    updateColumnStats(inputArrays[inputArray1Id], inputArray1RowIds, field1Id, predicateArray1Id, valueP, newValueP, filterColumnStatsArray, field1DistinctValuesNumAfterFilter);
+    updateColumnStats(inputArrays[inputArray2Id], inputArray2RowIds, field2Id, predicateArray2Id, valueP, newValueP, filterColumnStatsArray, field2DistinctValuesNumAfterFilter);
+    // for (uint64_t j = 0; j < inputArrays[inputArray1Id]->columnsNum; j++) {
+    //     if (j == field1Id)
+    //         continue;
+        
+    //     ColumnStats* oldStatsP = &valueP->columnStatsArray[predicateArray1Id][j];
+    //     if (oldStatsP->valuesNum == -1) { // predicate array of 1st operand is used for the first time
+    //         oldStatsP = &filterColumnStatsArray[predicateArray1Id][j];
+    //     }
+
+    //     ColumnStats* valueStatsP = &newValueP->columnStatsArray[predicateArray1Id][field1Id];
+
+    //     valueStatsP->minValue = UINT64_MAX;
+    //     valueStatsP->maxValue = 0;
+
+    //     for (uint64_t i = 0; i < inputArray1RowIds->rowsNum; i++) {
+    //         uint64_t curValue = inputArrays[inputArray1Id]->columns[j][inputArray1RowIds->columns[0][i]];
+    //         if (curValue < valueStatsP->minValue) {
+    //             valueStatsP->minValue = curValue;
+    //         }
+    //         if (curValue > valueStatsP->maxValue) {
+    //             valueStatsP->maxValue = curValue;
+    //         }
+    //     }
+                
+    //     valueStatsP->valuesNum = field1ValueStatsP->valuesNum;
+
+    //     // if C attribute poy anhkei sto A h sto B ??
+    //     valueStatsP->calculateDistinctValuesNum(inputArrays[inputArray1Id], inputArray1RowIds, j);
+    //     uint64_t powOp = (uint64_t) pow((double) (1 - (field1ValueStatsP->distinctValuesNum / field1DistinctValuesNumAfterFilter)), (double) (inputArray1RowIds->rowsNum / valueStatsP->distinctValuesNum));
+    //     valueStatsP->distinctValuesNum = valueStatsP->distinctValuesNum * (1 - powOp);
+    // }
+
+    return newValueP;
+}
+
+uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputArrays,ColumnStats** filterColumnStatsArray)
 {
     int Rnum=4;
     // Ri* theRs;
@@ -523,15 +656,16 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,i
                 // TODO: if (NoCrossProducts && !connected(curPredicate, curCombination))
                 //          continue;
 
-                // TODO: CurrTree = CreateJoinTree(Map(S), curPredicate) // CreateJoinTree() will create a Value object and it will calculate the cost of the new tree
-
                 // S' = S U {Rj}
                 // ( S' = newPredicateArray )
-                PredicateArray newPredicateArray(curCombination->size + 1);
-                newPredicateArray.populate(curCombination);
+                PredicateArray* newPredicateArray = new PredicateArray(curCombination->size + 1);
+                newPredicateArray->populate(curCombination);
                 // newPredicateArray.array[newPredicateArray.size - 1].fieldId = curPredicate->fieldId;
                 // newPredicateArray.array[newPredicateArray.size - 1].predicateArrayId = curPredicate->predicateArrayId;
-                newPredicateArray.array[newPredicateArray.size - 1] = (*curPredicate);
+                newPredicateArray->array[newPredicateArray->size - 1] = (*curPredicate);
+
+                // Almost done: CurrTree = CreateJoinTree(Map(S), curPredicate) // CreateJoinTree() will create a Value object and it will calculate the cost of the new tree
+                // Value* newValue = createJoinTree(/*map.retrieve(curCombination)*/, newPredicateArray, relationids, relationsum, filterColumnStatsArray, inputArrays);
 
                 // TODO: if (Map(S') == NULL || cost(Map(S')) > cost(CurrTree))
                 //          Map(S') = CurrTree;

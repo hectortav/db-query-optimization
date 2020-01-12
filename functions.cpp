@@ -15,6 +15,7 @@ pthread_cond_t* predicateJobsDoneConds;
 pthread_cond_t *jobsCounterConds;
 pthread_mutex_t queryJobDoneMutex;
 pthread_cond_t queryJobDoneCond;
+int available_threads;
 
 bool** lastJobDoneArrays;
 // bool* queryJobDoneArray;
@@ -40,6 +41,33 @@ relation::~relation()
 {
     if (tuples != NULL)
         delete [] tuples;
+}
+
+void ColumnStats::calculateDistinctValuesNum(const InputArray* inputArray, InputArray* inputArrayRowIds, uint64_t columnIndex) {
+    uint64_t boolArraySize = maxValue - minValue + 1;
+    bool arraySizeCut = false;
+    if (boolArraySize > MAX_BOOLEAN_ARRAY_SIZE) {
+        boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
+        arraySizeCut = true;
+    }
+    distinctValuesNum = valuesNum;
+    bool* boolArray=new bool[boolArraySize]{false};
+
+    uint64_t rowsNum = inputArrayRowIds != NULL ? inputArrayRowIds->rowsNum : inputArray->rowsNum;
+    for (uint64_t j = 0; j < rowsNum; j++) {
+        uint64_t pureRowIndex = inputArrayRowIds != NULL ? inputArrayRowIds->columns[0][j] : j;
+        uint64_t boolArrayIndex = inputArray->columns[columnIndex][pureRowIndex] - minValue;
+        if (arraySizeCut) {
+            boolArrayIndex %= MAX_BOOLEAN_ARRAY_SIZE;
+        }
+
+        if (!boolArray[boolArrayIndex]) {
+            boolArray[boolArrayIndex] = true;
+        } else {
+            distinctValuesNum--;
+        }
+    }
+    delete[] boolArray;
 }
 
 InputArray::InputArray(uint64_t rowsNum, uint64_t columnsNum) {
@@ -1011,27 +1039,28 @@ InputArray** readArrays() {
                 }
             }
 
-            uint64_t boolArraySize = curStats->maxValue - curStats->minValue + 1;
-            bool arraySizeCut = false;
-            if (boolArraySize > MAX_BOOLEAN_ARRAY_SIZE) {
-                boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
-                arraySizeCut = true;
-            }
-            curStats->distinctValuesNum = curStats->valuesNum;
-            bool* boolArray=new bool[boolArraySize]{false};
-            for (uint64_t j = 0; j < rowsNum; j++) {
-                uint64_t boolArrayIndex = curInputArray->columns[i][j] - curStats->minValue;
-                if (arraySizeCut) {
-                    boolArrayIndex %= MAX_BOOLEAN_ARRAY_SIZE;
-                }
+            curStats->calculateDistinctValuesNum(curInputArray, NULL, i);
+            // uint64_t boolArraySize = curStats->maxValue - curStats->minValue + 1;
+            // bool arraySizeCut = false;
+            // if (boolArraySize > MAX_BOOLEAN_ARRAY_SIZE) {
+            //     boolArraySize = MAX_BOOLEAN_ARRAY_SIZE;
+            //     arraySizeCut = true;
+            // }
+            // curStats->distinctValuesNum = curStats->valuesNum;
+            // bool* boolArray=new bool[boolArraySize]{false};
+            // for (uint64_t j = 0; j < rowsNum; j++) {
+            //     uint64_t boolArrayIndex = curInputArray->columns[i][j] - curStats->minValue;
+            //     if (arraySizeCut) {
+            //         boolArrayIndex %= MAX_BOOLEAN_ARRAY_SIZE;
+            //     }
 
-                if (!boolArray[boolArrayIndex]) {
-                    boolArray[boolArrayIndex] = true;
-                } else {
-                    curStats->distinctValuesNum--;
-                }
-            }
-            delete[] boolArray;
+            //     if (!boolArray[boolArrayIndex]) {
+            //         boolArray[boolArrayIndex] = true;
+            //     } else {
+            //         curStats->distinctValuesNum--;
+            //     }
+            // }
+            // delete[] boolArray;
         }
 
         fclose(fileP);
@@ -1163,7 +1192,8 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
         // std::cout<<std::endl;
         pthread_mutex_lock(&queryJobDoneMutex);
         queryJobDone--;
-        if(queryJobDone==0)
+        available_threads++;
+        // if(queryJobDone==0)
             pthread_cond_signal(&queryJobDoneCond);
         pthread_mutex_unlock(&queryJobDoneMutex);
 

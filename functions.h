@@ -35,6 +35,7 @@ extern pthread_cond_t *jobsCounterConds;
 // pthread_cond_t* queryJobDoneConds;
 extern pthread_mutex_t queryJobDoneMutex;
 extern pthread_cond_t queryJobDoneCond;
+extern int available_threads;
 
 extern bool** lastJobDoneArrays;
 // extern bool* queryJobDoneArray;
@@ -87,6 +88,8 @@ class ColumnEnumStats {
         }
 };
 
+class InputArray;
+
 class ColumnStats {
     public:
         uint64_t minValue, maxValue, valuesNum, distinctValuesNum;
@@ -94,9 +97,11 @@ class ColumnStats {
         ColumnStats() {
             minValue = 0;
             maxValue = 0;
-            valuesNum = 0;
+            valuesNum = -1;
             distinctValuesNum = 0;
         }
+
+        void calculateDistinctValuesNum(const InputArray* inputArray, InputArray* inputArrayRowIds, uint64_t columnIndex);
 };
 
 class InputArray
@@ -105,7 +110,6 @@ class InputArray
     uint64_t rowsNum, columnsNum;
     uint64_t** columns;
     ColumnStats* columnsStats;
-    ColumnEnumStats* columnsEnumStats;
 
     InputArray(uint64_t rowsNum, uint64_t columnsNum);
     InputArray(uint64_t rowsNum);  // initialization for storing row ids

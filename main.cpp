@@ -55,7 +55,6 @@ int main(int argc,char** argv)
     // scheduler = new JobScheduler(16, 1000000000);
     pthread_mutex_init(&queryJobDoneMutex,NULL);
     pthread_cond_init(&queryJobDoneCond,NULL);
-    int available_threads;
     if(queryMode==parallel)
         available_threads=scheduler->getThreadsNum()-1;
     while(1)
@@ -77,9 +76,10 @@ int main(int argc,char** argv)
         // queryJobDoneArray = new bool[lines];
         QueryResult=new char*[lines];
         jobsCounter = new int64_t[lines];
-        if(queryMode==parallel && available_threads<lines)
-            queryJobDone=available_threads;
-        else queryJobDone=lines;
+        // if(queryMode==parallel && available_threads<lines)
+        //     queryJobDone=available_threads;
+        // else
+        queryJobDone=lines;
         int Queries_Run=0;
         // std::cout<<"total queries: "<<lines<<std::endl;
         for (int i = 0; i < lines; i++) {
@@ -100,24 +100,33 @@ int main(int argc,char** argv)
             if (queryMode == serial) {
                 handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
             } else if (queryMode == parallel) {
-                if(available_threads>0)
-                {
+                pthread_mutex_lock(&queryJobDoneMutex);
+                while (available_threads == 0) {
+                    pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
+                }
+                pthread_mutex_unlock(&queryJobDoneMutex);
+
+                // if(available_threads>0)
+                // {
                     scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i), -1);
-                    available_threads--;
-                    Queries_Run++;
-                }
-                else
-                {
                     pthread_mutex_lock(&queryJobDoneMutex);
-                    while(queryJobDone>0)
-                        pthread_cond_wait(&queryJobDoneCond,&queryJobDoneMutex);
+                    available_threads--;
                     pthread_mutex_unlock(&queryJobDoneMutex);
-                    available_threads=scheduler->getThreadsNum()-1;
-                    if(available_threads<lines-Queries_Run)
-                        queryJobDone=available_threads;
-                    else queryJobDone=lines-Queries_Run;
-                    i--;
-                }
+
+                    // Queries_Run++;
+                // }
+                // else
+                // {
+                //     pthread_mutex_lock(&queryJobDoneMutex);
+                //     while(queryJobDone>0)
+                //         pthread_cond_wait(&queryJobDoneCond,&queryJobDoneMutex);
+                //     pthread_mutex_unlock(&queryJobDoneMutex);
+                //     available_threads=scheduler->getThreadsNum()-1;
+                //     if(available_threads<lines-Queries_Run)
+                //         queryJobDone=available_threads;
+                //     else queryJobDone=lines-Queries_Run;
+                //     i--;
+                // }
             }
         }
 
