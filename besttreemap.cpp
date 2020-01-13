@@ -1,5 +1,7 @@
 #include "besttreemap.h"
 
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
 Statistics::Statistics(int min,int max,int numdiscrete,int size)
 {
     this->min=min;
@@ -141,20 +143,20 @@ bool PredicateArray::operator ==(PredicateArray& array)
             return 0;
     }
     
-    // for(int i=0;i<array.size;i++)
-    // {
-    //     int found=0;
-    //     for(int j=0;j<this->size;j++)
-    //     {
-    //         if(this->array[j]==array.array[i])
-    //         {
-    //             found=1;
-    //             break;
-    //         }
-    //     }
-    //     if(found==0)
-    //         return 0;
-    // }
+    for(int i=0;i<array.size;i++)
+    {
+        int found=0;
+        for(int j=0;j<this->size;j++)
+        {
+            if(this->array[j]==array.array[i])
+            {
+                found=1;
+                break;
+            }
+        }
+        if(found==0)
+            return 0;
+    }
     //MIGHT NEED UNCOMMENTING! WILL SEE
     return 1;
 }
@@ -182,7 +184,7 @@ Key::Key(int sz)
 
 Key::~Key()
 {
-    delete[] this->KeyArray;
+    delete this->KeyArray;
 }
 
 Value::Value(int sz)
@@ -213,9 +215,9 @@ int factorial(int x)
 
 Map::Map(int queryArraysNum)
 {
-    values=new Value*[queryArraysNum*queryArraysNum];
-    keys=new Key*[queryArraysNum*queryArraysNum];
-    for (uint64_t i = 0; i < queryArraysNum*queryArraysNum; i++) {
+    values=new Value*[(uint64_t) pow(queryArraysNum,queryArraysNum)];
+    keys=new Key*[(uint64_t) pow(queryArraysNum,queryArraysNum)];
+    for (uint64_t i = 0; i < (uint64_t)pow(queryArraysNum,queryArraysNum); i++) {
         values[i] = NULL;
         keys[i] = NULL;
     }
@@ -224,12 +226,12 @@ Map::Map(int queryArraysNum)
 
 Map::~Map()
 {
-    // for (uint64_t i = 0; i < cursize; i++) {
-    //     if (values[i] != NULL)
-    //         delete values[i];
-    //     if (keys[i] != NULL)
-    //         delete keys[i];
-    // }
+    for (uint64_t i = 0; i < cursize; i++) {
+        if (values[i] != NULL)
+            delete values[i];
+        if (keys[i] != NULL)
+            delete keys[i];
+    }
     delete[] values;
     delete[] keys;
 }
@@ -540,9 +542,9 @@ void updateColumnStats(const InputArray* pureInputArray, uint64_t joinFieldId, i
         ColumnStats* oldStatsP = &valueP->columnStatsArray[predicateArrayId][j];
         if (oldStatsP->changed == false) { // predicate array is used for the first time
             oldStatsP = &filterColumnStatsArray[predicateArrayId][j];
-            if (oldStatsP->changed == false) {
-                oldStatsP = &pureInputArray->columnsStats[j];
-            }
+            // if (oldStatsP->changed == false) {
+            //     oldStatsP = &pureInputArray->columnsStats[j];
+            // }
         }
 
         ColumnStats* valueStatsP = &newValueP->columnStatsArray[predicateArrayId][j];
@@ -633,9 +635,11 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
     // std::cout<<"predicateArray1Id: "<<predicateArray1Id<<", field1Id: "<<field1Id<<", predicateArray2Id: "<<predicateArray2Id<<", field2Id: "<<field2Id<<std::endl;
     if (field1OldStatsP->changed == false) { // predicate array of 1st operand is used for the first time
         field1OldStatsP = &filterColumnStatsArray[predicateArray1Id][field1Id];
-        if (field1OldStatsP->changed == false) {
-            field1OldStatsP = &inputArrays[inputArray1Id]->columnsStats[field1Id];
-        }
+        // if (field1OldStatsP->changed == false) {
+        //                 std::cout<<"blaaaaaaaaaaaaaaaaa"<<std::endl;
+
+        //     field1OldStatsP = &inputArrays[inputArray1Id]->columnsStats[field1Id];
+        // }
         // std::cout<<"field1OldStatsP->valuesNum: "<<field1OldStatsP->valuesNum<<std::endl;
     }
             // std::cout<<"createJoinTree 3.3"<<std::endl;
@@ -644,9 +648,12 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
                 // std::cout<<"createJoinTree 3.35"<<std::endl;
 
         field2OldStatsP = &filterColumnStatsArray[predicateArray2Id][field2Id];
-        if (field2OldStatsP->changed == false) {
-            field2OldStatsP = &inputArrays[inputArray2Id]->columnsStats[field2Id];
-        }
+        // if (field2OldStatsP->changed == false) {
+        //                             std::cout<<"blaaaaaaaaaaaaaaaaa"<<std::endl;
+
+        //     field2OldStatsP = &inputArrays[inputArray2Id]->columnsStats[field2Id];
+
+        // }
                 // std::cout<<"field2OldStatsP->valuesNum: "<<field2OldStatsP->valuesNum<<std::endl;
 
     }
@@ -856,7 +863,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
 
         }
         // 2xcolumns
-        value->ValueArray = keyValuePredicateArray;
+        memcpy(value->ValueArray->array, keyValuePredicateArray->array, sizeof(Predicate));
                         // std::cout<<"5, i "<<i<<std::endl;
         
         bestTreeMap->insert(keyValuePredicateArray, value);
@@ -963,8 +970,14 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
     // swap(&predicateOperandArray, 0, 1);
     //     std::cout<<predicateOperandArray.array[0].predicateArrayId<<std::endl;
     //     std::cout<<predicateOperandArray.array[0].fieldId<<std::endl;
+    // std::cout<<"thread id: "<<pthread_self()<<"    key to find: ";
+    // joinPredicateArray->print();
+    // bestTreeMap->print();
     uint64_t** newJoinPreds = bestTreeMap->retrieve(joinPredicateArray)->ValueArray->toUintArray();
+    // std::cout<<"thread id: "<<pthread_self()<<"      gagsfgadgasgfgasfgasfgaagag"<<std::endl;
     delete bestTreeMap;
+        // std::cout<<"thread id: "<<pthread_self()<<"       after delete"<<std::endl;
+    delete joinPredicateArray;
     return newJoinPreds;
 }
 
@@ -1040,7 +1053,10 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
     // }
     FilterStats(Filters,FiltersNum,relationsum,relationids,inputarr,Stats);
     // std::cout<<"o"<<std::endl;
+    
     uint64_t** best=BestPredicateOrder(NonFilters,cntr-FiltersNum,relationsum,relationids,inputarr,Stats);
+
+
     int next=0;
     for(int i=0;i<FiltersNum;i++)
     {

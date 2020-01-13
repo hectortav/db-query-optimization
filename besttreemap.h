@@ -47,7 +47,7 @@ public:
 class Key{
 public:
     PredicateArray* KeyArray;
-    Key() {};
+    Key() {this->KeyArray = NULL;};
     Key(int);
     ~Key();
 };
