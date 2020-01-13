@@ -191,12 +191,14 @@ Value::Value(int sz)
     // this->ValueArray->array=arr;
     // this->ValueArray->size=sz;
     this->stats=NULL;
+    this->columnStatsArray = NULL;
+    this->cost=0;
 }
 Value::~Value()
 {
     delete this->ValueArray;
-    if(stats!=NULL)
-        delete stats;
+    // if(columnStatsArray!=NULL)
+    //     delete columnStatsArray;
 }
 
 int factorial(int x)
@@ -211,23 +213,30 @@ int factorial(int x)
 
 Map::Map(int queryArraysNum)
 {
-    values=new Value*[factorial(queryArraysNum)];
-    keys=new Key*[factorial(queryArraysNum)];
+    values=new Value*[queryArraysNum*queryArraysNum];
+    keys=new Key*[queryArraysNum*queryArraysNum];
+    for (uint64_t i = 0; i < queryArraysNum*queryArraysNum; i++) {
+        values[i] = NULL;
+        keys[i] = NULL;
+    }
     cursize=0;
 }
 
 Map::~Map()
 {
+    // for (uint64_t i = 0; i < cursize; i++) {
+    //     if (values[i] != NULL)
+    //         delete values[i];
+    //     if (keys[i] != NULL)
+    //         delete keys[i];
+    // }
     delete[] values;
     delete[] keys;
 }
 
 bool Map::insert(PredicateArray* key,Value* value)
 {
-    if (value == NULL) {
-        std::cout<<"wut 2"<<std::endl;
-        getchar();
-    }
+
     // std::cout<<"insert 1"<<std::endl;
     int ifexists=exists(key);
         // std::cout<<"insert 2"<<std::endl;
@@ -237,7 +246,8 @@ bool Map::insert(PredicateArray* key,Value* value)
     {
                 // std::cout<<"insert exists ifexists: "<<ifexists<<"size: "<<this->cursize<<std::endl;
 
-        // delete values[ifexists];                
+        delete values[ifexists];       
+        values[ifexists]=NULL;         
         // std::cout<<"insert exists1"<<std::endl;
 
         values[ifexists]=value;
@@ -247,7 +257,7 @@ bool Map::insert(PredicateArray* key,Value* value)
         // std::cout<<"not exists 1"<<std::endl;
         values[cursize]=value;
                 // std::cout<<"not exists 2"<<std::endl;
-
+        // std::cout<<"cursize: "<<cursize<<std::endl;
         keys[cursize] = new Key();
         keys[cursize]->KeyArray=key;
                 // std::cout<<"not exists 3"<<std::endl;
@@ -581,7 +591,8 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
     Predicate* newPredicateP = &newPredicateArrayP->array[newPredicateArrayP->size - 1];
     // std::cout<<"createJoinTree 1"<<std::endl;
     Value* newValueP = new Value();
-    newValueP->ValueArray = newPredicateArrayP;
+    newValueP->ValueArray = new PredicateArray(newPredicateArrayP->size);
+    memcpy(newValueP->ValueArray->array, newPredicateArrayP->array, sizeof(Predicate)*newPredicateArrayP->size);
         // std::cout<<"createJoinTree 1.1"<<std::endl;
 
     newValueP->columnStatsArray = new ColumnStats*[relationsnum];
@@ -823,12 +834,16 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         //     resultArray[j].print();
         // }
     // std::cout<<"1"<<std::endl;
-    Map* bestTreeMap = new Map(relationsnum);
-    for (int i = 0; i < relationsnum; i++) {
+    Map* bestTreeMap = new Map(cntr);
+    for (int i = 0; i < cntr; i++) {
                     // std::cout<<"outer loop i "<<i<<std::endl;
 
         PredicateArray* keyValuePredicateArray = new PredicateArray(1);
         keyValuePredicateArray->array[0] = joinPredicateArray->array[i];
+        // keyValuePredicateArray->array[0].field1Id = joinPredicateArray->array[i].field1Id;
+        // keyValuePredicateArray->array[0].field2Id = joinPredicateArray->array[i].field2Id;
+        // keyValuePredicateArray->array[0].predicateArray1Id = joinPredicateArray->array[i].predicateArray1Id;
+        // keyValuePredicateArray->array[0].predicateArray2Id= joinPredicateArray->array[i].predicateArray2Id;
         Value* value = new Value(1);
         value->columnStatsArray = new ColumnStats*[relationsnum];
         for (int i = 0; i < relationsnum; i++) {
@@ -848,10 +863,10 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
     }
     // std::cout<<"2"<<std::endl;
 
-    for (int i = 1; i < relationsnum; i++) {
+    for (int i = 1; i < cntr; i++) {
         // std::cout<<"i "<<i<<std::endl;
         nextIndex = 0;
-        int curCombinationsNum = getCombinationsNum(relationsnum, i);
+        int curCombinationsNum = getCombinationsNum(cntr, i);
                 // std::cout<<"1"<<std::endl;
 
         // std::cout<<curCombinationsNum<<std::endl;
@@ -932,6 +947,8 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                     // std::cout<<"will insert in bestpredicateorder: "<<std::endl;
                     // newPredicateArray->print();
                     bestTreeMap->insert(newPredicateArray, newValue);
+                } else {
+                    delete newValue;
                 }
             }
         }
@@ -954,15 +971,15 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
 uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr)
 {
     //******************************missing case for σ A=B ???? is it filter on bestpredicate function?
-    std::cout<<"before optimization"<<std::endl;
-    for(int i=0;i<cntr;i++)
-    {
-        for(int j=0;j<5;j++)
-        {
-            std::cout<<currentpreds[i][j]<<" ";
-        }
-        std::cout<<std::endl;
-    }
+    // std::cout<<"before optimization"<<std::endl;
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<currentpreds[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
 
     // for(int i=0;i<relationsum;i++)
     // {
@@ -1036,15 +1053,15 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
         next++;
     }
     delete[] best;
-    std::cout<<"after optimization"<<std::endl;
-    for(int i=0;i<cntr;i++)
-    {
-        for(int j=0;j<5;j++)
-        {
-            std::cout<<Final[i][j]<<" ";
-        }
-        std::cout<<std::endl;
-    }
+    // std::cout<<"after optimization"<<std::endl;
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<Final[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
     return Final;
     // for(int i=0;i<relationsum;i++)
     // {
@@ -1135,10 +1152,10 @@ void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids
 
 
 
-                uint64_t base=1-(Stats[array][field].valuesNum / oldF);
-                uint64_t exponent=Stats[array][field].valuesNum / Stats[array][field].distinctValuesNum;
+                double base=(double)1-(double)((double)Stats[array][field].valuesNum / (double)oldF);
+                double exponent=(double)Stats[array][field].valuesNum / (double)Stats[array][field].distinctValuesNum;
 
-                Stats[array][field].distinctValuesNum=Stats[array][filternum].distinctValuesNum=Stats[array][field].distinctValuesNum * (1-(pow(base,exponent)));
+                Stats[array][field].distinctValuesNum=Stats[array][filternum].distinctValuesNum=Stats[array][field].distinctValuesNum * (double)((double)1-(double)(pow((double)base,(double)exponent)));
 
             }
             

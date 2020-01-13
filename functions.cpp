@@ -228,7 +228,7 @@ void IntermediateArray::extractFieldToRelation(relation* resultRelation, const I
     resultRelation->tuples = new tuple[resultRelation->num_tuples];
 
     uint64_t columnIndex = findColumnIndexByPredicateArrayId(predicateArrayId);
-
+    // std::cout<<"index: "<<columnIndex<<std::endl;
     for (uint64_t i = 0; i < rowsNum; i++) {
         uint64_t inputArrayRowId = this->results[columnIndex][i];
         
@@ -636,6 +636,7 @@ void joinparallel(tuple* R, tuple* S, int Rsize, int Sstart, int Send,list* lst,
                 case -1:
                     if(s+1<Send&&S[s].payload==S[s+1].payload)
                         samestart=s;
+                    break;
                 default:
                     if(S[samestart].payload!=S[s].payload)  
                         samestart=-1;
@@ -1309,12 +1310,21 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
 {
     int cntr;
     uint64_t** preds=splitpreds(part,cntr);
-    preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
+    // preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
     // xxx++;
     // if(xxx==1)
     // {
-        // preds = OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
+        preds = OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
         // exit(1);
+    // }
+    // std::cout<<"after optimization"<<std::endl;
+    // for(int i=0;i<cntr;i++)
+    // {
+    //     for(int j=0;j<5;j++)
+    //     {
+    //         std::cout<<preds[i][j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
     // }
     InputArray** inputArraysRowIds = new InputArray*[relationsnum];
     for (int i = 0; i < relationsnum; i++) {
@@ -1392,17 +1402,29 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         relation rel1, rel2;
         bool rel2ExistsInIntermediateArray = false;
 
+        // std::cout<<"predicateArray1Id: "<<predicateArray1Id<<", field1Id: "<<field1Id<<", predicateArray2Id: "<<predicateArray2Id<<", field2Id: "<<field2Id<<std::endl;
+
         // fill rel1
         if (curIntermediateArray == NULL || !curIntermediateArray->hasInputArrayId(inputArray1Id)) {
+                                    // std::cout<<"predicateArray1Id does NOT exist in intermediate array"<<std::endl;
+
             inputArray1RowIds->extractColumnFromRowIds(rel1, field1Id, inputArray1);
         } else {
+                        // std::cout<<"predicateArray1Id exists in intermediate array"<<std::endl;
+
+
             curIntermediateArray->extractFieldToRelation(&rel1, inputArray1, predicateArray1Id, field1Id);
         }
 
         // fill rel2
         if (curIntermediateArray == NULL || inputArray1Id == inputArray2Id || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
+                                    // std::cout<<"predicateArray2Id does NOT exist in intermediate array"<<std::endl;
+
             inputArray2RowIds->extractColumnFromRowIds(rel2, field2Id, inputArray2);
         } else {
+                                    // std::cout<<"predicateArray2Id exists in intermediate array"<<std::endl;
+
+
             rel2ExistsInIntermediateArray = true;
             curIntermediateArray->extractFieldToRelation(&rel2, inputArray2, predicateArray2Id, field2Id);
         }
@@ -1430,7 +1452,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         // std::cout<<"rel2 size: "<<reorderedRel2->num_tuples<<std::endl;
         tuple* t2 = NULL;
         bool shouldSortRel2 = handleReorderRel(&rel2, &t2, preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin, queryIndex, 1);
-
+        // std::cout<<"shouldSortRel1: "<<shouldSortRel1<<", shouldSortRel2: "<<shouldSortRel2<<std::endl;
         // tuple* t2 = NULL;
         // bool shouldSortRel2 = shouldSort(preds, cntr, i, predicateArray2Id, field2Id, prevPredicateWasFilterOrSelfJoin);
         //                     // std::cout<<"shouldSortRel2: "<<shouldSortRel2<<std::endl;
@@ -1465,16 +1487,19 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
             // scheduler = NULL;
 
         }
-        // std::cout<<cntrcntr<<std::endl;
-
-        // std::cout<<"-------------MAIN THREAD5"<<std::endl;
         
+        // std::cout<<cntrcntr<<std::endl;
+        // rel1.print();
+        
+        // rel2.print();
+        // std::cout<<"-------------MAIN THREAD5"<<std::endl;
         if (t1 != NULL)
             delete[] t1;
         if (t2 != NULL)
             delete[] t2;
         result* rslt;
         if (joinMode == serial) {
+            // rel2ExistsInIntermediateArray = false;
             rslt= join(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
         } else if (joinMode == parallel) {
             rslt = managejoin(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2,queryIndex);
@@ -1485,7 +1510,15 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
             handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, false);
             return NULL;
         }
+        // rslt->lst->print();
+        // std::cout<<rslt->lst->rows<<std::endl;
         uint64_t** resultArray=rslt->lst->lsttoarr();
+        // for (uint64_t i = 0; i < rslt->lst->rows; i++) {
+        //     for (uint64_t j = 0; j < rslt->lst->rowsz; j++) {
+        //         std::cout<<resultArray[j][i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        // }
         uint64_t rows=rslt->lst->rows;
         uint64_t rowsz=rslt->lst->rowsz;
         handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, true);
@@ -1501,6 +1534,8 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
             IntermediateArray* newIntermediateArray = new IntermediateArray(curIntermediateArray->columnsNum + 1);
             newIntermediateArray->populate(resultArray, rows, curIntermediateArray, -1, rel2ExistsInIntermediateArray ? inputArray1Id : inputArray2Id, -1, rel2ExistsInIntermediateArray ? predicateArray1Id : predicateArray2Id);
             delete curIntermediateArray;
+            // std::cout<<"interm array size: "<<newIntermediateArray->rowsNum<<std::endl;
+            // newIntermediateArray->print();
             curIntermediateArray = newIntermediateArray;
         }
         prevPredicateWasFilterOrSelfJoin = false;
@@ -1565,7 +1600,8 @@ void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* p
             if(rowarr!=NULL)
             {
                 uint64_t key;
-                key=rowarr->predicateArrayIds[predicatearray];
+                // key=rowarr->predicateArrayIds[predicatearray];
+                key=rowarr->findColumnIndexByPredicateArrayId(predicatearray);
                 for(uint64_t i =0;i<rowarr->rowsNum;i++)
                 {
                     sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
@@ -1641,7 +1677,8 @@ void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* p
                 if(rowarr!=NULL)
                 {
                     uint64_t key;
-                    key=rowarr->predicateArrayIds[predicatearray];
+                    // key=rowarr->predicateArrayIds[predicatearray];
+                    key=rowarr->findColumnIndexByPredicateArrayId(predicatearray);
                     for(uint64_t i =0;i<rowarr->rowsNum;i++)
                     {
                         sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
@@ -1688,7 +1725,8 @@ void handleprojectionparallel(IntermediateArray* rowarr,const InputArray** array
     if(rowarr!=NULL)
     {
         uint64_t key;
-        key=rowarr->predicateArrayIds[predicatearray];
+        // key=rowarr->predicateArrayIds[predicatearray];
+        key=rowarr->findColumnIndexByPredicateArrayId(predicatearray);
         for(uint64_t i =0;i<rowarr->rowsNum;i++)
         {
             sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];

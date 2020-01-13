@@ -63,7 +63,7 @@ public:
     ColumnStats** columnStatsArray; // size: relationsnum x each InputArray's columnNum
     uint64_t cost;
 
-    Value() {};
+    Value() {cost = 0;};
     Value(int);
     ~Value();
 };
