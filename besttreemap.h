@@ -23,6 +23,8 @@ class Predicate {
         bool operator ==(Predicate &predicate);
         bool hasCommonArray(Predicate &predicate);
         void print(bool printEndl);
+        bool issame(Predicate& prdct);
+
 };
 
 class PredicateArray
@@ -88,7 +90,7 @@ public:
 class InputArray;
 
 uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats );
-uint64_t** OptimizePredicates(uint64_t**,int,int,int*,const InputArray**);
+uint64_t** OptimizePredicates(uint64_t**,int&,int,int*,const InputArray**);
 void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats);
 
 

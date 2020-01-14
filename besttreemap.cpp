@@ -160,7 +160,9 @@ bool PredicateArray::operator ==(PredicateArray& array)
     //MIGHT NEED UNCOMMENTING! WILL SEE
     return 1;
 }
-
+// 0.1=1.0
+// 0.1=1.0
+// 1.0=0.1
 uint64_t** PredicateArray::toUintArray() {
     uint64_t** preds = new uint64_t*[size];
     for (int i = 0; i < size; i++) {
@@ -174,7 +176,17 @@ uint64_t** PredicateArray::toUintArray() {
 
     return preds;
 }
-
+bool Predicate::issame(Predicate& prdct)
+{
+    if(*this==prdct)
+        return true;
+    Predicate p1;
+    p1.init(prdct.predicateArray2Id,prdct.field2Id,prdct.predicateArray1Id,prdct.field1Id);
+    if(*this==p1)
+        return true;
+    
+    return false;
+}
 Key::Key(int sz)
 {
     this->KeyArray=new PredicateArray(sz);
@@ -973,7 +985,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         //     resultArray[j].print();
         // }
     // std::cout<<"1"<<std::endl;
-    Map* bestTreeMap = new Map(cntr);
+    Map* bestTreeMap = new Map(7);
     for (int i = 0; i < cntr; i++) {
                     // std::cout<<"outer loop i "<<i<<std::endl;
 
@@ -1072,6 +1084,10 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                 // Almost done: CurrTree = CreateJoinTree(Map(S), curPredicate) // CreateJoinTree() will create a Value object and it will calculate the cost of the new tree
                 Value* curCombinationValue = bestTreeMap->retrieve(curCombination);
                 if (curCombinationValue == NULL) {
+                    // std::cout<<"currcombinationvalue is null"<<std::endl;
+                    // curCombination->print();
+                    // std::cout<<"new predicate array: "<<std::endl;
+                    // newPredicateArray->print();
                     continue;
                 }
                                     // std::cout<<"3.5 k "<<k<<std::endl;
@@ -1107,9 +1123,11 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
     // std::cout<<"thread id: "<<pthread_self()<<"    key to find: ";
     // joinPredicateArray->print();
     // bestTreeMap->print();
-    Value* dummy = bestTreeMap->retrieve(joinPredicateArray);
+    // Value* dummy = bestTreeMap->retrieve(joinPredicateArray);
     // if (dummy == NULL) {
     //     std::cout<<"aaaaaaaaaaaaaaaaaagaggagagagagag"<<std::endl;
+    //     joinPredicateArray->print();
+    //     bestTreeMap->print();
     // }
     uint64_t** newJoinPreds = bestTreeMap->retrieve(joinPredicateArray)->ValueArray->toUintArray();
     // std::cout<<"thread id: "<<pthread_self()<<"      gagsfgadgasgfgasfgasfgaagag"<<std::endl;
@@ -1119,7 +1137,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
     return newJoinPreds;
 }
 
-uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr)
+uint64_t** OptimizePredicates(uint64_t** currentpreds,int& cntr,int relationsum,int*relationids,const InputArray** inputarr)
 {
     //******************************missing case for σ A=B ???? is it filter on bestpredicate function?
     // std::cout<<"before optimization"<<std::endl;
@@ -1131,6 +1149,7 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
     //     }
     //     std::cout<<std::endl;
     // }
+    
 
     // for(int i=0;i<relationsum;i++)
     // {
@@ -1170,6 +1189,42 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
             //nofilter
         }
     }
+
+    int nonfiltersnum=cntr-FiltersNum;
+    PredicateArray* Preds=new PredicateArray(nonfiltersnum,NonFilters);
+    // std::cout<<"preds start"<<std::endl;
+    // Preds->print();
+    // std::cout<<"preds end"<<std::endl;
+    PredicateArray* NewPreds=new PredicateArray(nonfiltersnum);
+    for(int i=0;i<nonfiltersnum;i++)
+    {
+        delete NonFilters[i];
+    }
+    delete[] NonFilters;
+
+    nonfiltersnum=0;
+    for(int i=0;i<Preds->size;i++)
+    {
+        bool found=0;
+        for(int j=0;j<nonfiltersnum;j++)
+        {
+            if(Preds->array[i].issame(Preds->array[j]))
+            {
+               found=1; 
+            }
+        }
+        if(!found)
+            NewPreds->array[nonfiltersnum++]=Preds->array[i];
+
+
+    }
+    NewPreds->size=nonfiltersnum;
+    delete Preds;
+    uint64_t** newpreds=NewPreds->toUintArray();
+    // NewPreds->print();
+    delete NewPreds;
+    cntr=nonfiltersnum+FiltersNum;
+
     // delete[] currentpreds;
     // std::cout<<"Filters: "<<std::endl;
     // for(int i=0;i<FiltersNum;i++)
@@ -1192,7 +1247,7 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
     FilterStats(Filters,FiltersNum,relationsum,relationids,inputarr,Stats);
     // std::cout<<"o"<<std::endl;
     
-    uint64_t** best=BestPredicateOrder(NonFilters,cntr-FiltersNum,relationsum,relationids,inputarr,Stats);
+    uint64_t** best=BestPredicateOrder(newpreds,nonfiltersnum,relationsum,relationids,inputarr,Stats);
 
 
     int next=0;
@@ -1201,7 +1256,7 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int cntr,int relationsum,i
         Final[next]=Filters[i];
         next++;
     }
-    for(int i=0;i<cntr-FiltersNum;i++)
+    for(int i=0;i<nonfiltersnum;i++)
     {
         Final[next]=best[i];
         next++;

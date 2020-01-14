@@ -227,7 +227,7 @@ IntermediateArray::~IntermediateArray() {
 void IntermediateArray::extractFieldToRelation(relation* resultRelation, const InputArray* inputArray, int predicateArrayId, uint64_t fieldId) {
     resultRelation->num_tuples = rowsNum;
     resultRelation->tuples = new tuple[resultRelation->num_tuples];
-
+    // std::cout<<"pred arr id: "<<predicateArrayId<<std::endl;
     uint64_t columnIndex = findColumnIndexByPredicateArrayId(predicateArrayId);
     // std::cout<<"index: "<<columnIndex<<std::endl;
     for (uint64_t i = 0; i < rowsNum; i++) {
@@ -298,7 +298,7 @@ bool IntermediateArray::hasPredicateArrayId(int predicateArrayId) {
         }
     }
     return false;
-}
+} 
 
 void IntermediateArray::print() {
     printf("input array ids: ");
@@ -1177,6 +1177,7 @@ char** makeparts(char* query)
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 {
     myCounter = 0;
+    // std::cout<<"query: "<<queryIndex<<std::endl;
     // std::cout<<"thread "<<pthread_self()<<", inputArrays = "<<allrelations<<", inputArrays address = "<<&allrelations<<std::endl;
     /*for(int i=0;i<3;i++)
     {
