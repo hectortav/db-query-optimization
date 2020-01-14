@@ -25,6 +25,7 @@ extern RunningMode joinMode;
 extern RunningMode projectionMode;
 extern RunningMode filterMode;
 extern bool newJobPerBucket;
+extern bool OptimizePredicatesFlag;
 
 typedef class list list;
 

@@ -9,6 +9,7 @@ RunningMode joinMode = serial;
 RunningMode projectionMode=serial;
 RunningMode filterMode = serial;
 bool newJobPerBucket = false;
+bool OptimizePredicatesFlag=false;
 
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
@@ -1314,7 +1315,10 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
     // xxx++;
     // if(xxx==1)
     // {
+    // std::cout<<"flag is: "<<OptimizePredicatesFlag<<std::endl;
+    if(OptimizePredicatesFlag)
         preds = OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
+    else preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
         // exit(1);
     // }
     // std::cout<<"after optimization"<<std::endl;
@@ -1932,6 +1936,10 @@ void params(char** argv,int argc)
             }
             scheduler=new JobScheduler(threadsNum,1000000000);
             threadsNumGiven = true;
+        }
+        else if (strcmp(argv[i],"-optimize")==0)
+        {
+            OptimizePredicatesFlag=true;
         }
     }
     if (!threadsNumGiven && (queryMode == parallel || reorderMode == parallel || quickSortMode == parallel || joinMode == parallel || filterMode == parallel)) {
