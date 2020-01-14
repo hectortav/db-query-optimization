@@ -143,6 +143,7 @@ class IntermediateArray {
     void extractFieldToRelation(relation* resultRelation, const InputArray* inputArray, int predicateArrayId, uint64_t fieldId);
     void populate(uint64_t** intermediateResult, uint64_t rowsNum, IntermediateArray* prevIntermediateArray, int inputArray1Id, int inputArray2Id, int predicateArray1Id, int predicateArray2Id);
     bool hasInputArrayId(int inputArrayId);
+    bool hasPredicateArrayId(int inputArrayId);
     uint64_t findColumnIndexByInputArrayId(int inputArrayId);
     uint64_t findColumnIndexByPredicateArrayId(int predicateArrayId);
     IntermediateArray* selfJoin(int inputArray1Id, int inputArray2Id, uint64_t field1Id, uint64_t field2Id, const InputArray* inputArray1, const InputArray* inputArray2);

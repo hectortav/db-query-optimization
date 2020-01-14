@@ -291,6 +291,15 @@ bool IntermediateArray::hasInputArrayId(int inputArrayId) {
     return false;
 }
 
+bool IntermediateArray::hasPredicateArrayId(int predicateArrayId) {
+    for (uint64_t j = 0; j < columnsNum; j++) {
+        if (predicateArrayIds[j] == predicateArrayId) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void IntermediateArray::print() {
     printf("input array ids: ");
     for (uint64_t j = 0; j < columnsNum; j++) {
@@ -784,7 +793,7 @@ void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
     delete[] psum;
     delete[] hist;
 }
-
+uint64_t myCounter = 0;
 static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
 {
@@ -844,8 +853,13 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         if(hist[i]==0)
             continue;
         allHistsEmpty = false;
+        // std::cout<<"shift: "<<shift<<std::endl;
+        if (shift == 7){
+            myCounter++;
+        }
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
+            
             // std::cout<<"will scheduler new reorder -> queryIndex: "<<queryIndex<<", reorderIndex: "<<reorderIndex<<std::endl;
             if(reorderMode==parallel && ( newJobPerBucket || shift%2 == 0 ))
                 scheduler->schedule(new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex), queryIndex);
@@ -1162,6 +1176,7 @@ char** makeparts(char* query)
 
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 {
+    myCounter = 0;
     // std::cout<<"thread "<<pthread_self()<<", inputArrays = "<<allrelations<<", inputArrays address = "<<&allrelations<<std::endl;
     /*for(int i=0;i<3;i++)
     {
@@ -1199,6 +1214,7 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 
                 // std::cout<<"query "<<queryIndex<<" ended"<<std::endl;
     }
+    // std::cout<<"mycounter: "<<myCounter<<std::endl;
 }
 void loadrelationIds(int* relationIds, char* part, int& relationsnum)
 {
@@ -1409,7 +1425,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         // std::cout<<"predicateArray1Id: "<<predicateArray1Id<<", field1Id: "<<field1Id<<", predicateArray2Id: "<<predicateArray2Id<<", field2Id: "<<field2Id<<std::endl;
 
         // fill rel1
-        if (curIntermediateArray == NULL || !curIntermediateArray->hasInputArrayId(inputArray1Id)) {
+        if (curIntermediateArray == NULL || !curIntermediateArray->hasPredicateArrayId(predicateArray1Id)) {
                                     // std::cout<<"predicateArray1Id does NOT exist in intermediate array"<<std::endl;
 
             inputArray1RowIds->extractColumnFromRowIds(rel1, field1Id, inputArray1);
@@ -1421,7 +1437,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         }
 
         // fill rel2
-        if (curIntermediateArray == NULL || inputArray1Id == inputArray2Id || !curIntermediateArray->hasInputArrayId(inputArray2Id)) {
+        if (curIntermediateArray == NULL || !curIntermediateArray->hasPredicateArrayId(predicateArray2Id)) {
                                     // std::cout<<"predicateArray2Id does NOT exist in intermediate array"<<std::endl;
 
             inputArray2RowIds->extractColumnFromRowIds(rel2, field2Id, inputArray2);
