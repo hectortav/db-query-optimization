@@ -1528,7 +1528,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         
         if (rslt->lst->rows == 0) {
             // no results
-            handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, false);
+            // handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, false);
             return NULL;
         }
         // rslt->lst->print();
@@ -1542,7 +1542,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         // }
         uint64_t rows=rslt->lst->rows;
         uint64_t rowsz=rslt->lst->rowsz;
-        handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, true);
+        // handleDelete(preds, cntr, relationsnum, inputArraysRowIds, rslt, true);
 
         // delete newRel1;
         // delete newRel2;                    
@@ -1585,7 +1585,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
         /***********END***************************/
     }
 
-    handleDelete(preds, cntr, relationsnum, inputArraysRowIds, NULL, false);
+    // handleDelete(preds, cntr, relationsnum, inputArraysRowIds, NULL, false);
 
     return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
 }

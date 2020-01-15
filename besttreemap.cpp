@@ -266,7 +266,6 @@ bool Map::insert(PredicateArray* key,Value* value)
     if(ifexists != -1)
     {
                 // std::cout<<"insert exists ifexists: "<<ifexists<<"size: "<<this->cursize<<std::endl;
-
         delete values[ifexists];       
         values[ifexists]=NULL;         
         // std::cout<<"insert exists1"<<std::endl;
@@ -424,48 +423,46 @@ void swap(PredicateArray *predicateArray, int a, int b) {
     predicateArray->array[b] = tmp;
 }
 
-int nextIndex = 0;
+// void getAllPermutations(int size, int permutationSize, PredicateArray* elements, PredicateArray* resultArray) {
+//     // if size becomes 1 then prints the obtained 
+//     // permutation 
+//     if (size == 1) 
+//     { 
+//         // printArr(a, n); 
+//         // std::cout<<"index: "<<nextIndex<<std::endl;
+//         for (int j = 0; j < permutationSize; j++) {
+//             elements->array[j].print(false);
+//             std::cout<<" ";
+//         }
+//         std::cout<<std::endl;
+//         resultArray[nextIndex++].init(elements, permutationSize);
 
-void getAllPermutations(int size, int permutationSize, PredicateArray* elements, PredicateArray* resultArray) {
-    // if size becomes 1 then prints the obtained 
-    // permutation 
-    if (size == 1) 
-    { 
-        // printArr(a, n); 
-        std::cout<<"index: "<<nextIndex<<std::endl;
-        for (int j = 0; j < permutationSize; j++) {
-            elements->array[j].print(false);
-            std::cout<<" ";
-        }
-        std::cout<<std::endl;
-        resultArray[nextIndex++].init(elements, permutationSize);
-
-        return; 
-    } 
+//         return; 
+//     } 
   
-    for (int i=0; i<size; i++) 
-    { 
-        getAllPermutations(size - 1, permutationSize, elements, resultArray); 
+//     for (int i=0; i<size; i++) 
+//     { 
+//         getAllPermutations(size - 1, permutationSize, elements, resultArray); 
   
-        // if size is odd, swap first and last 
-        // element 
-        if (size%2==1) {
-            swap(elements, 0, size - 1); 
-        }
-        // If size is even, swap ith and last 
-        // element 
-        else {
-            // swap(a[i], a[size-1]); 
-            swap(elements, i, size - 1); 
-        }
-    } 
-    // std::cout<<elements->array[0].predicateArrayId<<"."<<elements->array[0].fieldId<<std::endl;
-    //     std::cout<<elements->array[size - 1].predicateArrayId<<"."<<elements->array[size - 1].fieldId<<std::endl;
+//         // if size is odd, swap first and last 
+//         // element 
+//         if (size%2==1) {
+//             swap(elements, 0, size - 1); 
+//         }
+//         // If size is even, swap ith and last 
+//         // element 
+//         else {
+//             // swap(a[i], a[size-1]); 
+//             swap(elements, i, size - 1); 
+//         }
+//     } 
+//     // std::cout<<elements->array[0].predicateArrayId<<"."<<elements->array[0].fieldId<<std::endl;
+//     //     std::cout<<elements->array[size - 1].predicateArrayId<<"."<<elements->array[size - 1].fieldId<<std::endl;
 
-    // swap(elements, 0, size - 1);
-    //     std::cout<<elements->array[0].predicateArrayId<<"."<<elements->array[0].fieldId<<std::endl;
-    //     std::cout<<elements->array[size - 1].predicateArrayId<<"."<<elements->array[size - 1].fieldId<<std::endl;
-}
+//     // swap(elements, 0, size - 1);
+//     //     std::cout<<elements->array[0].predicateArrayId<<"."<<elements->array[0].fieldId<<std::endl;
+//     //     std::cout<<elements->array[size - 1].predicateArrayId<<"."<<elements->array[size - 1].fieldId<<std::endl;
+// }
 
 int getPermutationsNum(int size) {
     int sum = 0;
@@ -510,7 +507,7 @@ int getCombinationsNum(int size, int combinationSize) {
    data[] ---> Temporary array to store current combination 
    i      ---> index of current element in arr[]     */
 void getCombinations(PredicateArray* elements, int n, int r, int index, PredicateArray* data,
-                     PredicateArray* resultArray, int i) 
+                     PredicateArray* resultArray, int i, int& nextIndex) 
 { 
     // Current cobination is ready, print it 
     if (index == r) { 
@@ -537,19 +534,20 @@ void getCombinations(PredicateArray* elements, int n, int r, int index, Predicat
     // data[index] = arr[i]; 
     // std::cout<<"1"<<std::endl;
 
-    data->array[index].field1Id = elements->array[i].field1Id;
-    data->array[index].predicateArray1Id = elements->array[i].predicateArray1Id;
-    data->array[index].field2Id = elements->array[i].field2Id;
-    data->array[index].predicateArray2Id = elements->array[i].predicateArray2Id;
+    data->array[index] = elements->array[i];
+    // data->array[index].field1Id = elements->array[i].field1Id;
+    // data->array[index].predicateArray1Id = elements->array[i].predicateArray1Id;
+    // data->array[index].field2Id = elements->array[i].field2Id;
+    // data->array[index].predicateArray2Id = elements->array[i].predicateArray2Id;
     // data.array[index] = elements->array[i];
             // std::cout<<"3"<<std::endl;
 
-    getCombinations(elements, n, r, index + 1, data, resultArray, i + 1); 
+    getCombinations(elements, n, r, index + 1, data, resultArray, i + 1, nextIndex); 
   
     // current is excluded, replace it with next 
     // (Note that i+1 is passed, but index is not 
     // changed) 
-    getCombinations(elements, n, r, index, data, resultArray, i + 1); 
+    getCombinations(elements, n, r, index, data, resultArray, i + 1, nextIndex); 
 }
 
 void updateColumnStats(const InputArray* pureInputArray, uint64_t joinFieldId, int predicateArrayId,
@@ -1022,7 +1020,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         bestTreeMap->insert(keyValuePredicateArray, value);
     }
     // std::cout<<"2"<<std::endl;
-
+    int nextIndex;
     for (int i = 1; i < cntr; i++) {
         // std::cout<<"i "<<i<<std::endl;
         nextIndex = 0;
@@ -1038,7 +1036,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         PredicateArray tempPredicateArray(i);
         // tempPredicateArray.size = i;
         // tempPredicateArray.array = new Predicate[i];
-        getCombinations(joinPredicateArray, joinPredicateArray->size, i, 0, &tempPredicateArray, resultArray, 0);
+        getCombinations(joinPredicateArray, joinPredicateArray->size, i, 0, &tempPredicateArray, resultArray, 0, nextIndex);
         // delete[] tempPredicateArray.array;
         // std::cout<<"nextindex: "<<nextIndex<<std::endl;
                 // std::cout<<"3"<<std::endl;
@@ -1095,6 +1093,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                     // curCombination->print();
                     // std::cout<<"new predicate array: "<<std::endl;
                     // newPredicateArray->print();
+                    delete newPredicateArray;
                     continue;
                 }
                                     // std::cout<<"3.5 k "<<k<<std::endl;
@@ -1112,6 +1111,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
                     // newPredicateArray->print();
                     bestTreeMap->insert(newPredicateArray, newValue);
                 } else {
+                    delete newPredicateArray;
                     delete newValue;
                 }
             }
@@ -1232,7 +1232,7 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int& cntr,int relationsum,
     delete NewPreds;
     cntr=nonfiltersnum+FiltersNum;
 
-    // delete[] currentpreds;
+    delete[] currentpreds;
     // std::cout<<"Filters: "<<std::endl;
     // for(int i=0;i<FiltersNum;i++)
     // {
