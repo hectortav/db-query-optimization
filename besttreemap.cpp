@@ -225,11 +225,18 @@ int factorial(int x)
     return sum;
 }
 
+int getCombinationsNum(int size, int combinationSize);
+
 Map::Map(int queryArraysNum)
 {
-    values=new Value*[(uint64_t) pow(queryArraysNum,queryArraysNum)];
-    keys=new Key*[(uint64_t) pow(queryArraysNum,queryArraysNum)];
-    for (uint64_t i = 0; i < (uint64_t)pow(queryArraysNum,queryArraysNum); i++) {
+    uint64_t size = 0;
+    for (int i = 1; i <= queryArraysNum; i++) {
+        size += getCombinationsNum(queryArraysNum, i);
+    }
+    // std::cout<<"size: "<<size<<std::endl;
+    values=new Value*[size];
+    keys=new Key*[size];
+    for (uint64_t i = 0; i < size; i++) {
         values[i] = NULL;
         keys[i] = NULL;
     }
@@ -985,7 +992,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         //     resultArray[j].print();
         // }
     // std::cout<<"1"<<std::endl;
-    Map* bestTreeMap = new Map(7);
+    Map* bestTreeMap = new Map(cntr);
     for (int i = 0; i < cntr; i++) {
                     // std::cout<<"outer loop i "<<i<<std::endl;
 
@@ -1198,7 +1205,7 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int& cntr,int relationsum,
     PredicateArray* NewPreds=new PredicateArray(nonfiltersnum);
     for(int i=0;i<nonfiltersnum;i++)
     {
-        delete NonFilters[i];
+        delete[] NonFilters[i];
     }
     delete[] NonFilters;
 
