@@ -1324,6 +1324,25 @@ void handleDelete(uint64_t** preds, int cntr, int relationsnum, InputArray** inp
     delete[] inputArraysRowIds;
 }
 // int xxx=0;
+uint64_t** noopt(uint64_t** preds,int cntr)
+{
+    uint64_t** tmp=new uint64_t*[cntr];
+    uint64_t** final=new uint64_t*[cntr];
+    int next=0;
+    int tmpnext=0;
+    for(int i=0;i<cntr;i++)
+    {
+        if(preds[i][3]==(uint64_t)-1||(preds[i][0]==preds[i][3]))
+            final[next++]=preds[i];
+        
+        else tmp[tmpnext++]=preds[i];
+    }
+    for(int i=0;i<tmpnext;i++)
+        final[next++]=preds[i];
+
+    delete[] tmp;
+    return final;
+}
 IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,int relationsnum, int* relationIds, int queryIndex)
 {
     int cntr;
@@ -1335,7 +1354,7 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
     // std::cout<<"flag is: "<<OptimizePredicatesFlag<<std::endl;
     if(OptimizePredicatesFlag)
         preds = OptimizePredicates(preds,cntr,relationsnum,relationIds,inputArrays);
-    else preds=optimizepredicates(preds,cntr,relationsnum,relationIds);
+    else preds=noopt(preds,cntr);
 
     // for(int i=0;i<cntr;i++)
     // {
