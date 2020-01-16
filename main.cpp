@@ -98,7 +98,10 @@ int main(int argc,char** argv)
             lastJobDoneArrays[i][1] = false;
 
             if (queryMode == serial) {
+                // const clock_t begin_time=clock();
                 handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
+                // std::cout <<"query: "<<i<<" "<< float( clock () - begin_time ) /  CLOCKS_PER_SEC<<std::endl;
+
             } else if (queryMode == parallel) {
                 pthread_mutex_lock(&queryJobDoneMutex);
                 while (available_threads == 0) {
