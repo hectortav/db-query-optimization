@@ -88,10 +88,6 @@ bool PredicateArray::isConnectedWith(Predicate& predicate) {
     return false;
 }
 
-bool PredicateArray::isConnected() {
-    return true;
-}
-
 void PredicateArray::populate(PredicateArray *newPredicateArray) {
     memcpy(array, newPredicateArray->array, sizeof(Predicate)*newPredicateArray->size);
 }

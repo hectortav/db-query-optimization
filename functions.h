@@ -33,14 +33,11 @@ typedef class list list;
 extern pthread_mutex_t *predicateJobsDoneMutexes;
 extern pthread_cond_t *predicateJobsDoneConds;
 extern pthread_cond_t *jobsCounterConds;
-// pthread_mutex_t* queryJobDoneMutexes;
-// pthread_cond_t* queryJobDoneConds;
 extern pthread_mutex_t queryJobDoneMutex;
 extern pthread_cond_t queryJobDoneCond;
 extern int available_threads;
 
 extern bool** lastJobDoneArrays;
-// extern bool* queryJobDoneArray;
 extern int queryJobDone;
 extern char** QueryResult;
 extern JobScheduler *scheduler;
@@ -55,7 +52,6 @@ public:
 const unsigned long BUCKET_SIZE = 64 * pow(2, 10);  //64KB (I think)
 const unsigned long TUPLE_SIZE = sizeof(tuple);
 const int TUPLES_PER_BUCKET = (int)(BUCKET_SIZE / TUPLE_SIZE);  
-//const int TUPLES_PER_BUCKET=10;
 const uint64_t power=pow(2,8);
 //each bucket must be smaller than 64KB 
 //size of bucket = num_tuples * sizeof(tuples)  
@@ -75,19 +71,6 @@ class result
 {
 public:
     list* lst;
-};
-
-// To be filled with stats like fA etc.
-class ColumnEnumStats {
-    public:
-        // uint64_t minValue, maxValue, valuesNum, distinctValuesNum;
-
-        ColumnEnumStats() {
-            // minValue = 0;
-            // maxValue = 0;
-            // valuesNum = 0;
-            // distinctValuesNum = 0;
-        }
 };
 
 class InputArray;
@@ -198,8 +181,6 @@ public:
 
     void run() override
     {
-        // std::cout << "reorder added to queue\n";
-        // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
         handlequery(parts, allrelations, queryIndex);
         return; 
     }
@@ -230,8 +211,6 @@ public:
 
     void run() override
     {
-        // std::cout << "reorder added to queue\n";
-        // std::cout<<"array:"<<array<<", offset: "<<offset<<std::endl;
         tuplereorder_parallel(array, array2, offset, shift, isLastCall, reorderIndex, queryIndex);
 
         pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
@@ -239,8 +218,6 @@ public:
         if (jobsCounter[queryIndex] == 0) {
             pthread_cond_signal(&jobsCounterConds[queryIndex]);
         }
-        // std::cout<<"-- "<<jobsCounter[queryIndex]<<std::endl;
-        // std::cout<<"reorder Job with id: "<<getJobId()<<" finished"<<" queryIndex: "<<queryIndex<<std::endl;
 
         pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
         return; 
@@ -270,7 +247,6 @@ public:
 
     void run() override
     {
-        // std::cout << "quicksort added to queue\n";
         quickSort(tuples, startIndex, stopIndex, queryIndex, reorderIndex, isLastCall);
 
         pthread_mutex_lock(&jobsCounterMutexes[queryIndex]);
@@ -278,8 +254,6 @@ public:
         if (jobsCounter[queryIndex] == 0) {
             pthread_cond_signal(&jobsCounterConds[queryIndex]);
         }
-        // std::cout<<"qJob -- "<<jobsCounter[queryIndex]<<std::endl;
-        // std::cout<<"quicksort Job with id: "<<getJobId()<<" finished"<<" queryIndex: "<<queryIndex<<std::endl;
         pthread_mutex_unlock(&jobsCounterMutexes[queryIndex]);
         return; 
     }
@@ -427,10 +401,6 @@ void waitForJobsToFinish(int queryIndex);
 InputArray* parallelFilterOrInnerJoin(int queryIndex, InputArray* inputArrayRowIds, bool isFilterJob, int field1Id, int field2Id, int operation, uint64_t numToCompare, const InputArray* pureInputArray);
 uint64_t hashFunction(uint64_t payload, int shift);
 result* join(relation* R, relation* S,uint64_t**r,uint64_t**s,int rsz,int ssz,int joincol);
-// uint64_t** create_hist(relation*, int);
-// uint64_t** create_psum(uint64_t**, uint64_t);
-// relation* re_ordered(relation*,relation*, int);
-// relation* re_ordered_2(relation*,relation*, int); //temporary
 uint64_t* psumcreate(uint64_t* hist);
 uint64_t* histcreate(tuple* array,int offset,int shift);
 void tuplereorder(tuple* array,tuple* array2, int offset,int shift, int reorderIndex, int queryIndex);

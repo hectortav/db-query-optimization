@@ -1,46 +1,8 @@
 #include "functions.h"
 
-//using namespace std;
-//tuple is in std :/
-
 int main(int argc,char** argv)
 {
-    // OptimizePredicates(NULL,0,0,NULL,NULL);
-    // BestPredicateOrder(NULL,0,0,NULL,NULL);
-    // return 0;
-    // Map mymap(3);
-    // int k[3]={0,1,2};
-    // int v[3]={2,3,3};
-    // int v2[4]={2,2,2,5};
-    // int k2[1]={0};
-    // mymap.insert(k,3,v,3);
-    // mymap.print();
-    // std::cout<<std::endl;
-    // std::cout<<mymap.exists(k,3);
-    //     std::cout<<std::endl;
-
-    // mymap.insert(k,3,v2,4);
-    // mymap.print();
-    //     std::cout<<std::endl;
-
-    // mymap.insert(k2,1,v2,4);
-    // mymap.print();
-    //     std::cout<<std::endl;
-
-    // mymap.insert(k2,1,v,3);
-    // mymap.print();
-    //     std::cout<<std::endl;
-
-
-    // return 0;
     params(argv,argc);
-    // std::cout<<"Running in: "<<std::endl;
-    // std::cout<<"  quicksort mode: "<<quickSortMode<<std::endl;
-    // std::cout<<"  reorder mode: "<<reorderMode<<std::endl;
-    // std::cout<<"  join mode: "<<joinMode<<std::endl;
-    // std::cout<<"  query mode: "<<queryMode<<std::endl;
-    // std::cout<<"  filter mode: "<<filterMode<<std::endl;
-    // std::cout<<"  projection mode: "<<projectionMode<<std::endl;
     InputArray** inputArrays = readArrays();
 
     FILE * fp = fopen("read_arrays_end", "w");
@@ -52,7 +14,6 @@ int main(int argc,char** argv)
 
     fclose(fp);
     int lines;
-    // scheduler = new JobScheduler(16, 1000000000);
     pthread_mutex_init(&queryJobDoneMutex,NULL);
     pthread_cond_init(&queryJobDoneCond,NULL);
     if(queryMode==parallel)
@@ -63,25 +24,15 @@ int main(int argc,char** argv)
         char** arr=readbatch(lines);
         if(arr==NULL)
             break;
-       // std::cout<<arr<<std::endl;
-        // std::cout<<std::endl;
-        //std::cout<<lines<<std::endl;
         jobsCounterMutexes = new pthread_mutex_t[lines];
         jobsCounterConds = new pthread_cond_t[lines];
         predicateJobsDoneMutexes = new pthread_mutex_t[lines];
         predicateJobsDoneConds = new pthread_cond_t[lines];
         lastJobDoneArrays = new bool*[lines];
-        // queryJobDoneMutexes = new pthread_mutex_t[lines];
-        // queryJobDoneConds = new pthread_cond_t[lines];
-        // queryJobDoneArray = new bool[lines];
         QueryResult=new char*[lines];
         jobsCounter = new int64_t[lines];
-        // if(queryMode==parallel && available_threads<lines)
-        //     queryJobDone=available_threads;
-        // else
         queryJobDone=lines;
         int Queries_Run=0;
-        // std::cout<<"total queries: "<<lines<<std::endl;
         for (int i = 0; i < lines; i++) {
             pthread_mutex_init(&jobsCounterMutexes[i], NULL);
             pthread_cond_init(&jobsCounterConds[i], NULL);
@@ -89,18 +40,13 @@ int main(int argc,char** argv)
             QueryResult[i]=new char[100];
             pthread_mutex_init(&predicateJobsDoneMutexes[i], NULL);
             pthread_cond_init(&predicateJobsDoneConds[i], NULL);
-            // queryJobDoneMutexes[i] = PTHREAD_MUTEX_INITIALIZER;
-            // queryJobDoneConds[i] = PTHREAD_COND_INITIALIZER;
-            // queryJobDoneArray[i] = false;
 
             lastJobDoneArrays[i] = new bool[2];
             lastJobDoneArrays[i][0] = false;
             lastJobDoneArrays[i][1] = false;
 
             if (queryMode == serial) {
-                // const clock_t begin_time=clock();
                 handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
-                // std::cout <<"query: "<<i<<" "<< float( clock () - begin_time ) /  CLOCKS_PER_SEC<<std::endl;
 
             } else if (queryMode == parallel) {
                 pthread_mutex_lock(&queryJobDoneMutex);
@@ -108,57 +54,19 @@ int main(int argc,char** argv)
                     pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
                 }
                 pthread_mutex_unlock(&queryJobDoneMutex);
-
-                // if(available_threads>0)
-                // {
                     scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i), -1);
                     pthread_mutex_lock(&queryJobDoneMutex);
                     available_threads--;
                     pthread_mutex_unlock(&queryJobDoneMutex);
-
-                    // Queries_Run++;
-                // }
-                // else
-                // {
-                //     pthread_mutex_lock(&queryJobDoneMutex);
-                //     while(queryJobDone>0)
-                //         pthread_cond_wait(&queryJobDoneCond,&queryJobDoneMutex);
-                //     pthread_mutex_unlock(&queryJobDoneMutex);
-                //     available_threads=scheduler->getThreadsNum()-1;
-                //     if(available_threads<lines-Queries_Run)
-                //         queryJobDone=available_threads;
-                //     else queryJobDone=lines-Queries_Run;
-                //     i--;
-                // }
             }
         }
-
-        // for(int i=0;i<lines;i++)
-        // {
-        //     // std::cout<<"query index: "<<i<<std::endl;
-        //     //std::cout<<arr[i]<<std::endl;
-        //     // handlequery(makeparts(arr[i]), (const InputArray**)inputArrays, i);
-        //     // std::cout<<std::endl;
-        // }
-        // std::cout<<"-------------MAIN THREAD: will wait for queries to finish"<<std::endl;
 
         if (queryMode == parallel) {
             pthread_mutex_lock(&queryJobDoneMutex);
             while (queryJobDone >0){
-
                 pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
-                // struct timespec timeout;
-                // clock_gettime(CLOCK_REALTIME, &timeout);
-                // timeout.tv_sec += 1;
-                // pthread_cond_timedwait(&queryJobDoneCond, &queryJobDoneMutex, &timeout);
-                
             }
-                // std::cout<<"-------------MAIN THREAD: finished query with index -> "<<i<<std::endl;
-
             pthread_mutex_unlock(&queryJobDoneMutex);
-            // queryJobDoneArray[i] == false;
-
-        
         }
         for(int i=0;i<lines;i++)
         {
@@ -167,8 +75,6 @@ int main(int argc,char** argv)
             delete[] QueryResult[i];
         }
         delete[] QueryResult;
-
-        // delete[] arr;
         delete[] predicateJobsDoneMutexes;
         delete[] predicateJobsDoneConds;
         delete[] lastJobDoneArrays;
@@ -181,7 +87,7 @@ int main(int argc,char** argv)
         delete[] arr;
         arr=NULL;
     }
-    // std::cout<<"-----------------------------------------------------------------------------OUT OF LOOP"<<std::endl;
+    
     delete scheduler;
 
     for(int i=0;i<MAX_INPUT_ARRAYS_NUM;i++)
