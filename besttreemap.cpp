@@ -207,12 +207,15 @@ Value::Value(int sz)
     this->stats=NULL;
     this->columnStatsArray = NULL;
     this->cost=0;
+    this->ColumnStatsArraySize=0;
 }
 Value::~Value()
 {
-    delete this->ValueArray;
-    // if(columnStatsArray!=NULL)
-    //     delete columnStatsArray;
+    delete this->ValueArray;    
+    for(int i=0;i<this->ColumnStatsArraySize;i++)
+        delete[] this->columnStatsArray[i];
+
+    delete[] this->columnStatsArray;
 }
 
 int factorial(int x)
@@ -271,6 +274,7 @@ bool Map::insert(PredicateArray* key,Value* value)
         // std::cout<<"insert exists1"<<std::endl;
 
         values[ifexists]=value;
+        delete key;
     }
     else
     {
@@ -743,6 +747,7 @@ Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* re
         // std::cout<<"createJoinTree 1.1"<<std::endl;
 
     newValueP->columnStatsArray = new ColumnStats*[relationsnum];
+    newValueP->ColumnStatsArraySize=relationsnum;
             // std::cout<<"createJoinTree 1.2"<<std::endl;
 
     for (int i = 0; i < relationsnum; i++) {
@@ -950,6 +955,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
 
     // }
     PredicateArray* joinPredicateArray = new PredicateArray(cntr, currentpreds);
+    
     // PredicateArray predicateArray(2);
     // predicateOperandArray.array = new PredicateOperand[4];
     // predicateOperandArray.size = 4;
@@ -1002,6 +1008,7 @@ uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsnum,
         // keyValuePredicateArray->array[0].predicateArray2Id= joinPredicateArray->array[i].predicateArray2Id;
         Value* value = new Value(1);
         value->columnStatsArray = new ColumnStats*[relationsnum];
+        value->ColumnStatsArraySize=relationsnum;
         for (int i = 0; i < relationsnum; i++) {
             // std::cout<<"i "<<i<<std::endl;
             value->columnStatsArray[i] = new ColumnStats[inputArrays[relationids[i]]->columnsNum];
@@ -1170,88 +1177,100 @@ uint64_t** OptimizePredicates(uint64_t** currentpreds,int& cntr,int relationsum,
             FiltersNum++;
     }
     NonFiltersNum=cntr-FiltersNum;
-
-
-    if(NonFiltersNum<=2)
+    if(NonFiltersNum<=1)
     {
-        ColumnStats** Stats=new ColumnStats*[relationsum];
-        for(int i=0;i<relationsum;i++)
-        {
-            Stats[i]=new ColumnStats[inputarr[relationids[i]]->columnsNum];
-            for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
-            {
-                memcpy(&Stats[i][j],&inputarr[relationids[i]]->columnsStats[j],sizeof(ColumnStats));
-            }
-        }
-        uint64_t** Filters=new uint64_t*[FiltersNum];
-        uint64_t** NonFilters=new uint64_t*[cntr-FiltersNum]; 
-        uint64_t** Final=new uint64_t*[cntr];
-        for(int i=0,findx=0,nfindex=0;i<cntr;i++)
-        {
-            if(currentpreds[i][3]==(uint64_t)-1||(currentpreds[i][0]==currentpreds[i][3]))
-            {
-                //filter
-                Filters[findx]=currentpreds[i];
-                findx++;
-            }
-            else
-            {
-                NonFilters[nfindex]=currentpreds[i];
-                nfindex++;
-                //nofilter
-            }
-        }
+        return noopt(currentpreds,cntr);
+    }
 
-        PredicateArray* Preds=new PredicateArray(NonFiltersNum,NonFilters);
-        PredicateArray* NewPreds=new PredicateArray(NonFiltersNum);
-        for(int i=0;i<NonFiltersNum;i++)
+    // if(NonFiltersNum<=2)
+    // {
+    ColumnStats** Stats=new ColumnStats*[relationsum];
+    for(int i=0;i<relationsum;i++)
+    {
+        Stats[i]=new ColumnStats[inputarr[relationids[i]]->columnsNum];
+        for(int j=0;j<inputarr[relationids[i]]->columnsNum;j++)
         {
-            delete[] NonFilters[i];
+            memcpy(&Stats[i][j],&inputarr[relationids[i]]->columnsStats[j],sizeof(ColumnStats));
         }
-        delete[] NonFilters;
+    }
+    uint64_t** Filters=new uint64_t*[FiltersNum];
+    uint64_t** NonFilters=new uint64_t*[cntr-FiltersNum]; 
+    uint64_t** Final=new uint64_t*[cntr];
+    for(int i=0,findx=0,nfindex=0;i<cntr;i++)
+    {
+        if(currentpreds[i][3]==(uint64_t)-1||(currentpreds[i][0]==currentpreds[i][3]))
+        {
+            //filter
+            Filters[findx]=currentpreds[i];
+            findx++;
+        }
+        else
+        {
+            NonFilters[nfindex]=currentpreds[i];
+            nfindex++;
+            //nofilter
+        }
+    }
 
-        NonFiltersNum=0;
-        for(int i=0;i<Preds->size;i++)
-        {
-            bool found=0;
-            for(int j=0;j<NonFiltersNum;j++)
-            {
-                if(Preds->array[i].issame(Preds->array[j]))
-                    found=1; 
-            }
-            if(!found)
-                NewPreds->array[NonFiltersNum++]=Preds->array[i];
+    PredicateArray* Preds=new PredicateArray(NonFiltersNum,NonFilters);
+    PredicateArray* NewPreds=new PredicateArray(NonFiltersNum);
+    for(int i=0;i<NonFiltersNum;i++)
+    {
+        delete[] NonFilters[i];
+    }
+    delete[] NonFilters;
 
+    NonFiltersNum=0;
+    for(int i=0;i<Preds->size;i++)
+    {
+        bool found=0;
+        for(int j=0;j<NonFiltersNum;j++)
+        {
+            if(Preds->array[i].issame(Preds->array[j]))
+                found=1; 
+        }
+        if(!found)
+            NewPreds->array[NonFiltersNum++]=Preds->array[i];
 
-        }
-        NewPreds->size=NonFiltersNum;
-        delete Preds;
-        uint64_t** newpreds=NewPreds->toUintArray();
-        delete NewPreds;
-        cntr=NonFiltersNum+FiltersNum;
-        delete[] currentpreds;
-        FilterStats(Filters,FiltersNum,relationsum,relationids,inputarr,Stats);
-        uint64_t** best;
-        best=BestPredicateOrder(newpreds,NonFiltersNum,relationsum,relationids,inputarr,Stats);
-        int next=0;
-        for(int i=0;i<FiltersNum;i++)
-        {
-            Final[next]=Filters[i];
-            next++;
-        }
-        for(int i=0;i<NonFiltersNum;i++)
-        {
-            Final[next]=best[i];
-            next++;
-        }
-        delete[] best;
-        return Final;
 
     }
-    else
+    NewPreds->size=NonFiltersNum;
+    delete Preds;
+    uint64_t** newpreds=NewPreds->toUintArray();
+    delete NewPreds;
+    cntr=NonFiltersNum+FiltersNum;
+    delete[] currentpreds;
+    FilterStats(Filters,FiltersNum,relationsum,relationids,inputarr,Stats);
+    uint64_t** best;
+    best=BestPredicateOrder(newpreds,NonFiltersNum,relationsum,relationids,inputarr,Stats);
+    for(int i=0;i<NonFiltersNum;i++)
+        delete[] newpreds[i];
+    delete[] newpreds;
+    int next=0;
+    for(int i=0;i<FiltersNum;i++)
     {
-        return optimizepredicates(currentpreds,cntr,relationsum,relationids);
+        Final[next]=Filters[i];
+        next++;
     }
+    for(int i=0;i<NonFiltersNum;i++)
+    {
+        Final[next]=best[i];
+        next++;
+    }
+    delete[] Filters;
+    delete[] best;
+    for(int i=0;i<relationsum;i++)
+    {
+        delete[] Stats[i];
+    }
+    delete[] Stats;
+    return Final;
+
+    // }
+    // else
+    // {
+    //     return optimizepredicates(currentpreds,cntr,relationsum,relationids);
+    // }
 
 
     

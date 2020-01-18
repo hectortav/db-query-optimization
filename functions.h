@@ -26,6 +26,7 @@ extern RunningMode projectionMode;
 extern RunningMode filterMode;
 extern bool newJobPerBucket;
 extern bool OptimizePredicatesFlag;
+extern bool jthreads;
 
 typedef class list list;
 
@@ -464,6 +465,7 @@ void mid_func(tuple *t1, tuple *t2, int num, int not_used);
 void usage(char** argv);
 void params(char** argv,int argc);
 void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex);
+uint64_t** noopt(uint64_t** preds,int cntr);
 
 
 #endif

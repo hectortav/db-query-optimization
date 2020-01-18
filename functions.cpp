@@ -10,6 +10,7 @@ RunningMode projectionMode=serial;
 RunningMode filterMode = serial;
 bool newJobPerBucket = false;
 bool OptimizePredicatesFlag=false;
+bool jthreads=false;
 
 pthread_mutex_t* predicateJobsDoneMutexes;
 pthread_cond_t* predicateJobsDoneConds;
@@ -462,8 +463,8 @@ result* managejoin_3(relation* R, relation* S, int queryIndex)
 {
     uint64_t* hist=histcreate(S->tuples, S->num_tuples, 0);
     uint64_t* psum=psumcreate(hist);
+    delete[] hist;
     int parts = scheduler->getThreadsNum();
-    int i = 0;
     list** lst=new list*[power];    //if one is empty (probably not) then ???
     jobsCounter[queryIndex]=power;
     for (int j = 0; j < power; j++)
@@ -479,10 +480,10 @@ result* managejoin_3(relation* R, relation* S, int queryIndex)
     while(jobsCounter[queryIndex]>0)
         pthread_cond_wait(&predicateJobsDoneConds[queryIndex],&predicateJobsDoneMutexes[queryIndex]);
     pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
-
+    delete[] psum;
     result* rslt=new result;
     rslt->lst=NULL;
-    for(int i=0;i<parts;i++)
+    for(int i=0;i<power;i++)
     {
         if(lst[i]->rows>0)
         {
@@ -497,6 +498,7 @@ result* managejoin_3(relation* R, relation* S, int queryIndex)
                 delete lst[i];
             }
         }
+        else delete lst[i];
     }
     delete[] lst;
     if(rslt->lst==NULL)
@@ -548,6 +550,7 @@ result* managejoin_2(relation* R, relation* S, int queryIndex)
                 delete lst[i];
             }
         }
+        else delete lst[i];
     }
     delete[] lst;
     if(rslt->lst==NULL)
@@ -620,6 +623,7 @@ result* managejoin(relation* R, relation* S, int queryIndex)
 
             }
         }
+        else delete lst[i];
     }
     delete[] lst;
     // delete scheduler;
@@ -1215,6 +1219,7 @@ void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 
                 // std::cout<<"query "<<queryIndex<<" ended"<<std::endl;
     }
+    delete[] parts;
     // std::cout<<"mycounter: "<<myCounter<<std::endl;
 }
 void loadrelationIds(int* relationIds, char* part, int& relationsnum)
@@ -1341,6 +1346,7 @@ uint64_t** noopt(uint64_t** preds,int cntr)
         final[next++]=preds[i];
 
     delete[] tmp;
+    delete[] preds;
     return final;
 }
 IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,int relationsnum, int* relationIds, int queryIndex)
@@ -1552,7 +1558,10 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
             // rel2ExistsInIntermediateArray = false;
             rslt= join(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2, inputArray1->columns, inputArray2->columns, inputArray1->columnsNum, inputArray2->columnsNum, 0);
         } else if (joinMode == parallel) {
-            rslt = managejoin(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2,queryIndex);
+            if(jthreads)
+                rslt = managejoin(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2,queryIndex);
+            else
+                rslt = managejoin_3(rel2ExistsInIntermediateArray ? &rel2 : &rel1, rel2ExistsInIntermediateArray ? &rel1 : &rel2,queryIndex);
         }
         
         if (rslt->lst->rows == 0) {
@@ -1760,6 +1769,7 @@ void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* p
         }
         pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
         sprintf(QueryResult[queryIndex],"%s",buffer[0]);
+        delete[] buffer[0];
         for(int i=1;i<projectionscount;i++)
         {
             sprintf(QueryResult[queryIndex],"%s %s",QueryResult[queryIndex],buffer[i]);
@@ -1926,10 +1936,13 @@ void usage(char** argv)
     std::cout<<"   -pb           (Reorder -> New job Per Bucket) (\"-ro\" should be provided) Create a new parallel job for each new bucket"<<std::endl;
     std::cout<<"   -qs           (QuickSort)Run quicksorts independently"<<std::endl;
     std::cout<<"   -jn           (JoiN) Runs joins in parallel (split arrays)"<<std::endl;
+    std::cout<<"   -jnthreads    (JoiN THREADS) Extra flag when parallel join is running. It will split every join array in <num of threds> parts"<<std::endl;
+    std::cout<<"                 *Default is: split join array by prefix"<<std::endl<<std::endl;
     std::cout<<"   -pj           (ProJection) Runs projection checksums in parallel"<<std::endl;
     std::cout<<"   -ft           (FilTer) Runs filters in parallel"<<std::endl;
     std::cout<<"   -all          (ALL) Everything runs in parallel"<<std::endl;  
-    std::cout<<"   -n <threads>  Specify number of threads to run"<<std::endl;  
+    std::cout<<"   -n <threads>  Specify number of threads to run (if 1 is provided, then program will run in serial mode)"<<std::endl;  
+    std::cout<<"   -optimize     Optimize the Predicates Given"<<std::endl;
     std::cout<<"   -h            Displays this help message"<<std::endl<<std::endl;
     std::cout<<"Default is: everything runs serial"<<std::endl<<std::endl;
     std::cout<<"*Note that <threads> must be greater than the max batch size so that the threads do not hang*"<<std::endl;
@@ -1954,6 +1967,8 @@ void params(char** argv,int argc)
             quickSortMode=parallel;
         else if(strcmp(argv[i],"-jn")==0)
             joinMode=parallel;
+        else if(strcmp(argv[i],"-jnthreads")==0)
+            jthreads=true;
         else if(strcmp(argv[i],"-pj")==0)
             projectionMode=parallel;
         else if(strcmp(argv[i],"-ft")==0)
@@ -1980,8 +1995,20 @@ void params(char** argv,int argc)
                 std::cout<<"Wrong arguments"<<std::endl;
                 exit(1);
             }
-            scheduler=new JobScheduler(threadsNum,1000000000);
-            threadsNumGiven = true;
+            if(threadsNum==1)
+            {
+                queryMode=serial;
+                reorderMode=serial;
+                joinMode=serial;
+                quickSortMode=serial;
+                projectionMode=serial;
+                filterMode=serial;
+            }
+            else
+            {
+                scheduler=new JobScheduler(threadsNum,1000000000);
+                threadsNumGiven = true;
+            }
         }
         else if (strcmp(argv[i],"-optimize")==0)
         {

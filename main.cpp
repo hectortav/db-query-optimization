@@ -174,6 +174,7 @@ int main(int argc,char** argv)
         delete[] lastJobDoneArrays;
         delete[] jobsCounter;
         delete[] jobsCounterMutexes;
+        delete[] jobsCounterConds;
 
         for(int i=0;i<lines;i++)
             delete[] arr[i];

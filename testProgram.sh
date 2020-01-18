@@ -69,10 +69,15 @@ read -p "Provide arguments for program run according to the following guide:
 -pb                                 (Reorder -> New job Per Bucket) (\"-ro\" should be provided) Create a new parallel job for each new bucket
 -qs                                 (QuickSort) Run quicksorts independently
 -jn                                 (JoiN) Run joins in parallel (split arrays)
+-jnthreads                          (JoiN THREADS) Extra flag when parallel join is running. It will split every join array in <num of threds> parts
+                                    *Default is: split join array by prefix
+
 -ft                                 (FilTer) Runs filters in parallel
 -pj                                 (ProJection) Runs Projection checksums in parallel
 -all                                (ALL) Everything runs in parallel
--n <threads>                        Specify number of threads to run
+-n <threads>                        Specify number of threads to run (if 1 is provided, then program will run in serial mode)
+-optimize                           Optimize the Predicates Given
+
 [no argument or any other argument] Everything runs serial
 -> " args
 
