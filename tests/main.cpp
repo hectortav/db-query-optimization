@@ -35,7 +35,9 @@ int main()
      || (NULL == CU_add_test(pSuite, "test of InputArray::extractColumnFromRowIds()", testInputArrayExtractColumnFromRowIds)) 
      || (NULL == CU_add_test(pSuite, "test of IntermediateArray::populate()", testIntermediateArrayPopulate)) 
      || (NULL == CU_add_test(pSuite, "test of IntermediateArray::findColumnIndexByInputArrayId() and IntermediateArray::findColumnIndexByPredicateArrayId()", testIntermediateArrayFindColumnIndex)) 
-     || (NULL == CU_add_test(pSuite, "test of IntermediateArray::selfJoin()", testIntermediateArraySelfJoin)) 
+     || (NULL == CU_add_test(pSuite, "test of IntermediateArray::selfJoin()", testIntermediateArraySelfJoin))
+     || (NULL == CU_add_test(pSuite, "test of getCombinationsNum()", testGetCombinationsNum))
+     || (NULL == CU_add_test(pSuite, "test of getCombinations()", testGetCombinations))
     )
    {
       CU_cleanup_registry();

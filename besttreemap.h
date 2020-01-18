@@ -76,7 +76,18 @@ class InputArray;
 uint64_t** BestPredicateOrder(uint64_t** currentpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats );
 uint64_t** OptimizePredicates(uint64_t**,int&,int,int*,const InputArray**);
 void FilterStats(uint64_t** filterpreds,int cntr,int relationsum,int*relationids,const InputArray** inputarr,ColumnStats** Stats);
+int getCombinationsNum(int size, int combinationSize);
+void getCombinations(PredicateArray* elements, int n, int r, int index, PredicateArray* data,
+                     PredicateArray* resultArray, int i, int& nextIndex);
+                     
+void updateColumnStats(const InputArray* pureInputArray, uint64_t joinFieldId, int predicateArrayId,
+                         Value* valueP, Value* newValueP, ColumnStats** filterColumnStatsArray,
+                         uint64_t fieldDistinctValuesNumAfterFilter, uint64_t fieldValuesNumBeforeFilter);
+                         
+void updateValueStats(Value* valueP, Value* newValueP, Predicate* newPredicateP, int* relationIds,
+                         ColumnStats** filterColumnStatsArray, const InputArray** inputArrays);
 
-
+Value* createJoinTree(Value* valueP, PredicateArray* newPredicateArrayP, int* relationIds, int relationsnum,
+                         ColumnStats** filterColumnStatsArray, const InputArray** inputArrays);
 
 #endif

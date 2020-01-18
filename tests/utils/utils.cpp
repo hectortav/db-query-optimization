@@ -541,3 +541,38 @@ void testIntermediateArraySelfJoin(void) {
     delete pureInputArray1;
     delete pureInputArray2;
 }
+
+void testGetCombinationsNum(void) {      
+    CU_ASSERT(getCombinationsNum(1, 1) == 1);
+    CU_ASSERT(getCombinationsNum(2, 2) == 1);
+    CU_ASSERT(getCombinationsNum(2, 1) == 2);
+    CU_ASSERT(getCombinationsNum(3, 1) == 3);
+    CU_ASSERT(getCombinationsNum(3, 2) == 3);
+    CU_ASSERT(getCombinationsNum(3, 3) == 1);
+    CU_ASSERT(getCombinationsNum(4, 1) == 4);
+    CU_ASSERT(getCombinationsNum(4, 2) == 6);
+    CU_ASSERT(getCombinationsNum(4, 3) == 4);
+    CU_ASSERT(getCombinationsNum(4, 4) == 1);
+}
+
+void testGetCombinations(void) {
+    PredicateArray predicateArray(4);
+    predicateArray.array[0].init(0, 2, 1, 0);
+    predicateArray.array[1].init(0, 1, 2, 0);
+    predicateArray.array[2].init(0, 3, 5, 0);
+    predicateArray.array[3].init(2, 1, 2, 3);
+    
+    for (int i = 1; i < 4; i++) {
+        PredicateArray tempPredicateArray(1);
+        
+        int curCombinationsNum = getCombinationsNum(4, i);
+        PredicateArray* resultArray = new PredicateArray[curCombinationsNum];
+        int nextIndex = 0;
+        getCombinations(&predicateArray, predicateArray.size, i, 0, &tempPredicateArray, resultArray, 0, nextIndex);
+        for (int j = 0; j < curCombinationsNum; j++) {
+            CU_ASSERT(resultArray[j].array != NULL && resultArray[j].size != 0);
+        }
+
+        delete[] resultArray;
+    }
+}
