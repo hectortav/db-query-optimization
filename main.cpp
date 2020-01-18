@@ -53,11 +53,10 @@ int main(int argc,char** argv)
                 while (available_threads == 0) {
                     pthread_cond_wait(&queryJobDoneCond, &queryJobDoneMutex);
                 }
+                available_threads--;
                 pthread_mutex_unlock(&queryJobDoneMutex);
-                    scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i), -1);
-                    pthread_mutex_lock(&queryJobDoneMutex);
-                    available_threads--;
-                    pthread_mutex_unlock(&queryJobDoneMutex);
+                
+                scheduler->schedule(new queryJob(makeparts(arr[i]), (const InputArray**)inputArrays, i), -1);
             }
         }
 
@@ -87,7 +86,7 @@ int main(int argc,char** argv)
         delete[] arr;
         arr=NULL;
     }
-    
+
     delete scheduler;
 
     for(int i=0;i<MAX_INPUT_ARRAYS_NUM;i++)
