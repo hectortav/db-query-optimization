@@ -1,19 +1,5 @@
 #include "besttreemap.h"
 
-pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-
-Statistics::Statistics(int min,int max,int numdiscrete,int size)
-{
-    this->min=min;
-    this->max=max;
-    this->numdiscrete=numdiscrete;
-    this->size=size;
-}
-Statistics::~Statistics()
-{
-
-}
-
 void Predicate::init(int predicateArray1Id, uint64_t field1Id, int predicateArray2Id, uint64_t field2Id) {
     this->predicateArray1Id = predicateArray1Id;
     this->predicateArray2Id = predicateArray2Id;
@@ -175,7 +161,6 @@ Key::~Key()
 Value::Value(int sz)
 {
     this->ValueArray=new PredicateArray(sz);
-    this->stats=NULL;
     this->columnStatsArray = NULL;
     this->cost=0;
     this->ColumnStatsArraySize=0;

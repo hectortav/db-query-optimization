@@ -9,15 +9,9 @@
 
 static pthread_mutex_t jobQueueMutex = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
 extern pthread_mutex_t* jobsCounterMutexes; // mutex for jobsCounter
-// static pthread_mutex_t jobSchedulerDestroyMutex = PTHREAD_MUTEX_INITIALIZER;
-
-// jobQueueFullCond: JobQueue is currently full
-// jobQueueEmptyCond: JobQueue is currently empty
 static pthread_cond_t jobQueueFullCond = PTHREAD_COND_INITIALIZER, jobQueueEmptyCond = PTHREAD_COND_INITIALIZER; // condition variables for JobQueue
-// static pthread_cond_t jobSchedulerDestroyCond = PTHREAD_COND_INITIALIZER;
 extern int64_t* jobsCounter;
 
-// Abstract Class Job
 class Job
 {
 private:
@@ -89,7 +83,6 @@ public:
     // Add a job in the queue and returns a job id
     int schedule(Job *job, int queryIndex);
     int getThreadsNum(); 
-    // void* threadWork(void*);
 };
 
 void *threadWork(void *arg);
