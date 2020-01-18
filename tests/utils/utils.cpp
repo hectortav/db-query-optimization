@@ -563,7 +563,7 @@ void testGetCombinations(void) {
     predicateArray.array[3].init(2, 1, 2, 3);
     
     for (int i = 1; i < 4; i++) {
-        PredicateArray tempPredicateArray(1);
+        PredicateArray tempPredicateArray(i);
         
         int curCombinationsNum = getCombinationsNum(4, i);
         PredicateArray* resultArray = new PredicateArray[curCombinationsNum];

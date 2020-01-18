@@ -326,16 +326,15 @@ int getCombinationsNum(int size, int combinationSize) {
 
 /* arr[]  ---> Input Array 
    n      ---> Size of input array 
-   r      ---> Size of a combination to be printed 
+   r      ---> Size of a combination
    index  ---> Current index in data[] 
    data[] ---> Temporary array to store current combination 
    i      ---> index of current element in arr[]     */
 void getCombinations(PredicateArray* elements, int n, int r, int index, PredicateArray* data,
                      PredicateArray* resultArray, int i, int& nextIndex) 
 { 
-    // Current cobination is ready, print it 
+    // Current cobination is ready
     if (index == r) { 
-
         resultArray[nextIndex++].init(data, r);
         return; 
     } 
@@ -345,7 +344,6 @@ void getCombinations(PredicateArray* elements, int n, int r, int index, Predicat
         return; 
   
     // current is included, put next at next location 
-
     data->array[index] = elements->array[i];
 
     getCombinations(elements, n, r, index + 1, data, resultArray, i + 1, nextIndex); 
