@@ -209,11 +209,11 @@ void testQuickSort(void) {
     populateRelationRandomly(rel4);
     populateRelationRandomly(rel5);
 
-    quickSort(rel1.tuples, 0, rel1.num_tuples - 1);
-    quickSort(rel2.tuples, 0, rel2.num_tuples - 1);
-    quickSort(rel3.tuples, 0, rel3.num_tuples - 1);
-    quickSort(rel4.tuples, 0, rel4.num_tuples - 1);
-    quickSort(rel5.tuples, 0, rel5.num_tuples - 1);
+    quickSort(rel1.tuples, 0, rel1.num_tuples - 1, -1, -1, false);
+    quickSort(rel2.tuples, 0, rel2.num_tuples - 1, -1, -1, false);
+    quickSort(rel3.tuples, 0, rel3.num_tuples - 1, -1, -1, false);
+    quickSort(rel4.tuples, 0, rel4.num_tuples - 1, -1, -1, false);
+    quickSort(rel5.tuples, 0, rel5.num_tuples - 1, -1, -1, false);
     
     CU_ASSERT(isRelationOrderedTest(rel1) && isRelationOrderedTest(rel2) && isRelationOrderedTest(rel3) && isRelationOrderedTest(rel4) && isRelationOrderedTest(rel5));
 }
@@ -330,7 +330,7 @@ void tuplesReorderTest(void) {
     uint64_t x = pow(2,8);
     populateRelationRandomly(rel);
     tuple* t=new tuple[rel.num_tuples];
-    tuplereorder(rel.tuples, t, rel.num_tuples, 0);
+    tuplereorder(rel.tuples, t, rel.num_tuples, 0, -1, -1);
     uint64_t test = rel.tuples[0].payload;
     for (int i = 1; i < rel.num_tuples; i++)
     {
@@ -377,19 +377,19 @@ void testInputArrayFilterRowIds(void) {
     
     InputArray inputArrayRowIds(2);
 
-    InputArray* newInputArrayRowIds = inputArrayRowIds.filterRowIds(0, 1, pureInputArray);
+    InputArray* newInputArrayRowIds = inputArrayRowIds.filterRowIds(0, 1, pureInputArray, 0, inputArrayRowIds.rowsNum);
     CU_ASSERT(newInputArrayRowIds->columns[0][0] == 0 && newInputArrayRowIds->rowsNum == 1)
     delete newInputArrayRowIds;
 
-    newInputArrayRowIds = inputArrayRowIds.filterRowIds(2, 2, 3, pureInputArray);
+    newInputArrayRowIds = inputArrayRowIds.filterRowIds(2, 2, 3, pureInputArray, 0, inputArrayRowIds.rowsNum);
     CU_ASSERT(newInputArrayRowIds->columns[0][0] == 0 && newInputArrayRowIds->rowsNum == 1)
     delete newInputArrayRowIds;
 
-    newInputArrayRowIds = inputArrayRowIds.filterRowIds(1, 0, 57, pureInputArray);
+    newInputArrayRowIds = inputArrayRowIds.filterRowIds(1, 0, 57, pureInputArray, 0, inputArrayRowIds.rowsNum);
     CU_ASSERT(newInputArrayRowIds->columns[0][0] == 1 && newInputArrayRowIds->rowsNum == 1)
     delete newInputArrayRowIds;
 
-    newInputArrayRowIds = inputArrayRowIds.filterRowIds(2, 1, 0, pureInputArray);
+    newInputArrayRowIds = inputArrayRowIds.filterRowIds(2, 1, 0, pureInputArray, 0, inputArrayRowIds.rowsNum);
     CU_ASSERT(newInputArrayRowIds->rowsNum == 0)
     delete newInputArrayRowIds;
 

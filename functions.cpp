@@ -842,7 +842,7 @@ void quickSort(tuple* tuples, int startIndex, int stopIndex, int queryIndex, int
         quickSort(tuples, partitionIndex + 1, stopIndex, queryIndex, reorderIndex, false); 
     }
 
-    if (isLastCall) {
+    if (isLastCall && queryIndex != -1  && reorderIndex != -1) {
         lastJobDoneArrays[queryIndex][reorderIndex] = true;
         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     }
