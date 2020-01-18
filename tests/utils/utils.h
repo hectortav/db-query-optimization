@@ -3,6 +3,7 @@
 #include <CUnit/Basic.h>
 #include "../../functions.h"
 #include "../../besttreemap.h"
+#include <iostream>
 
 /* The suite initialization function.
  * Returns zero on success, non-zero otherwise.
@@ -50,3 +51,4 @@ void testIntermediateArrayFindColumnIndex(void);
 void testIntermediateArraySelfJoin(void);
 void testGetCombinationsNum(void);
 void testGetCombinations(void);
+void testmap(void);

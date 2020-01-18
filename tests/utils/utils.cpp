@@ -576,3 +576,33 @@ void testGetCombinations(void) {
         delete[] resultArray;
     }
 }
+void testmap(void)
+{
+    Map* mymap=new Map(25);
+    PredicateArray** parr=new PredicateArray*[100];
+    Value** varr=new Value*[100];
+    for(int i=0;i<100;i++)
+    {
+        parr[i]=new PredicateArray(i);
+        varr[i]=new Value(i);
+        mymap->insert(parr[i],varr[i]);
+        for(int j=0;j<=i;j++)
+            CU_ASSERT(mymap->retrieve(parr[j])==varr[j]);
+        
+    }
+    for(int i=0;i<100;i++)
+    {
+        CU_ASSERT(mymap->retrieve(parr[i])==varr[i]);
+        // parr[i]=new PredicateArray(i);
+        varr[i]=new Value(i);
+        PredicateArray* tmp=new PredicateArray(i);
+        memcpy(tmp->array,parr[i]->array,sizeof(Predicate)*i);
+        mymap->insert(tmp,varr[i]);
+        CU_ASSERT(mymap->retrieve(parr[i])==varr[i]);
+    }
+    delete[] parr;
+    delete[] varr;
+    delete mymap;
+    
+    
+}

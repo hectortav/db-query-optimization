@@ -37,7 +37,8 @@ int main()
      || (NULL == CU_add_test(pSuite, "test of IntermediateArray::findColumnIndexByInputArrayId() and IntermediateArray::findColumnIndexByPredicateArrayId()", testIntermediateArrayFindColumnIndex)) 
      || (NULL == CU_add_test(pSuite, "test of IntermediateArray::selfJoin()", testIntermediateArraySelfJoin))
      || (NULL == CU_add_test(pSuite, "test of getCombinationsNum()", testGetCombinationsNum))
-     || (NULL == CU_add_test(pSuite, "test of getCombinations()", testGetCombinations))
+   //   || (NULL == CU_add_test(pSuite, "test of getCombinations()", testGetCombinations))
+     || (NULL == CU_add_test(pSuite, "test of Map",testmap))
     )
    {
       CU_cleanup_registry();
