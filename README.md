@@ -261,6 +261,22 @@ require constant checks and processes to allocate new memory blocks we
 would achieve better times with probably an allocation of unneeded
 memory as a negative aspect.
 
+# Description of handlepredicates(), the main function of theprogram
+
+The flow of handlepredicates() is the following:
+
+- Filter predicates are relocated before the join predicates. If “-optimize”argument is provided, join predicates are reordered according to an algo-rithm ofjoin enumeration.
+- For each predicate array id (which corresponds to an original input array(InputArray object)), a new InputArray object is created which containsonly  the  row  idsof  the  original  input  array.  This  is  done  because  itprevents the existence of duplicated data.
+- For each predicate:
+  - If the predicate isfilterorself-join/inner-joinof an input array,its row ids (InputArray object) are filtered and transferred to a newlycreated InputArray which replaces the old row ids.
+  –If the predicate contains 2 predicate array ids both of which exist in thecurrent IntermediateArray (both participated in a previous join), thiscase is handled as aself-join/inner-joinof the current Intermedi-ateArray. So, the current IntermediateArray is filtered and transferredto a newly created IntermediateArray which becomes the current one.
+  – In any other case, the predicate is handled as a typical join between2 arrays. Specifically:
+    - For each of the 2 pairs of predicate array id and field id, an ob-ject of type relation is created by retrieving data from the corre-sponding original input array. Thepayloadsare retrieved fromthe rows the ids of which exist(1)in the corresponding (filtered)row-ids-array  (InputArray  object)or  (2)in  the  current  Inter-mediateArray if the predicate array id participated in a previousjoin. In case(1), thekeysof the relation are the row ids of theoriginal input array. In case(2), thekeysof the relation are therow ids of the current IntermediateArray.
+    - For  each  predicate  array  id  and  field  id,  if  the  combination  ofthem  participated  in  the  last  join,  the  above  corresponding  ex-tracted relation doesnotget reordered, because it already is. Inthe opposite case, the relation gets reordered with radix-sort.
+    - The 2 above ordered relations are joined in a list which is thenconverted to a 2-column array each of its columns contains therow ids of either the original input array or the current Interme-diateArray as mentioned in step (i).
+    - If the result contains 0 entries, then the function does the neces-sary memory deallocation and returns NULL which indicates noresults.
+    - In any other case, a new IntermediateArray is created which con-sists of only the above 2-column result if this is the first join,orof the contents of the previous IntermediateArrayplusthe col-umn  with  the  row  ids  of  the  first-time-joined  InputArray.  Thisnew IntermediateArray becomes the current one.
+  - If the last IntermediateArray is not NULL and its size is greater than0, the function returns it. In any other case, NULL is returned whichindicates no results.
 # Time Statistics
 
 ## Small Sized Input (In seconds)
