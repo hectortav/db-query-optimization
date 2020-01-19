@@ -43,27 +43,42 @@ and a bash script (testProgram.sh) to easily test the program. To run the execut
 called "final", you can use one or more of the following flags to provide cli arguments:
 
 \begin{itemize}
-    \item -qr (QueRy)
-	    Run queries of every batch in parallel
-    \item -ro (ReOrder)
-	Run bucket reorder (radix-sort) in parallel
-    \item -pb Create a new parallel job for each new bucket
-    \item -qs (QuickSort) Run quicksorts independently
-    \item -jn (JoiN)
-        Run join in parallel
-    \item -ft (FilTer) 
-        Run filters in parallel
-    \item -pj (ProJection)
-        Run Projection checksums in parallel
-    \item -all (ALL) 
-        Everything runs in parallel
-    \item -n "threads"                        
-        Specify number of threads to run
-\item -jnthreads Complementary way to manage Join
+    \item -qr: Each query is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -ro: If “-pb” argument is not provided and if current shift of hash function is even, the reorder task of the “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -pb: If “-ro” argument is provided, the reorder task of each “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -qs: Each quicksort task is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -jn: If “-jnthreads” argument is not provided, each job is responsible for joining areas that have the same prefix.
+    \item -jnthreads: if “-jn” argument is provided, the array involved in each join is split evenly according to the thread pool’s size and the join of each of its parts with the other array is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -pj: The result array is split evenly according to the thread pool’s size and the calculation of the sums of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -ft: Each time a filter is handled, the current array of row ids is split evenly according to the thread pool’s size and the filtering of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -all: Equivalent to the following combination of arguments: -qr -ro -qs -jn -pj -ft
+    \item -n \textless No threads\textgreater: Size of the thread pool to be created by the scheduler.
+    \item -optimize: Join enumeration is used to reorder join predicates. Note: If this argument is not provided, join predicates are not reordered but filter predicates are relocated before the join predicates.
+    \item -h: Displays a help message which contains a short description of each argument.
  \end{itemize}
 
 \clearpage
-\section{Observations and choices during implementation}
+\section{Code Description}
+\subsection{Description of job scheduler and jobs (class JobScheduler & abstract class Job)}
+\begin{itemize}
+    \item JobScheduler consists of a queue (JobQueue) in which any kind of Job (: abstract class) is inserted.
+    \item When the JobScheduler gets initialized, a thread pool is created, the size of which is defined by the user.
+    \item When a new Job (with a new unique id) is inserted into the queue, an available thread or the first thread that will be available handles the Job.
+    \item Job insertion and obtainment is handled with mutual exclusion in order to avoid race conditions.
+    \item If the Job is a Radix-sort Job (for parallel Radix-sort) or a Quicksort Job (for parallel Quicksort), jobsCounter[queryIndex] is incremented by 1 when the Job is inserted into the queue. This is helping the parent thread in knowing when to proceed in joining the results of the 2 relations’ reordering. (queryIndex is the index/id of the current query and it is used for the case of parallel run of queries)
+    \item When any Job is completed, jobsCounter[queryIndex] is decremented by 1. If jobsCounter[queryIndex] equals to 0, a condition variable is signaled which indicates that all the jobs of the current part of the program are done, so the parent thread can continue its execution.
+    \item When the JobScheduler gets destroyed, it creates ExitJobs (with id=-1), the count of which is equal to the thread pool’s size. When a thread handles an ExitJob, it exits immediately.
+\end{itemize}
+\section{Code Description}
+\subsection{Description of job scheduler and jobs (class JobScheduler & abstract class Job)}
+\begin{itemize}
+    \item IntermediateArray consists of the row ids of each array (of the predicate) that took part in previous joins. Each column is identified by the corresponding predicate array’s id.
+    \item After the first join, an IntermediateArray is created having as contents the 2 columns that resulted from the join.
+    \item After each consecutive join, which involves a column (with row ids) of the IntermediateArray and a column (with row ids) of a first-time-used predicate array, a new IntermediateArray is created. This newly created IntermediateArray has row count equal to the last join result’s row count and column count equal to the previous IntermediateArray’s column count plus 1. Its contents are the joined row ids taken from the previous IntermediateArray and the joined row ids of the firstly used predicate array.
+    \item A join between 2 arrays that have already been involved in a previous join, is handled as inner-join/self-join of the current IntermediateArray.
+
+\end{itemize}
+\section{Description of intermediate result (class IntermediateArray)}
 
 \tab We implemented and tested two different methods for sorting buckets during the first and second part. One of them was using recursion while the other one was using a loop to break the buckets into smaller ones when needed. After thorough testing we decided to use the recursive one since we managed to achieve better execution times and convolution while we also managed to keep each thread work on a different memory part at any time, reducing the need for semaphores which would slow the execution further since each thread would have to wait to access the memory.
 
@@ -137,8 +152,17 @@ Predicate optimization & 48.637 & N/A & N/A & N/A & N/A & N/A & N/A \\
 \label{tab:my-table}
 \end{table}
 \clearpage
+\section{Time Results Conclusions}
+\begin{itemize}
+    \item Without the “-optimize” flag the program runs without query optimization but with the filters of each query being placed first. This is a reason why sometimes the program runs quicker without the “-optimize” flag. 	
+    \item When 	the small dataset is given as input, the size of the data is so small that the overhead of Join Enumeration adds a small delay to the program compared to its execution without the “-optimize” flag.
+    \item When 	the medium dataset is given as input, the size of the data is bigger, so Join Enumeration increases the speed of the program.
+    \item Parallelism increases the speed of the program significantly because the execution load is split so that each thread is handling a different Job at each given moment.
+    \item When the program’s thread pool has a size which is larger than the maximum number of threads that the system can provide, there is only a small or no amount of increase at the program’s speed compared to using a smaller thread pool.
+\end{itemize}
+
 \section{Parallelization Observations}
-\tab At the third and last part of the project, parallelization was added to the program. The effect this transition had on the program is immediately apparent when looking at the overall execution times. Adding CPU parallelization led to a decline of 20\% concerning execution time and a increase of 70\% concerning CPU usage which means computer resources are better utilized and the overall outcome is maximized.
+\tab At the third and last part of the project, parallelization was added to the program. The effect this transition had on the program is immediately apparent when looking at the overall execution times. Adding CPU parallelization led to a decline of 60\% concerning execution time and a increase of 70\% concerning CPU usage which means computer resources are better utilized and the overall outcome is maximized.
 
 \section{Version Control Observations}
 \tab During the whole project we used git as a version control system. With git we managed to track bugs that emerged during development and then easily solve them. Git also helped our team to share code and communicate better that led to better organization and management. Finally, a git aspect we found greatly useful was branching since each team member could work in separate features without causing problems and interference.
