@@ -686,35 +686,7 @@ uint64_t* histcreate(tuple* array,int offset,int shift)
 }
 uint64_t cntrcntr;
 
-void tuplereorder_serial(tuple* array,tuple* array2, int offset,int shift)
-{
-    uint64_t* hist=histcreate(array,offset,shift);
-    uint64_t* psum=psumcreate(hist);
-    for(int i=0;i<offset;i++)
-    {
-        uint64_t hash=hashFunction(array[i].payload,7-shift);
-        memcpy(array2+psum[hash],array+i,sizeof(tuple));
-        psum[hash]++;
-    }
-    memcpy(array,array2,offset*sizeof(tuple));
-    for(int i=0,start=0;i<power;i++)
-    {
-        if(hist[i]==0)
-            continue;
-        if(hist[i] > TUPLES_PER_BUCKET && shift < 7){
-            tuplereorder_serial(array+start,array2+start,psum[i]-start,shift+1); //psum[i]-start = endoffset
-        }
-        else            
-            quickSort(array,start, psum[i]-1, -1, -1, false);
-
-        start=psum[i];
-    }
-    delete[] psum;
-    delete[] hist;
-}
-uint64_t myCounter = 0;
-static pthread_mutex_t blah = PTHREAD_MUTEX_INITIALIZER; // mutex for JobQueue
-void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
+void tuplereorder(tuple* array,tuple* array2, int offset,int shift, bool isLastCall, int reorderIndex /*can be 0 or 1*/, int queryIndex)
 {
     uint64_t* hist=histcreate(array,offset,shift);
     uint64_t* psum=psumcreate(hist);
@@ -755,15 +727,12 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
         if(hist[i]==0)
             continue;
         allHistsEmpty = false;
-        if (shift == 7){
-            myCounter++;
-        }
         if(hist[i] > TUPLES_PER_BUCKET && shift < 7)
         {
             if(reorderMode==parallel && ( newJobPerBucket || shift%2 == 0 ))
                 scheduler->schedule(new trJob(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex), queryIndex);
             else
-                tuplereorder_parallel(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex);
+                tuplereorder(array+start,array2+start,psum[i]-start,shift+1, i==lastReorderCallIndex ? true : false, reorderIndex, queryIndex);
         } else {
             bool isLastQuickSort = (lastQuicksortCallIndex == i && lastReorderCallIndex == -1);
             if (quickSortMode == serial)
@@ -784,11 +753,11 @@ void tuplereorder_parallel(tuple* array,tuple* array2, int offset,int shift, boo
     delete[] hist;
 }
 
-void tuplereorder(tuple* array,tuple* array2, int offset,int shift, int reorderIndex, int queryIndex)
-{
-            tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex, queryIndex);
+// void tuplereorder(tuple* array,tuple* array2, int offset,int shift, int reorderIndex, int queryIndex)
+// {
+//             tuplereorder_parallel(array, array2, offset, shift, true, reorderIndex, queryIndex);
 
-}
+// }
 
 void swap(tuple* tuple1, tuple* tuple2)
 {
@@ -1010,11 +979,6 @@ char** makeparts(char* query)
 
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex)
 {
-    myCounter = 0;
-    /*for(int i=0;i<3;i++)
-    {
-        std::cout<<parts[i]<<std::endl;
-    }*/
     int relationIds[MAX_INPUT_ARRAYS_NUM];
     int relationsnum;
     loadrelationIds(relationIds, parts[0], relationsnum);
@@ -1076,7 +1040,7 @@ bool handleReorderRel(relation* rel, tuple** t, uint64_t** preds, int cntr, int 
     bool shouldSortRel = shouldSort(preds, cntr, i, predicateArrayId, fieldId, prevPredicateWasFilterOrSelfJoin);
     if (shouldSortRel) {
         (*t)=new tuple[rel->num_tuples];
-        tuplereorder(rel->tuples,*t,rel->num_tuples,0, reorderIndex, queryIndex);  //add parallel
+        tuplereorder(rel->tuples,*t,rel->num_tuples,0, true, reorderIndex, queryIndex);  //add parallel
     }
 
     return shouldSortRel;
@@ -1291,52 +1255,6 @@ IntermediateArray* handlepredicates(const InputArray** inputArrays,char* part,in
     handleDelete(preds, cntr, relationsnum, inputArraysRowIds, NULL, false);
 
     return curIntermediateArray != NULL && curIntermediateArray->rowsNum > 0 ? curIntermediateArray : NULL;
-}
-void handleprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex)
-{
-    QueryResult[queryIndex][0]='\0';
-    int projarray,projcolumn,predicatearray;
-    for(int i=0,start=0;(i==0)||(i>0&&part[i-1])!='\0';i++)
-    {
-        if(part[i]=='.')
-        {
-            part[i]='\0';
-            projarray=relationIds[atoi(part+start)];
-            predicatearray=atoi(part+start);
-            part[i]='.';
-            start=i+1;
-        }
-        if(part[i]==' '||part[i]=='\0')
-        {
-            int flg=0;
-            if(part[i]==' ')
-            {
-                part[i]='\0';
-                flg=1;
-            }
-            projcolumn=atoi(part+start);
-            if(flg)
-                part[i]=' ';
-            start=i+1;
-            
-            uint64_t sum=0;
-            if(rowarr!=NULL)
-            {
-                uint64_t key;
-                key=rowarr->findColumnIndexByPredicateArrayId(predicatearray);
-                for(uint64_t i =0;i<rowarr->rowsNum;i++)
-                {
-                    sum+=array[projarray]->columns[projcolumn][rowarr->results[key][i]];
-                }
-            }
-            if(sum!=0)
-                sprintf(QueryResult[queryIndex],"%s%" PRIu64,QueryResult[queryIndex],sum);
-            else
-                sprintf(QueryResult[queryIndex],"%sNULL",QueryResult[queryIndex]);
-            if(part[i]!='\0')
-                sprintf(QueryResult[queryIndex],"%s ",QueryResult[queryIndex]);
-        }
-    }
 }
 void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex)
 {

@@ -330,7 +330,7 @@ void tuplesReorderTest(void) {
     uint64_t x = pow(2,8);
     populateRelationRandomly(rel);
     tuple* t=new tuple[rel.num_tuples];
-    tuplereorder(rel.tuples, t, rel.num_tuples, 0, -1, -1);
+    tuplereorder(rel.tuples, t, rel.num_tuples, 0, true, -1, -1);
     uint64_t test = rel.tuples[0].payload;
     for (int i = 1; i < rel.num_tuples; i++)
     {
