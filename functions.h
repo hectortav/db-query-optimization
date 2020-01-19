@@ -421,8 +421,11 @@ void quickSort(tuple* tuples, int startIndex, int stopIndex, int queryIndex, int
 // reads input arrays from binary file and stores their data in an array of InputArrays which it returns
 // also calculates and stores the statistics for each column of each input array
 InputArray** readArrays();
+//reads next batch from input (stdin)
 char** readbatch(int& lns);
+//takes a line of information that consists of arrays,predicates,projection and splits is to three parts
 char** makeparts(char* query);
+//initializes environment for handling a query. it loads the arrays, executes the predicates and calculates checksums by callin the correct functions
 void handlequery(char** parts,const InputArray** allrelations, int queryIndex);
 // populates relationIds array with the array ids of the currently handled query
 void loadrelationIds(int* relationIds, char* part, int& relationsnum);
@@ -442,6 +445,7 @@ IntermediateArray* handlepredicates(const InputArray** relations,char* part,int 
 uint64_t** splitpreds(char* ch,int& cn);
 // old function for predicate reordering used in the 2nd part of the project
 uint64_t** optimizepredicates(uint64_t** preds,int cntr,int relationsnum,int* relationIds);
+//converts a predicate of string type (char*) to its corresponding numerical values
 void predsplittoterms(char* pred,uint64_t& rel1,uint64_t& col1,uint64_t& rel2,uint64_t& col2,uint64_t& flag);
 // creates and returns the hist constructed from the first "offset" elements of array
 uint64_t* histcreate(tuple* array,int offset,int shift);
@@ -454,6 +458,7 @@ void usage(char** argv);
 void params(char** argv,int argc);
 // calculates and prints the required sums by taking into consideration the parallelism mode of projection
 void manageprojection(IntermediateArray* rowarr,const InputArray** array,char* part, int* relationIds,int queryIndex);
+//pushes every filter in a query in front of any joins and returns the new order of execution of predicates
 uint64_t** noopt(uint64_t** preds,int cntr);
 
 #endif
