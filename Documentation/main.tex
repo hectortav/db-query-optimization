@@ -136,9 +136,16 @@ Predicate optimization & 48.637 & N/A & N/A & N/A & N/A & N/A & N/A \\
 \label{tab:my-table}
 \end{table}
 \clearpage
+\section{Parallelization Observations}
+\tab At the third and last part of the project, parallelization was added to the program. The effect this transition had on the program is immediately apparent when looking at the overall execution times. Adding CPU parallelization led to a decline of 20\% concerning execution time and a increase of 70\% concerning CPU usage which means computer resources are better utilized and the overall outcome is maximized.
+
+\section{Version Control Observations}
+\tab During the whole project we used git as a version control system. With git we managed to track bugs that emerged during development and then easily solve them. Git also helped our team to share code and communicate better that led to better organization and management. Finally, a git aspect we found greatly useful was branching since each team member could work in separate features without causing problems and interference.
+
+\clearpage
 \section{Unit Testing}
 
-\tab To test the execution of our program we used unit testing and especially Cunit. We tried to make unitests for every function regardless of the size or simplicity. Some of the functions tested are the following: 
+\tab To test the execution of our program we used unit testing and especially Cunit. We tried to make unit tests for every function regardless of the size or simplicity. Some of the functions tested are the following: 
 \begin{itemlist}
 \item randomIndex
 \item swap
@@ -158,6 +165,7 @@ Predicate optimization & 48.637 & N/A & N/A & N/A & N/A & N/A & N/A \\
 \item IntermediateArray::findColumnIndexByPredicateArrayId
 \item IntermediateArray::selfJoin
 \end{itemlist}
+\tab Overall we concluded that unit testing in an easy way to test and validate the solidity of a big project, that would otherwise require many hours of manual testing. Also we found that creating unit tests before the project is a valid way to ensure the smooth development of a program as well as keeping the team in track and necessitate the usage of a common API.
 
 \section{Conclusion}
 
