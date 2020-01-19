@@ -1,18 +1,20 @@
 # Software Development forInformation Systems
 
 [![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
-# How to compile and run the main program
+## How to compile and run the main program
 ----------------------------------
 make
 ./final
 
-How to compile and run the unit testing program
+or use testProgram.sh script
+
+### How to compile and run the unit testing program
 ------------------------------------------
 cd tests
 make
 ./main
 
-How to install CUnit on Linux
+### How to install CUnit on Linux
 -----------------------------
 To install CUnit on debian squeeze:
 sudo apt-get install libcunit1-dev libcunit1-doc libcunit1
@@ -29,7 +31,7 @@ chmod u+x configure (if necessary)
 make
 make install
 
-# Introduction
+## Introduction
 
 The following study was executed as part of the course on software
 development for information systems in the <span>*Notional and
@@ -66,7 +68,7 @@ arguments:
 
   - \-jnthreads Complementary way to manage Join
 
-# Observations and choices during implementation
+## Observations and choices during implementation
 
 We implemented and tested two different methods for sorting buckets
 during the first and second part. One of them was using recursion while
@@ -130,7 +132,7 @@ CPU parallelization led to a decline of 20% concerning execution time
 and a increase of 70% concerning CPU usage which means computer
 resources are better utilized and the overall outcome is maximized.
 
-# Version Control Observations
+## Version Control Observations
 
 During the whole project we used git as a version control system. With
 git we managed to track bugs that emerged during development and then
@@ -140,7 +142,7 @@ Finally, a git aspect we found greatly useful was branching since each
 team member could work in separate features without causing problems and
 interference.
 
-# Unit Testing
+## Unit Testing
 
 To test the execution of our program we used unit testing and especially
 Cunit. We tried to make unit tests for every function regardless of the
@@ -187,7 +189,7 @@ before the project is a valid way to ensure the smooth development of a
 program as well as keeping the team in track and necessitate the usage
 of a common API.
 
-# Conclusion
+## Conclusion
 
 During this assignment we used various technologies and researched a
 plethora of ideas and theories. We appreciated concepts like parallel
