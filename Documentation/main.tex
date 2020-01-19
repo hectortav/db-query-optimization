@@ -48,12 +48,12 @@ called "final", you can use one or more of the following flags to provide cli ar
     \item -pb: If “-ro” argument is provided, the reorder task of each “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
     \item -qs: Each quicksort task is scheduled as a single Job and runs in parallel with the other Jobs.
     \item -jn: If “-jnthreads” argument is not provided, each job is responsible for joining areas that have the same prefix.
-    \item -jnthreads: if “-jn” argument is provided, the array involved in each join is split evenly according to the thread pool’s size and the join of each of its parts with the other array is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item -jnthreads: if “-jn” argument is provided, the array involved in \textbf{each} join is split evenly according to the thread pool’s size and the join of each of its parts with the other array is scheduled as a single Job and runs in parallel with the other Jobs.
     \item -pj: The result array is split evenly according to the thread pool’s size and the calculation of the sums of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
     \item -ft: Each time a filter is handled, the current array of row ids is split evenly according to the thread pool’s size and the filtering of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
     \item -all: Equivalent to the following combination of arguments: -qr -ro -qs -jn -pj -ft
     \item -n \textless No threads\textgreater: Size of the thread pool to be created by the scheduler.
-    \item -optimize: Join enumeration is used to reorder join predicates. Note: If this argument is not provided, join predicates are not reordered but filter predicates are relocated before the join predicates.
+    \item -optimize: Join enumeration is used to reorder join predicates. \textbf{Note}: If this argument is not provided, join predicates are not reordered but filter predicates are relocated before the join predicates.
     \item -h: Displays a help message which contains a short description of each argument.
  \end{itemize}
 
@@ -65,8 +65,8 @@ called "final", you can use one or more of the following flags to provide cli ar
     \item When the JobScheduler gets initialized, a thread pool is created, the size of which is defined by the user.
     \item When a new Job (with a new unique id) is inserted into the queue, an available thread or the first thread that will be available handles the Job.
     \item Job insertion and obtainment is handled with mutual exclusion in order to avoid race conditions.
-    \item If the Job is a Radix-sort Job (for parallel Radix-sort) or a Quicksort Job (for parallel Quicksort), jobsCounter[queryIndex] is incremented by 1 when the Job is inserted into the queue. This is helping the parent thread in knowing when to proceed in joining the results of the 2 relations’ reordering. (queryIndex is the index/id of the current query and it is used for the case of parallel run of queries)
-    \item When any Job is completed, jobsCounter[queryIndex] is decremented by 1. If jobsCounter[queryIndex] equals to 0, a condition variable is signaled which indicates that all the jobs of the current part of the program are done, so the parent thread can continue its execution.
+    \item If the Job is a Radix-sort Job (for parallel Radix-sort) or a Quicksort Job (for parallel Quicksort), jobsCounter[queryIndex] is \textbf{incremented by 1} when the Job is inserted into the queue. This is helping the parent thread in knowing when to proceed in joining the results of the 2 relations’ reordering. (queryIndex is the index/id of the current query and it is used for the case of parallel run of queries)
+    \item When any Job is completed, jobsCounter[queryIndex] is \textbf{decremented by 1}. If jobsCounter[queryIndex] equals to 0, a condition variable is signaled which indicates that all the jobs of the current part of the program are done, so the parent thread can continue its execution.
     \item When the JobScheduler gets destroyed, it creates ExitJobs (with id=-1), the count of which is equal to the thread pool’s size. When a thread handles an ExitJob, it exits immediately.
 \end{itemize}
 \section{Code Description}
@@ -94,7 +94,28 @@ called "final", you can use one or more of the following flags to provide cli ar
 
 \tab Another observation we made is that the list functions (e.g. insert) consume 17\% of the time. If we had another data structure that would not require constant checks and processes to allocate new memory blocks we would achieve better times with probably an allocation of unneeded memory as a negative aspect.
 
-%\clearpage
+\clearpage
+\section{Description of handlepredicates(), the main function of the program}
+The flow of handlepredicates() is the following:
+\begin{itemize}
+    \item Filter predicates are relocated before the join predicates. If “\textbf{-optimize}” argument is provided, join predicates are reordered according to an algorithm of \textbf{join enumeration}.
+    \item For each predicate array id (which corresponds to an original input array (InputArray object)), a new InputArray object is created which contains \textbf{only the row ids} of the original input array. This is done because it prevents the existence of duplicated data.
+    \item For each predicate:
+    \begin{itemize}
+        \item If the predicate is \textbf{filter} or \textbf{self-join/inner-join} of an input array, its row ids (InputArray object) are filtered and transferred to a newly created InputArray which replaces the old row ids.
+        \item If the predicate contains 2 predicate array ids both of which exist in the current IntermediateArray (both participated in a previous join), this case is handled as a \textbf{self-join/inner-join} of the current IntermediateArray. So, the current IntermediateArray is filtered and transferred to a newly created IntermediateArray which becomes the current one.
+        \item In any other case, the predicate is handled as a typical join between 2 arrays. Specifically:
+        \begin{itemize}
+            \item For each of the 2 pairs of predicate array id and field id, an object of type relation is created by retrieving data from the corresponding original input array. The \textbf{payloads} are retrieved from the rows the ids of which exist \textbf{(1)} in the corresponding (filtered) row-ids-array (InputArray object) \textbf{or (2)} in the current IntermediateArray if the predicate array id participated in a previous join. In case \textbf{(1)}, the \textbf{keys} of the relation are the row ids of the original input array. In case \textbf{(2)}, the \textbf{keys} of the relation are the row ids of the current IntermediateArray.
+            \item For each predicate array id and field id, if the combination of them participated in the last join, the above corresponding extracted relation does \textbf{not} get reordered, because it already is. In the opposite case, the relation gets reordered with radix-sort.
+            \item The 2 above ordered relations are joined in a list which is then converted to a 2-column array each of its columns contains the row ids of either the original input array or the current IntermediateArray as mentioned in step (i).
+            \item If the result contains 0 entries, then the function does the necessary memory deallocation and returns NULL which indicates no results.
+            \item In any other case, a new IntermediateArray is created which consists of only the above 2-column result if this is the first join, \textbf{or} of the contents of the previous IntermediateArray \textbf{plus} the column with the row ids of the first-time-joined InputArray. This new IntermediateArray becomes the current one.
+        \end{itemize}
+        \item If the last IntermediateArray is not NULL and its size is greater than 0, the function returns it. In any other case, NULL is returned which indicates no results.
+    \end{itemize}
+\end{itemize}
+\begin{samepage}
 \section{Time Statistics}
 
 \tab The following table contains the program runtime measurements, CPU and memory usage with various parameters:\\
@@ -122,7 +143,7 @@ Predicate optimization & 1.111 & N/A & N/A & N/A & N/A & N/A & N/A \\
 \caption{Time in seconds}
 \label{tab:my-table}
 \end{table}
-
+\end{samepage}
 \clearpage
 \subsubsection{Medium Sized Input}
 
@@ -154,9 +175,9 @@ Predicate optimization & 48.637 & N/A & N/A & N/A & N/A & N/A & N/A \\
 \clearpage
 \section{Time Results Conclusions}
 \begin{itemize}
-    \item Without the “-optimize” flag the program runs without query optimization but with the filters of each query being placed first. This is a reason why sometimes the program runs quicker without the “-optimize” flag. 	
-    \item When 	the small dataset is given as input, the size of the data is so small that the overhead of Join Enumeration adds a small delay to the program compared to its execution without the “-optimize” flag.
-    \item When 	the medium dataset is given as input, the size of the data is bigger, so Join Enumeration increases the speed of the program.
+    \item Without the “-optimize” flag the program runs without query optimization \textbf{but with the filters of each query being placed first}. This is a reason why sometimes the program runs quicker without the “-optimize” flag. 	
+    \item When 	the small dataset is given as input, the size of the data is so small that the overhead of Join Enumeration adds a \textbf{small} delay to the program compared to its execution without the “-optimize” flag.
+    \item When 	the \textbf{medium} dataset is given as input, the size of the data is bigger, so Join Enumeration increases the speed of the program.
     \item Parallelism increases the speed of the program significantly because the execution load is split so that each thread is handling a different Job at each given moment.
     \item When the program’s thread pool has a size which is larger than the maximum number of threads that the system can provide, there is only a small or no amount of increase at the program’s speed compared to using a smaller thread pool.
 \end{itemize}
