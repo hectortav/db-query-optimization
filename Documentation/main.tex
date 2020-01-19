@@ -1,0 +1,167 @@
+\def\ArtDir{main/}
+
+\documentclass{ws-ijprai}
+ \usepackage[table,xcdraw]{xcolor}
+ \usepackage{chngpage}
+ \usepackage{fancyhdr}
+ 
+\pagestyle{fancy}
+\fancyhf{}
+
+\rfoot{Page \thepage}
+\def\ArtDir{main/}
+\begin{document}
+
+\catchline{}{}{}{}{}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{titlepage}
+    \centering
+
+    \vspace*{0.5cm}
+
+    \huge\bfseries
+    Software Development for Information Systems (2019 – 2020)
+    \vspace*{\fill}
+    \vspace*{0.5cm}
+
+    \large Antonis Klironomos\\[0.1in]Chrysostomos Rampidis\\[0.1in]Fotis Ektoras Tavoularis
+
+    \vspace*{\fill}
+\end{titlepage}
+
+\clearpage
+\newcommand\tab[1][1cm]{\hspace*{#1}}
+
+\section{Introduction}
+
+
+\tab The following study was executed as part of the course on software development for information systems in the {\it Notional and Kapodistrian University of Athens}. The aim of this study was to create a subset of a database that manages data entirely in the main memory. The whole task was split in three parts. In the first part we implemented a Sort Merge Join Algorithm, in the second one we performed a query analysis, similar to the one used in the {\it SIGMOD 2018} competition, while in the last part we implemented CPU personalization and a query optimizer.
+\tab The project is hosted in GitHub (https://github.com/hectortav/Project2020) and contains a Makefile for compilation
+and a bash script (testProgram.sh) to easily test the program. To run the executable, produced by the Makefile,
+called "final", you can use one or more of the following flags to provide cli arguments:
+
+\begin{itemize}
+    \item -qr (QueRy)
+	    Run queries of every batch in parallel
+    \item -ro (ReOrder)
+	Run bucket reorder (radix-sort) in parallel
+    \item -pb Create a new parallel job for each new bucket
+    \item -qs (QuickSort) Run quicksorts independently
+    \item -jn (JoiN)
+        Run join in parallel
+    \item -ft (FilTer) 
+        Run filters in parallel
+    \item -pj (ProJection)
+        Run Projection checksums in parallel
+    \item -all (ALL) 
+        Everything runs in parallel
+    \item -n "threads"                        
+        Specify number of threads to run
+\item -jnthreads Complementary way to manage Join
+ \end{itemize}
+
+\clearpage
+\section{Observations and choices during implementation}
+
+\tab We implemented and tested two different methods for sorting buckets during the first and second part. One of the was using recursion while the other one was using a loop to break the buckets into smaller ones when needed. After thorough testing we decided two use the recursive one since we managed to achieve better execution times and convolution while we also managed to keep each thread work on a different memory part at any time, reducing the need for semaphores which would slow the execution further since each thread would have to wait to access the memory.
+
+\tab Another part of the execution that we tried to parallelize was the copy from one tuple to another during each call of the Reorder function (tuplereorder\_parallel @ functions.cpp), but we finally decided not to keep the change since it significantly slowed the program because all the extra threads that would be used to execute the copy could be used more efficiently by another function that is waiting in the scheduler.
+
+\tab To adapt Join for running on a parallel processing system, we tried several different implementations. First, we tried the one described in class, that is to join areas that have the same prefix. Then, we tried merging some of these areas together so that each new area cluster is assigned to a thread. Finally, we tried to split the relation in equal parts so that each part is assigned to a thread. We noticed that the third method that kept the job count at a minimum while at the same time accomplished a balanced load between threads, produced a better result concerning time and processor usage.
+
+\tab We noticed that we had great time improvents when we used smaller and continues memory allocations. For example by turning histogram and psum from 2D arrays to 1D we managed to cut the execution time to 20\% of what we had with the model described in class. The reasoning behind this great impovement is that a big part of the array can be kept in cache and we don't have to worry about loading times that take a long time.
+
+\tab Another observation was the difference between the small and medium inputs. We noticed that the multithreading was better exploited with the medium sized input, where we saw greater time and cpu usage improvements. 
+
+\tab Running the program through a profiler, we noticed that partitioning during predicate optimization, consumed 37\% of the overall time. That means there are many data in a small number of buckets. That way we do not have the optimal outcome we could accomplish with an other optimization policy
+
+\tab Another observation we made is that the list functions (e.g. insert) consumes 17\% of the time. If we had another data structure that would not require constant checks and processes to allocate new memory blocks we would achieve better times with probably an allocation of unneeded memory as the negative.
+
+
+\clearpage
+\section{Time Statistics}
+
+\tab The following table contains the program runtime measurements, CPU and memory usage with various parameters:\\
+
+\subsubsection{Small Sized Input}
+
+\begin{table}[htb]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{
+>{\columncolor[HTML]{9AFF99}}l lllllll}
+\hline
+ & \cellcolor[HTML]{9AFF99}\begin{tabular}[c]{@{}l@{}}1 thread\\ (serial)\end{tabular} & \cellcolor[HTML]{9AFF99}2 threads & \cellcolor[HTML]{9AFF99}4 threads & \cellcolor[HTML]{9AFF99}8 threads & \cellcolor[HTML]{9AFF99}16 threads & \cellcolor[HTML]{9AFF99}32 threads & \cellcolor[HTML]{9AFF99}64 threads \\ \hline
+No predicate optimization & 0.775 & N/A & N/A & N/A & N/A & N/A & N/A \\
+Predicate optimization & 1.111 & N/A & N/A & N/A & N/A & N/A & N/A \\
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 0.856 & 0.662 & 0.645 & 0.671 & 0.671 & 0.727 \\
+\begin{tabular}[c]{@{}l@{}}(No preddicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.841 & 0.837 & 0.856 & 0.890 & 0.914 & 0.906 \\
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.889 & 0.806 & 0.744 & 0.719 & 0.737 & 0.785 \\
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 1.124 & 1.016 & 1.017 & 0.999 & 1.061 & 0.998 \\
+\begin{tabular}[c]{@{}l@{}}(Preddicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 1.050 & 1.016 & 0.976 & 0.983 & 0.974 & 0.978 \\
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 1.234 & 0.895 & 0.832 & 0.775 & 0.822 & 0.854 \\ \hline
+\end{tabular}%
+}
+\caption{}
+\caption{Time in seconds}
+\label{tab:my-table}
+\end{table}
+
+\clearpage
+\subsubsection{Medium Sized Input}
+
+% Please add the following required packages to your document preamble:
+% \usepackage{graphicx}
+% \usepackage[table,xcdraw]{xcolor}
+% If you use beamer only pass "xcolor=table" option, i.e. \documentclass[xcolor=table]{beamer}
+\begin{table}[htb]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{
+>{\columncolor[HTML]{9AFF99}}l lllllll}
+\hline
+ & \cellcolor[HTML]{9AFF99}\begin{tabular}[c]{@{}l@{}}1 thread\\ (serial)\end{tabular} & \cellcolor[HTML]{9AFF99}2 threads & \cellcolor[HTML]{9AFF99}4 threads & \cellcolor[HTML]{9AFF99}8 threads & \cellcolor[HTML]{9AFF99}16 threads & \cellcolor[HTML]{9AFF99}32 threads & \cellcolor[HTML]{9AFF99}64 threads \\ \hline
+No predicate optimization & 47.211 & N/A & N/A & N/A & N/A & N/A & N/A \\
+Predicate optimization & 48.637 & N/A & N/A & N/A & N/A & N/A & N/A \\
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 44.903 & 24.862 & 20.573 & 20.471 & 20.844 & 21.023 \\
+\begin{tabular}[c]{@{}l@{}}(No preddicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 41.879 & 38.320 & 37.520 & 38.142 & 36.670 & 38.874 \\
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 47.957 & 35.500 & 29.447 & 20.235 & 20.767 & 22.356 \\
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 45.596 & 23.769 & 20.072 & 20.433 & 20.597 & 20.876 \\
+\begin{tabular}[c]{@{}l@{}}(Preddicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 40.381 & 37.549 & 36.599 & 36.317 & 36.327 & 36.604 \\
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 47.481 & 35.455 & 28.007 & 18.521 & 19.425 & 21.666 \\ \hline
+\end{tabular}%
+}
+\caption{}
+\caption{Time in seconds}
+\label{tab:my-table}
+\end{table}
+\clearpage
+\section{Unit Testing}
+
+\tab To test the execution of our program we used unit testing and especially Cunit. We tried to make unitests for every function regardless of the size or simplicity. Some of the functions tested are the following: 
+\begin{itemlist}
+\item randomIndex
+\item swap
+\item hashFunction
+\item makeparts
+\item splitpreds
+\item optimizepredicates
+\item predsplittoterms
+\item sortBucket
+\item histcreateTest
+\item psumcreateTest
+\item tuplesReorderTest
+\item InputArray::filterRowIds
+\item InputArray::extractColumnFromRowIds
+\item IntermediateArray::populate
+\item IntermediateArray::findColumnIndexByInputArrayId
+\item IntermediateArray::findColumnIndexByPredicateArrayId
+\item IntermediateArray::selfJoin
+\end{itemlist}
+
+\section{Conclusion}
+
+\tab Write a conclusion
+
+\end{document}
