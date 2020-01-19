@@ -1110,7 +1110,7 @@
 	\space\number\day, \number\year}
 %
 %
-\def\draftnote{\today\quad\currenttime\quad Software Development forInformation Systems  
+\def\draftnote{\today\quad\currenttime\quad Software Development for Information Systems  
 }%
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
