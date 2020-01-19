@@ -1,3 +1,6 @@
+# Software Development forInformation Systems
+
+[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 # How to compile and run the main program
 ----------------------------------
 make
