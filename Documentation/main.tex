@@ -43,20 +43,20 @@ and a bash script (testProgram.sh) to easily test the program. To run the execut
 called "final", you can use one or more of the following flags to provide cli arguments:
 
 \begin{itemize}
-    \item -qr: Each query is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item -ro: If “-pb” argument is not provided and if current shift of hash function is even, the reorder task of the “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item -pb: If “-ro” argument is provided, the reorder task of each “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item -qs: Each quicksort task is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item -jn: If “-jnthreads” argument is not provided, each job is responsible for joining areas that have the same prefix.
-    \item -jnthreads: if “-jn” argument is provided, the array involved in \textbf{each} join is split evenly according to the thread pool’s size and the join of each of its parts with the other array is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item -pj: The result array is split evenly according to the thread pool’s size and the calculation of the sums of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item -ft: Each time a filter is handled, the current array of row ids is split evenly according to the thread pool’s size and the filtering of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item -all: Equivalent to the following combination of arguments: -qr -ro -qs -jn -pj -ft
-    \item -n \textless No threads\textgreater: Size of the thread pool to be created by the scheduler.
-    \item -optimize: Join enumeration is used to reorder join predicates. \textbf{Note}: If this argument is not provided, join predicates are not reordered but filter predicates are relocated before the join predicates.
-    \item -h: Displays a help message which contains a short description of each argument.
+    \item \textbf{-qr}: Each query is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-ro}: If “\textbf{-pb}” argument is not provided \textbf{and} if current shift of hash function is even, the reorder task of the “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-pb}: If “\textbf{-ro}” argument is provided, the reorder task of each “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-qs}: Each quicksort task is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-jn}: If “-jnthreads” argument is not provided, each job is responsible for joining areas that have the same prefix.
+    \item \textbf{-jnthreads}: if “\textbf{-jn}” argument is provided, the array involved in \textbf{each} join is split evenly according to the thread pool’s size and the join of each of its parts with the other array is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-pj}: The result array is split evenly according to the thread pool’s size and the calculation of the sums of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-ft}: Each time a filter is handled, the current array of row ids is split evenly according to the thread pool’s size and the filtering of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-all}: Equivalent to the following combination of arguments: \textbf{-qr -ro -qs -jn -pj -ft}
+    \item \textbf{-n \textless \# of threads\textgreater}: Size of the thread pool to be created by the scheduler.
+    \item \textbf{-optimize}: Join enumeration is used to reorder join predicates. \textbf{Note}: If this argument is \textbf{not} provided, join predicates are not reordered but filter predicates are relocated before the join predicates.
+    \item \textbf{-h}: Displays a help message which contains a short description of each argument.
  \end{itemize}
-
+ 
 \clearpage
 \section{Code Description}
 \subsection{Description of job scheduler and jobs (class JobScheduler & abstract class Job)}
@@ -66,11 +66,11 @@ called "final", you can use one or more of the following flags to provide cli ar
     \item When a new Job (with a new unique id) is inserted into the queue, an available thread or the first thread that will be available handles the Job.
     \item Job insertion and obtainment is handled with mutual exclusion in order to avoid race conditions.
     \item If the Job is a Radix-sort Job (for parallel Radix-sort) or a Quicksort Job (for parallel Quicksort), jobsCounter[queryIndex] is \textbf{incremented by 1} when the Job is inserted into the queue. This is helping the parent thread in knowing when to proceed in joining the results of the 2 relations’ reordering. (queryIndex is the index/id of the current query and it is used for the case of parallel run of queries)
-    \item When any Job is completed, jobsCounter[queryIndex] is \textbf{decremented by 1}. If jobsCounter[queryIndex] equals to 0, a condition variable is signaled which indicates that all the jobs of the current part of the program are done, so the parent thread can continue its execution.
+    \item When \textbf{any} Job is completed, jobsCounter[queryIndex] is \textbf{decremented by 1}. If jobsCounter[queryIndex] equals to \textbf{0}, a condition variable is signaled which indicates that all the jobs of the current part of the program are done, so the parent thread can continue its execution.
     \item When the JobScheduler gets destroyed, it creates ExitJobs (with id=-1), the count of which is equal to the thread pool’s size. When a thread handles an ExitJob, it exits immediately.
 \end{itemize}
 \section{Code Description}
-\subsection{Description of job scheduler and jobs (class JobScheduler & abstract class Job)}
+\subsection{Description of intermediate result (class IntermediateArray)}
 \begin{itemize}
     \item IntermediateArray consists of the row ids of each array (of the predicate) that took part in previous joins. Each column is identified by the corresponding predicate array’s id.
     \item After the first join, an IntermediateArray is created having as contents the 2 columns that resulted from the join.
@@ -78,24 +78,9 @@ called "final", you can use one or more of the following flags to provide cli ar
     \item A join between 2 arrays that have already been involved in a previous join, is handled as inner-join/self-join of the current IntermediateArray.
 
 \end{itemize}
-\section{Description of intermediate result (class IntermediateArray)}
 
-\tab We implemented and tested two different methods for sorting buckets during the first and second part. One of them was using recursion while the other one was using a loop to break the buckets into smaller ones when needed. After thorough testing we decided to use the recursive one since we managed to achieve better execution times and convolution while we also managed to keep each thread work on a different memory part at any time, reducing the need for semaphores which would slow the execution further since each thread would have to wait to access the memory.
-
-\tab Another part of the execution that we tried to parallelize was the copy from one tuple to another during each call of the Reorder function (tuplereorder\_parallel @ functions.cpp), but we finally decided not to keep the change since it significantly slowed the program because all the extra threads that would be used to execute the copy could be used more efficiently by another function that is waiting in the scheduler.
-
-\tab To adapt Join for running on a parallel processing system, we tried several different implementations. First, we tried the one described in class, that is to join areas that have the same prefix. Then, we tried merging some of these areas together so that each new area cluster is assigned to a thread. Finally, we tried to split the relation in equal parts so that each part is assigned to a thread. We noticed that the third method that kept the job count at a minimum while at the same time accomplished a balanced load between threads, produced a better result concerning time and processor usage.
-
-\tab We noticed that we had great time improvements when we used smaller and continues memory allocations. For example by turning histogram and psum from 2D arrays to 1D we managed to cut the execution time to 60\% of what we had with the model described in class. The reasoning behind this great improvement is that a big part of the array can be kept in cache and we don't have to worry about loading times that take a long time.
-
-\tab Another observation was the difference between the small and medium inputs. We noticed that the multi threading was better exploited with the medium sized input, where we saw greater time and CPU usage improvements. The explanation is that the time that it takes to split the jobs and wait for an available thread is better justified when the inputs are greater and the time relation of the thread organization processes to the time of the rest of the processes tend to zero.
-
-\tab While running the program through a profiler, we noticed that partitioning during predicate optimization, consumed 37\% of the overall time. That means there are many data in a small number of buckets. That way we do not have the optimal outcome we could accomplish with an other optimization policy.
-
-\tab Another observation we made is that the list functions (e.g. insert) consume 17\% of the time. If we had another data structure that would not require constant checks and processes to allocate new memory blocks we would achieve better times with probably an allocation of unneeded memory as a negative aspect.
-
-\clearpage
-\section{Description of handlepredicates(), the main function of the program}
+\section{Code Description}
+\subsection{Description of handlepredicates(), the main function of the program}
 The flow of handlepredicates() is the following:
 \begin{itemize}
     \item Filter predicates are relocated before the join predicates. If “\textbf{-optimize}” argument is provided, join predicates are reordered according to an algorithm of \textbf{join enumeration}.
@@ -115,6 +100,25 @@ The flow of handlepredicates() is the following:
         \item If the last IntermediateArray is not NULL and its size is greater than 0, the function returns it. In any other case, NULL is returned which indicates no results.
     \end{itemize}
 \end{itemize}
+
+
+\section{Description of intermediate result (class IntermediateArray)}
+
+\tab We implemented and tested two different methods for sorting buckets during the first and second part. One of them was using recursion while the other one was using a loop to break the buckets into smaller ones when needed. After thorough testing we decided to use the recursive one since we managed to achieve better execution times and convolution while we also managed to keep each thread work on a different memory part at any time, reducing the need for semaphores which would slow the execution further since each thread would have to wait to access the memory.
+
+\tab Another part of the execution that we tried to parallelize was the copy from one tuple to another during each call of the Reorder function (tuplereorder\_parallel @ functions.cpp), but we finally decided not to keep the change since it significantly slowed the program because all the extra threads that would be used to execute the copy could be used more efficiently by another function that is waiting in the scheduler.
+
+\tab To adapt Join for running on a parallel processing system, we tried several different implementations. First, we tried the one described in class, that is to join areas that have the same prefix. Then, we tried merging some of these areas together so that each new area cluster is assigned to a thread. Finally, we tried to split the relation in equal parts so that each part is assigned to a thread. We noticed that the third method that kept the job count at a minimum while at the same time accomplished a balanced load between threads, produced a better result concerning time and processor usage.
+
+\tab We noticed that we had great time improvements when we used smaller and continues memory allocations. For example by turning histogram and psum from 2D arrays to 1D we managed to cut the execution time to 60\% of what we had with the model described in class. The reasoning behind this great improvement is that a big part of the array can be kept in cache and we don't have to worry about loading times that take a long time.
+
+\tab Another observation was the difference between the small and medium inputs. We noticed that the multi threading was better exploited with the medium sized input, where we saw greater time and CPU usage improvements. The explanation is that the time that it takes to split the jobs and wait for an available thread is better justified when the inputs are greater and the time relation of the thread organization processes to the time of the rest of the processes tend to zero.
+
+\tab While running the program through a profiler, we noticed that partitioning during predicate optimization, consumed 37\% of the overall time. That means there are many data in a small number of buckets. That way we do not have the optimal outcome we could accomplish with an other optimization policy.
+
+\tab Another observation we made is that the list functions (e.g. insert) consume 17\% of the time. If we had another data structure that would not require constant checks and processes to allocate new memory blocks we would achieve better times with probably an allocation of unneeded memory as a negative aspect.
+
+\clearpage
 \begin{samepage}
 \section{Time Statistics}
 
