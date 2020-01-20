@@ -33,7 +33,7 @@
 \tableofcontents
 \clearpage
 \newcommand\tab[1][1cm]{\hspace*{#1}}
-
+\enlargethispage{\baselineskip}
 \section{Introduction}
 
 
@@ -67,42 +67,41 @@ called "final", you can use one or more of the following flags to provide cli ar
     \item Job insertion and obtainment is handled with mutual exclusion in order to avoid race conditions.
     \item If the Job is a Radix-sort Job (for parallel Radix-sort) or a Quicksort Job (for parallel Quicksort), jobsCounter[queryIndex] is \textbf{incremented by 1} when the Job is inserted into the queue. This is helping the parent thread in knowing when to proceed in joining the results of the 2 relations’ reordering. (queryIndex is the index/id of the current query and it is used for the case of parallel run of queries)
     \item When \textbf{any} Job is completed, jobsCounter[queryIndex] is \textbf{decremented by 1}. If jobsCounter[queryIndex] equals to \textbf{0}, a condition variable is signaled which indicates that all the jobs of the current part of the program are done, so the parent thread can continue its execution.
-    \item When the JobScheduler gets destroyed, it creates ExitJobs (with id=-1), the count of which is equal to the thread pool’s size. When a thread handles an ExitJob, it exits immediately.
+    \item When the JobScheduler gets destroyed, it creates ExitJobs (with \textbf{id=-1}), the count of which is equal to the thread pool’s size. When a thread handles an ExitJob, it exits immediately.
 \end{itemize}
-\section{Code Description}
+
 \subsection{Description of intermediate result (class IntermediateArray)}
 \begin{itemize}
     \item IntermediateArray consists of the row ids of each array (of the predicate) that took part in previous joins. Each column is identified by the corresponding predicate array’s id.
     \item After the first join, an IntermediateArray is created having as contents the 2 columns that resulted from the join.
-    \item After each consecutive join, which involves a column (with row ids) of the IntermediateArray and a column (with row ids) of a first-time-used predicate array, a new IntermediateArray is created. This newly created IntermediateArray has row count equal to the last join result’s row count and column count equal to the previous IntermediateArray’s column count plus 1. Its contents are the joined row ids taken from the previous IntermediateArray and the joined row ids of the firstly used predicate array.
+    \item After each consecutive join, which involves a column (with row ids) of the IntermediateArray and a column (with row ids) of a first-time-used predicate array, a new IntermediateArray is created. This newly created IntermediateArray has \textbf{row count} equal to the last join result’s row count and \textbf{column count} equal to the previous IntermediateArray’s column count \textbf{plus 1}. Its contents are the joined row ids taken from the previous IntermediateArray and the joined row ids of the firstly used predicate array.
     \item A join between 2 arrays that have already been involved in a previous join, is handled as inner-join/self-join of the current IntermediateArray.
 
 \end{itemize}
 
-\section{Code Description}
 \subsection{Description of handlepredicates(), the main function of the program}
 The flow of handlepredicates() is the following:
-\begin{itemize}
+\begin{enumerate}
     \item Filter predicates are relocated before the join predicates. If “\textbf{-optimize}” argument is provided, join predicates are reordered according to an algorithm of \textbf{join enumeration}.
     \item For each predicate array id (which corresponds to an original input array (InputArray object)), a new InputArray object is created which contains \textbf{only the row ids} of the original input array. This is done because it prevents the existence of duplicated data.
     \item For each predicate:
-    \begin{itemize}
+    \begin{enumerate}
         \item If the predicate is \textbf{filter} or \textbf{self-join/inner-join} of an input array, its row ids (InputArray object) are filtered and transferred to a newly created InputArray which replaces the old row ids.
         \item If the predicate contains 2 predicate array ids both of which exist in the current IntermediateArray (both participated in a previous join), this case is handled as a \textbf{self-join/inner-join} of the current IntermediateArray. So, the current IntermediateArray is filtered and transferred to a newly created IntermediateArray which becomes the current one.
         \item In any other case, the predicate is handled as a typical join between 2 arrays. Specifically:
-        \begin{itemize}
+        \begin{enumerate}
             \item For each of the 2 pairs of predicate array id and field id, an object of type relation is created by retrieving data from the corresponding original input array. The \textbf{payloads} are retrieved from the rows the ids of which exist \textbf{(1)} in the corresponding (filtered) row-ids-array (InputArray object) \textbf{or (2)} in the current IntermediateArray if the predicate array id participated in a previous join. In case \textbf{(1)}, the \textbf{keys} of the relation are the row ids of the original input array. In case \textbf{(2)}, the \textbf{keys} of the relation are the row ids of the current IntermediateArray.
-            \item For each predicate array id and field id, if the combination of them participated in the last join, the above corresponding extracted relation does \textbf{not} get reordered, because it already is. In the opposite case, the relation gets reordered with radix-sort.
+            \item For each predicate array id and field id, if the combination of them participated in the last join, the above corresponding extracted relation does \textbf{not} get reordered, because it already is. In the opposite case, the relation gets reordered with \textbf{radix-sort}.
             \item The 2 above ordered relations are joined in a list which is then converted to a 2-column array each of its columns contains the row ids of either the original input array or the current IntermediateArray as mentioned in step (i).
             \item If the result contains 0 entries, then the function does the necessary memory deallocation and returns NULL which indicates no results.
             \item In any other case, a new IntermediateArray is created which consists of only the above 2-column result if this is the first join, \textbf{or} of the contents of the previous IntermediateArray \textbf{plus} the column with the row ids of the first-time-joined InputArray. This new IntermediateArray becomes the current one.
-        \end{itemize}
+        \end{enumerate}
         \item If the last IntermediateArray is not NULL and its size is greater than 0, the function returns it. In any other case, NULL is returned which indicates no results.
-    \end{itemize}
-\end{itemize}
+    \end{enumerate}
+\end{enumerate}
 
 
-\section{Description of intermediate result (class IntermediateArray)}
+\section{Implementation Observations}
 
 \tab We implemented and tested two different methods for sorting buckets during the first and second part. One of them was using recursion while the other one was using a loop to break the buckets into smaller ones when needed. After thorough testing we decided to use the recursive one since we managed to achieve better execution times and convolution while we also managed to keep each thread work on a different memory part at any time, reducing the need for semaphores which would slow the execution further since each thread would have to wait to access the memory.
 
