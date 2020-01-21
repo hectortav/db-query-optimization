@@ -141,13 +141,13 @@ The flow of handlepredicates() is the following:
 >{\columncolor[HTML]{9AFF99}}l lllllll}
 \hline
  & \cellcolor[HTML]{9AFF99}\begin{tabular}[c]{@{}l@{}}1 thread\\ (serial)\end{tabular} & \cellcolor[HTML]{9AFF99}2 threads & \cellcolor[HTML]{9AFF99}4 threads & \cellcolor[HTML]{9AFF99}8 threads & \cellcolor[HTML]{9AFF99}16 threads & \cellcolor[HTML]{9AFF99}32 threads & \cellcolor[HTML]{9AFF99}64 threads \\ \hline
-No predicate optimization & 0.775 & N/A & N/A & N/A & N/A & N/A & N/A \\
-Predicate optimization & 0.720 & N/A & N/A & N/A & N/A & N/A & N/A \\
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 0.856 & 0.662 & 0.645 & 0.671 & 0.671 & 0.727 \\
-\begin{tabular}[c]{@{}l@{}}(No preddicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.841 & 0.837 & 0.856 & 0.890 & 0.914 & 0.906 \\
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.889 & 0.806 & 0.744 & 0.719 & 0.737 & 0.785 \\
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 0.780 & 0.645 & 0.673 & 0.670 & 0.631 & 0.649 \\
-\begin{tabular}[c]{@{}l@{}}(Preddicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.788 & 0.772 & 0.802 & 0.833 & 0.983 & 0.861 \\
+No predicate optimization & 0.775 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+Predicate optimization & 0.720 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 0.856 & 0.662 & 0.645 & 0.671 & 0.671 & 0.727 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.841 & 0.837 & 0.856 & 0.890 & 0.914 & 0.906 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.889 & 0.806 & 0.744 & 0.719 & 0.737 & 0.785 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 0.780 & 0.645 & 0.673 & 0.670 & 0.631 & 0.649 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.788 & 0.772 & 0.802 & 0.833 & 0.983 & 0.861 \\ \hline
 \begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.825 & 0.738 & 0.707 & 0.652 & 0.690 & 0.701 \\ \hline
 \end{tabular}%
 }
@@ -170,13 +170,13 @@ Predicate optimization & 0.720 & N/A & N/A & N/A & N/A & N/A & N/A \\
 >{\columncolor[HTML]{9AFF99}}l lllllll}
 \hline
  & \cellcolor[HTML]{9AFF99}\begin{tabular}[c]{@{}l@{}}1 thread\\ (serial)\end{tabular} & \cellcolor[HTML]{9AFF99}2 threads & \cellcolor[HTML]{9AFF99}4 threads & \cellcolor[HTML]{9AFF99}8 threads & \cellcolor[HTML]{9AFF99}16 threads & \cellcolor[HTML]{9AFF99}32 threads & \cellcolor[HTML]{9AFF99}64 threads \\ \hline
-No predicate optimization & 47.211 & N/A & N/A & N/A & N/A & N/A & N/A \\
-Predicate optimization & 48.311 & N/A & N/A & N/A & N/A & N/A & N/A \\
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 44.903 & 24.862 & 20.573 & 20.471 & 20.844 & 21.023 \\
-\begin{tabular}[c]{@{}l@{}}(No preddicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 41.879 & 38.320 & 37.520 & 38.142 & 36.670 & 38.874 \\
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 47.957 & 35.500 & 29.447 & 20.235 & 20.767 & 22.356 \\
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 47.957 & 25.203 & 20.961 & 20.235 & 20.767 & 22.356 \\
-\begin{tabular}[c]{@{}l@{}}(Preddicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 46.076 & 23.769 & 20.072 & 20.854 & 21.316 & 21.008 \\
+No predicate optimization & 47.211 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+Predicate optimization & 48.311 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 44.903 & 24.862 & 20.573 & 20.471 & 20.844 & 21.023 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 41.879 & 38.320 & 37.520 & 38.142 & 36.670 & 38.874 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 47.957 & 35.500 & 29.447 & 20.235 & 20.767 & 22.356 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 47.957 & 25.203 & 20.961 & 20.235 & 20.767 & 22.356 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 46.076 & 23.769 & 20.072 & 20.854 & 21.316 & 21.008 \\ \hline
 \begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 38.684 & 32.924 & 30.747 & 30.871 & 31.293 & 36.182 \\ \hline
 \end{tabular}%
 }
