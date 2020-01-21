@@ -21,7 +21,7 @@
     \vspace*{0.5cm}
 
     \huge\bfseries
-    Software Development for Information Systems (2019 – 2020)
+    Software Development for Information Systems (2019 -- 2020)
     \vspace*{\fill}
     \vspace*{0.5cm}
 
@@ -72,7 +72,7 @@ called "final", you can use one or more of the following flags to provide cli ar
 
 \subsection{Description of intermediate result (class IntermediateArray)}
 \begin{itemize}
-    \item IntermediateArray consists of the row ids of each array (included in the currently handled predicate) that took part in previous joins. Each column is identified by the corresponding predicate array’s id.
+    \item IntermediateArray consists of the row ids of each array (included in the currently handled predicate) that took part in previous joins. Each column is identified by the corresponding array’s id.
     \item After the first join, an IntermediateArray is created having as contents the 2 columns that resulted from the join.
     \item After each consecutive join, which involves a column (with row ids) of the IntermediateArray and a column (with row ids) of a first-time-used array, a new IntermediateArray is created. This newly created IntermediateArray has \textbf{row count} equal to the last join result’s row count and \textbf{column count} equal to the previous IntermediateArray’s column count \textbf{plus 1}. Its contents are the joined row ids taken from the previous IntermediateArray and the joined row ids of the first-time-joined array.
     \item A join between 2 arrays that have already been involved in a previous join, is handled as inner-join/self-join of the current IntermediateArray.
@@ -126,9 +126,7 @@ The flow of handlepredicates() is the following:
 
 \tab Another observation was the difference between the small and medium inputs. We noticed that the multi threading was better exploited with the medium sized input, where we saw greater time and CPU usage improvements. The explanation is that the time that it takes to split the jobs and wait for an available thread is better justified when the inputs are greater and the time relation of the thread organization processes to the time of the rest of the processes tend to zero.
 
-\tab While running the program through a profiler, we noticed that partitioning during predicate optimization, consumed 37\% of the overall time. That means there are many data in a small number of buckets. That way we do not have the optimal outcome we could accomplish with an other optimization policy.
-
-\tab Another observation we made is that the list functions (e.g. insert) consume 17\% of the time. If we had another data structure that would not require constant checks and processes to allocate new memory blocks we would achieve better times with probably an allocation of unneeded memory as a negative aspect.
+\tab Lastly, we noticed that the list's functions (e.g. insert) sometimes consumed 17\% of the execution time. So, if we used another implementation of the list data structure we could reduce the time spent in retrieving/adding data to it.
 
 \clearpage
 \begin{samepage}
@@ -145,14 +143,14 @@ The flow of handlepredicates() is the following:
 >{\columncolor[HTML]{9AFF99}}l lllllll}
 \hline
  & \cellcolor[HTML]{9AFF99}\begin{tabular}[c]{@{}l@{}}1 thread\\ (serial)\end{tabular} & \cellcolor[HTML]{9AFF99}2 threads & \cellcolor[HTML]{9AFF99}4 threads & \cellcolor[HTML]{9AFF99}8 threads & \cellcolor[HTML]{9AFF99}16 threads & \cellcolor[HTML]{9AFF99}32 threads & \cellcolor[HTML]{9AFF99}64 threads \\ \hline
-No predicate optimization & 0.775 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
-Predicate optimization & 0.720 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 0.856 & 0.662 & 0.645 & 0.671 & 0.671 & 0.727 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.841 & 0.837 & 0.856 & 0.890 & 0.914 & 0.906 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.889 & 0.806 & 0.744 & 0.719 & 0.737 & 0.785 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 0.780 & 0.645 & 0.673 & 0.670 & 0.631 & 0.649 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.788 & 0.772 & 0.802 & 0.833 & 0.983 & 0.861 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.825 & 0.738 & 0.707 & 0.652 & 0.690 & 0.701 \\ \hline
+No query optimization & 0.775 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+Query optimization & 0.720 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No query optimization)\\ Parallel queries\end{tabular} & N/A & 0.856 & 0.662 & 0.716 & 0.671 & 0.671 & 0.727 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No query optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.841 & 0.837 & 0.856 & 0.890 & 0.914 & 0.906 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No query optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.889 & 0.806 & 0.744 & 0.719 & 0.737 & 0.785 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Query optimization) \\ Parallel queries\end{tabular} & N/A & 0.780 & 0.645 & 0.673 & 0.670 & 0.631 & 0.649 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Query optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 0.788 & 0.772 & 0.802 & 0.833 & 0.868 & 0.861 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Query optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 0.825 & 0.738 & 0.707 & 0.652 & 0.690 & 0.701 \\ \hline
 \end{tabular}%
 }
 \caption{}
@@ -174,14 +172,14 @@ Predicate optimization & 0.720 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
 >{\columncolor[HTML]{9AFF99}}l lllllll}
 \hline
  & \cellcolor[HTML]{9AFF99}\begin{tabular}[c]{@{}l@{}}1 thread\\ (serial)\end{tabular} & \cellcolor[HTML]{9AFF99}2 threads & \cellcolor[HTML]{9AFF99}4 threads & \cellcolor[HTML]{9AFF99}8 threads & \cellcolor[HTML]{9AFF99}16 threads & \cellcolor[HTML]{9AFF99}32 threads & \cellcolor[HTML]{9AFF99}64 threads \\ \hline
-No predicate optimization & 47.211 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
-Predicate optimization & 48.311 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Parallel queries\end{tabular} & N/A & 44.903 & 24.862 & 20.573 & 20.471 & 20.844 & 21.023 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 41.879 & 38.320 & 37.520 & 38.142 & 36.670 & 38.874 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(No predicate optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 47.957 & 35.500 & 29.447 & 20.235 & 20.767 & 22.356 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Parallel queries\end{tabular} & N/A & 47.957 & 25.203 & 20.961 & 20.235 & 20.767 & 22.356 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 46.076 & 23.769 & 20.072 & 20.854 & 21.316 & 21.008 \\ \hline
-\begin{tabular}[c]{@{}l@{}}(Predicate optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 38.684 & 32.924 & 30.747 & 30.871 & 31.293 & 36.182 \\ \hline
+No query optimization & 47.211 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+Query optimization & 48.311 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No query optimization)\\ Parallel queries\end{tabular} & N/A & 44.903 & 24.862 & 20.573 & 20.471 & 20.844 & 21.023 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No query optimization)\\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 41.879 & 38.320 & 37.520 & 38.142 & 36.670 & 38.874 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(No query optimization) \\ Everything runs in parallel\\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 47.957 & 35.500 & 29.447 & 20.235 & 20.767 & 20.413 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Query optimization) \\ Parallel queries\end{tabular} & N/A & 44.418 & 23.187 & 19.711 & 20.235 & 20.767 & 20.415 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Query optimization) \\ Run the following in parallel \\ (Radix-sort, Quicksort, \\ Join, Filters, Projection)\end{tabular} & N/A & 37.245 & 23.769 & 20.072 & 20.854 & 21.316 & 21.008 \\ \hline
+\begin{tabular}[c]{@{}l@{}}(Query optimization) \\ Everything runs in parallel \\ (Queries, Radix-sort, \\ Quicksort, Join, \\ Filters, Projection)\end{tabular} & N/A & 38.684 & 32.924 & 27.560 & 17.931 & 18.458 & 20.280 \\ \hline
 \end{tabular}%
 }
 \caption{}
@@ -191,10 +189,9 @@ Predicate optimization & 48.311 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
 \clearpage
 \section{Time Results Conclusions}
 \begin{itemize}
-    \item Without the “-optimize” flag the program runs without query optimization \textbf{but with the filters of each query being placed first}. This is a reason why sometimes the program runs quicker without the “-optimize” flag. 	
-    \item When 	the small dataset is given as input, the size of the data is so small that the overhead of Join Enumeration adds a \textbf{small} delay to the program compared to its execution without the “-optimize” flag.
-    \item When 	the \textbf{medium} dataset is given as input, the size of the data is bigger, so Join Enumeration increases the speed of the program.
-    \item Parallelization increases the speed of the program significantly because the execution load is split so that each thread is handling a different Job at each given moment.
+    \item Without the “-optimize” flag the program runs without query optimization \textbf{but with the filters of each query being placed first}. This is a reason why sometimes the program could run quicker without the “-optimize” flag with the small dataset. 	
+    \item When 	the \textbf{medium} dataset is given as input, the size of the data is bigger, so Join Enumeration (query optimization) increases the speed of the program significantly.
+    \item Parallelization greatly increases the speed of the program because the execution load is split so that each thread is handling a different Job at each given moment.
     \item When the program’s thread pool has a size which is larger than the maximum number of threads that the system can provide, there is only a small or no amount of increase at the program’s speed compared to using a smaller thread pool.
 \end{itemize}
 
