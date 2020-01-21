@@ -4,6 +4,7 @@
  \usepackage[table,xcdraw]{xcolor}
  \usepackage{chngpage}
  \usepackage{fancyhdr}
+ \usepackage{textcomp}
  
 \pagestyle{fancy}
 \fancyhf{}
@@ -48,9 +49,9 @@ called "final", you can use one or more of the following flags to provide cli ar
     \item \textbf{-pb}: If “\textbf{-ro}” argument is provided, the reorder task of each “overflowed” bucket is scheduled as a single Job and runs in parallel with the other Jobs.
     \item \textbf{-qs}: Each quicksort task is scheduled as a single Job and runs in parallel with the other Jobs.
     \item \textbf{-jn}: If “\textbf{-jnthreads}” argument is not provided, each job is responsible for joining areas that have the same prefix.
-    \item \textbf{-jnthreads}: if “\textbf{-jn}” argument is provided, the array involved in \textbf{each} join is split evenly according to the thread pool’s size and the join of each of its parts with the other array is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item \textbf{-pj}: The result array is split evenly according to the thread pool’s size and the calculation of the sums of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
-    \item \textbf{-ft}: Each time a filter is handled, the current array of row ids is split evenly according to the thread pool’s size and the filtering of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-jnthreads}: if “\textbf{-jn}” argument is provided, the array involved in \textbf{each} join is split evenly according to the thread pool\textquotesingle s size and the join of each of its parts with the other array is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-pj}: The result array is split evenly according to the thread pool\textquotesingle s size and the calculation of the sums of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
+    \item \textbf{-ft}: Each time a filter is handled, the current array of row ids is split evenly according to the thread pool\textquotesingle s size and the filtering of each of its parts is scheduled as a single Job and runs in parallel with the other Jobs.
     \item \textbf{-all}: Equivalent to the following combination of arguments: \textbf{-qr -ro -qs -jn -pj -ft}
     \item \textbf{-n \textless \# of threads\textgreater}: Size of the thread pool to be created by the scheduler.
     \item \textbf{-optimize}: Join enumeration is used to reorder join predicates. \textbf{Note}: If this argument is \textbf{not} provided, join predicates are not reordered but filter predicates are relocated before the join predicates.
@@ -65,17 +66,17 @@ called "final", you can use one or more of the following flags to provide cli ar
     \item When the JobScheduler gets initialized, a thread pool is created, the size of which is defined by the user.
     \item When a new Job (with a new unique id) is inserted into the queue, an available thread or the first thread that will be available handles the Job.
     \item Job insertion and obtainment is handled with mutual exclusion in order to avoid race conditions.
-    \item If the Job is a Radix-sort Job (for parallel Radix-sort) or a Quicksort Job (for parallel Quicksort), jobsCounter[queryIndex] is \textbf{incremented by 1} when the Job is inserted into the queue. This is helping the parent thread in knowing when to proceed in joining the results of the 2 relations’ reordering. (queryIndex is the index/id of the current query and it is used for the case of parallel run of queries)
+    \item If the Job is a Radix-sort Job (for parallel Radix-sort) or a Quicksort Job (for parallel Quicksort), jobsCounter[queryIndex] is \textbf{incremented by 1} when the Job is inserted into the queue. This is helping the parent thread in knowing when to proceed in joining the results of the 2 relations\textquotesingle  reordering. (queryIndex is the index/id of the current query and it is used for the case of parallel run of queries)
     \item When \textbf{any} Job is completed, jobsCounter[queryIndex] is \textbf{decremented by 1}. If jobsCounter[queryIndex] equals to \textbf{0}, a condition variable is signaled which indicates that all the jobs of the current part of the program are done, so the parent thread can continue its execution.
-    \item When the JobScheduler gets destroyed, it creates ExitJobs (with \textbf{id=-1}), the count of which is equal to the thread pool’s size. When a thread handles an ExitJob, it exits immediately.
+    \item When the JobScheduler gets destroyed, it creates ExitJobs (with \textbf{id=-1}), the count of which is equal to the thread pool\textquotesingle s size. When a thread handles an ExitJob, it exits immediately.
 \end{itemize}
 
 \subsection{Description of intermediate result (class IntermediateArray)}
 \begin{itemize}
-    \item IntermediateArray consists of the row ids of each array (included in the currently handled predicate) that took part in previous joins. Each column is identified by the corresponding array’s id.
+    \item IntermediateArray consists of the row ids of each array (included in the currently handled predicate) that took part in previous joins. Each column is identified by the corresponding array\textquotesingle s id.
     \item After the first join, an IntermediateArray is created having as contents the 2 columns that resulted from the join.
-    \item After each consecutive join, which involves a column (with row ids) of the IntermediateArray and a column (with row ids) of a first-time-used array, a new IntermediateArray is created. This newly created IntermediateArray has \textbf{row count} equal to the last join result’s row count and \textbf{column count} equal to the previous IntermediateArray’s column count \textbf{plus 1}. Its contents are the joined row ids taken from the previous IntermediateArray and the joined row ids of the first-time-joined array.
-    \item A join between 2 arrays that have already been involved in a previous join, is handled as inner-join/self-join of the current IntermediateArray.
+    \item After each consecutive join, which involves a column (with row ids) of the IntermediateArray and a column (with row ids) of a first-time-used array, a new IntermediateArray is created. This newly created IntermediateArray has \textbf{row count} equal to the last join result\textquotesingle s row count and \textbf{column count} equal to the previous IntermediateArray\textquotesingle s column count \textbf{plus 1}. Its contents are the joined row ids taken from the previous IntermediateArray and the joined row ids of the first-time-joined array.
+    \item A join between 2 arrays that have already been involved in a previous join, is handled as \textbf{inner-join/self-join} of the current IntermediateArray.
 
 \end{itemize}
 
@@ -97,7 +98,7 @@ The flow of handlepredicates() is the following:
             \item If the result contains more than 0 entries: 
                 \begin{itemize}
                     \item If this is the first join, the first IntermediateArray is created which consists of only the above 2-column result \textbf{or}
-                    \item If this is a consecutive join, a new IntermediateArray is created which consists of the contents of the previous IntermediateArray \textbf{plus} the column with the row ids of the first-time-joined InputArray. This new IntermediateArray has as row count this join result's row count and it takes the place of the old IntermediateArray.
+                    \item If this is a consecutive join, a new IntermediateArray is created which consists of the contents of the previous IntermediateArray \textbf{plus} the column with the row ids of the first-time-joined InputArray. This new IntermediateArray has as row count this join result\textquotesingle s row count and it takes the place of the old IntermediateArray.
                 \end{itemize}
         \end{enumerate}
         \item If the last IntermediateArray is not NULL and its size is greater than 0, the function returns it. In any other case, NULL is returned which indicates no results.
@@ -122,11 +123,11 @@ The flow of handlepredicates() is the following:
 
 \tab To adapt Join for running on a parallel processing system, we tried several different implementations. First, we tried the one described in class, that is to join areas that have the same prefix. Then, we tried merging some of these areas together so that each new area cluster is assigned to a thread. Finally, we tried to split the relation in equal parts so that each part is assigned to a thread. We noticed that the third method that kept the job count at a minimum while at the same time accomplished a balanced load between threads, produced a better result concerning time and processor usage.
 
-\tab We noticed that we had great time improvements when we used smaller and continuous memory allocations. For example by turning histogram and psum from 2D arrays to 1D we managed to cut the execution time to 60\% of what we had with the model described in class. The reasoning behind this great improvement is that a big part of the array can be kept in cache and we don't have to worry about loading times that take a long time.
+\tab We noticed that we had great time improvements when we used smaller and continuous memory allocations. For example by turning histogram and psum from 2D arrays to 1D we managed to cut the execution time to 60\% of what we had with the model described in class. The reasoning behind this great improvement is that a big part of the array can be kept in cache and we don\textquotesingle t have to worry about loading times that take a long time.
 
 \tab Another observation was the difference between the small and medium inputs. We noticed that the multi threading was better exploited with the medium sized input, where we saw greater time and CPU usage improvements. The explanation is that the time that it takes to split the jobs and wait for an available thread is better justified when the inputs are greater and the time relation of the thread organization processes to the time of the rest of the processes tend to zero.
 
-\tab Lastly, we noticed that the list's functions (e.g. insert) sometimes consumed 17\% of the execution time. So, if we used another implementation of the list data structure we could reduce the time spent in retrieving/adding data to it.
+\tab Lastly, we noticed that the list\textquotesingle s functions (e.g. insert) sometimes consumed 17\% of the execution time. So, if we used another implementation of the list data structure we could reduce the time spent in retrieving/adding data to it.
 
 \clearpage
 \begin{samepage}
@@ -186,13 +187,20 @@ Query optimization & 48.311 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
 \caption{Time in seconds}
 \label{tab:my-table}
 \end{table}
+
+\subsubsection{Specifications of the PC used for the time tests}
+\begin{itemize}
+    \item \textbf{CPU}: Ryzen 7 2700x no overclock
+    \item \textbf{RAM}: G.skill ripjaws @ 2933 mhz 16gb dual channel memory
+\end{itemize}
+
 \clearpage
 \section{Time Results Conclusions}
 \begin{itemize}
     \item Without the “-optimize” flag the program runs without query optimization \textbf{but with the filters of each query being placed first}. This is a reason why sometimes the program could run quicker without the “-optimize” flag with the small dataset. 	
     \item When 	the \textbf{medium} dataset is given as input, the size of the data is bigger, so Join Enumeration (query optimization) increases the speed of the program significantly.
     \item Parallelization greatly increases the speed of the program because the execution load is split so that each thread is handling a different Job at each given moment.
-    \item When the program’s thread pool has a size which is larger than the maximum number of threads that the system can provide, there is only a small or no amount of increase at the program’s speed compared to using a smaller thread pool.
+    \item When the program\textquotesingle s thread pool has a size which is larger than the maximum number of threads that the system can provide, there is only a small or no amount of increase at the program\textquotesingle s speed compared to using a smaller thread pool.
 \end{itemize}
 
 \section{Parallelization Observations}
@@ -231,7 +239,7 @@ Query optimization & 48.311 & N/A & N/A & N/A & N/A & N/A & N/A \\ \hline
 \clearpage
 \section{Conclusion}
 
-\tab During this assignment we used various technologies and researched a plethora of ideas and theories. We appreciated concepts like parallel programming, unit testing, version control and of course software development for information systems. Parallel programming is a useful asset today since all systems have multiple real and virtual CPU cores that are not often utilized correctly. Unit testing is a respectful way to ensure that programs \& algorithms are valid and ready for production and version control is an easy way to track bugs and work with teams. Information systems and databases are the core of today's computing and leaving in an age where data are abundant, we must explore new and more efficient ways to store, find and index them. Last but not least, we learned the importance of pre-planning, estimating possible obstacles and chances during development of such last projects.
+\tab During this assignment we used various technologies and researched a plethora of ideas and theories. We appreciated concepts like parallel programming, unit testing, version control and of course software development for information systems. Parallel programming is a useful asset today since all systems have multiple real and virtual CPU cores that are not often utilized correctly. Unit testing is a respectful way to ensure that programs \& algorithms are valid and ready for production and version control is an easy way to track bugs and work with teams. Information systems and databases are the core of today\textquotesingle s computing and leaving in an age where data are abundant, we must explore new and more efficient ways to store, find and index them. Last but not least, we learned the importance of pre-planning, estimating possible obstacles and chances during development of such last projects.
 %profiler, data size, parallelization, git, unit testing, local memory, data bases, bucket sorting
 %sxediash kai planning
 \clearpage
