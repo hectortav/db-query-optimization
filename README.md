@@ -314,26 +314,26 @@ provided by the instructors of this course.
 |                                                                                                                        | 1 thread (serial) | 2 threads | 4 threads | 8 threads | 16 threads | 32 threads | 64 threads |
 |------------------------------------------------------------------------------------------------------------------------|-------------------|-----------|-----------|-----------|------------|------------|------------|
 | No predicate optimization                                                                                              | 0.775             | N/A       | N/A       | N/A       | N/A        | N/A        | N/A        |
-| Predicate optimization                                                                                                 | 1.111             | N/A       | N/A       | N/A       | N/A        | N/A        | N/A        |
+| Predicate optimization                                                                                                 | 0.720             | N/A       | N/A       | N/A       | N/A        | N/A        | N/A        |
 | (No predicate optimization) Parallel queries                                                                           | N/A               | 0.856     | 0.662     | 0.645     | 0.671      | 0.671      | 0.727      |
 | (No preddicate optimization) Run the following in parallel  (Radix-sort, Quicksort,  Join, Filters, Projection)        | N/A               | 0.841     | 0.837     | 0.856     | 0.890      | 0.914      | 0.906      |
 | (No predicate optimization)  Everything runs in parallel (Queries, Radix-sort,  Quicksort, Join,  Filters, Projection) | N/A               | 0.889     | 0.806     | 0.744     | 0.719      | 0.737      | 0.785      |
-| (Predicate optimization)  Parallel queries                                                                             | N/A               | 1.124     | 1.016     | 1.017     | 0.999      | 1.061      | 0.998      |
-| (Preddicate optimization)  Run the following in parallel  (Radix-sort, Quicksort,  Join, Filters, Projection)          | N/A               | 1.050     | 1.016     | 0.976     | 0.983      | 0.974      | 0.978      |
-| (Predicate optimization)  Everything runs in parallel  (Queries, Radix-sort,  Quicksort, Join,  Filters, Projection)   | N/A               | 1.234     | 0.895     | 0.832     | 0.775      | 0.822      | 0.854      |
+| (Predicate optimization)  Parallel queries                                                                             | N/A               | 0.780     | 0.645     | 0.673     | 0.670      | 0.631      | 0.649      |
+| (Preddicate optimization)  Run the following in parallel  (Radix-sort, Quicksort,  Join, Filters, Projection)          | N/A               | 0.788     | 0.772     | 0.802     | 0.833      | 0.983      | 0.861      |
+| (Predicate optimization)  Everything runs in parallel  (Queries, Radix-sort,  Quicksort, Join,  Filters, Projection)   | N/A               | 0.825     | 0.738     | 0.707     | 0.652      | 0.690      | 0.701      |
 
 ## Medium Sized Input (In seconds)
 
 |                                                                                                                        | 1 thread (serial) | 2 threads | 4 threads | 8 threads | 16 threads | 32 threads | 64 threads |
 |------------------------------------------------------------------------------------------------------------------------|-------------------|-----------|-----------|-----------|------------|------------|------------|
 | No predicate optimization                                                                                              | 47.211            | N/A       | N/A       | N/A       | N/A        | N/A        | N/A        |
-| Predicate optimization                                                                                                 | 48.637            | N/A       | N/A       | N/A       | N/A        | N/A        | N/A        |
+| Predicate optimization                                                                                                 | 48.311            | N/A       | N/A       | N/A       | N/A        | N/A        | N/A        |
 | (No predicate optimization) Parallel queries                                                                           | N/A               | 44.903    | 24.862    | 20.573    | 20.471     | 20.844     | 21.023     |
 | (No preddicate optimization) Run the following in parallel  (Radix-sort, Quicksort,  Join, Filters, Projection)        | N/A               | 41.879    | 38.320    | 37.520    | 38.142     | 36.670     | 38.874     |
 | (No predicate optimization)  Everything runs in parallel (Queries, Radix-sort,  Quicksort, Join,  Filters, Projection) | N/A               | 47.957    | 35.500    | 29.447    | 20.235     | 20.767     | 22.356     |
-| (Predicate optimization)  Parallel queries                                                                             | N/A               | 45.596    | 23.769    | 20.072    | 20.433     | 20.597     | 20.876     |
-| (Preddicate optimization)  Run the following in parallel  (Radix-sort, Quicksort,  Join, Filters, Projection)          | N/A               | 40.381    | 37.549    | 36.599    | 36.317     | 36.327     | 36.604     |
-| (Predicate optimization)  Everything runs in parallel  (Queries, Radix-sort,  Quicksort, Join,  Filters, Projection)   | N/A               | 47.481    | 35.455    | 28.007    | 18.521     | 19.425     | 21.666     |
+| (Predicate optimization)  Parallel queries                                                                             | N/A               | 46.076    | 23.769    | 20.072    | 20.854     | 21.316     | 21.008     |
+| (Preddicate optimization)  Run the following in parallel  (Radix-sort, Quicksort,  Join, Filters, Projection)          | N/A               | 38.684    | 32.924    | 30.747    | 30.871     | 31.293     | 36.182     |
+| (Predicate optimization)  Everything runs in parallel  (Queries, Radix-sort,  Quicksort, Join,  Filters, Projection)   | N/A               | 47.904    | 36.315    | 27.404    | 18.290     | 19.243     | 20.550     |
 
 # Time Results Conclusions
 
