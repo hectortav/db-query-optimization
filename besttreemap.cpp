@@ -431,7 +431,7 @@ void updateValueStats(Value* valueP, Value* newValueP, Predicate* newPredicateP,
     field1ValueStatsP->maxValue = field2ValueStatsP->maxValue = minMaxValue;
     
     field1ValueStatsP->valuesNum = field2ValueStatsP->valuesNum = (double)(field1ValueStatsP->valuesNum * field2ValueStatsP->valuesNum) / (double) n;
-    newValueP->cost = field1ValueStatsP->valuesNum;
+    newValueP->cost = valueP->cost + field1ValueStatsP->valuesNum;
 
     uint64_t field1DistinctValuesNumAfterFilter = field1ValueStatsP->distinctValuesNum;
     uint64_t field2DistinctValuesNumAfterFilter = field2ValueStatsP->distinctValuesNum;
