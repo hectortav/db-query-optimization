@@ -1,4 +1,4 @@
-# Software Development forInformation Systems
+# Software Development for Information Systems
 
 [![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 ## How to compile and run the main program
@@ -30,6 +30,10 @@ chmod u+x configure (if necessary)
 ./configure
 make
 make install
+
+# Documentation
+
+Full documentation in [Report](Report.pdf) & TeX files under [Documentation](Documentation) subdirectory.
 
 ## Introduction
 
@@ -277,6 +281,32 @@ The flow of handlepredicates() is the following:
     - If the result contains 0 entries, then the function does the neces-sary memory deallocation and returns NULL which indicates noresults.
     - In any other case, a new IntermediateArray is created which con-sists of only the above 2-column result if this is the first join,orof the contents of the previous IntermediateArrayplusthe col-umn  with  the  row  ids  of  the  first-time-joined  InputArray.  Thisnew IntermediateArray becomes the current one.
   - If the last IntermediateArray is not NULL and its size is greater than0, the function returns it. In any other case, NULL is returned whichindicates no results.
+  
+  ## Map data structure used for the optimization algorithm
+
+For the implementation of the optimization algorithm, a map data
+structure was used. This map uses a “Key” as a key and returns a
+“Value”. A map is a data structure that uses some information as
+identification for some other information. In our case, it uses a
+“PredicateArray” to produce another “PredicateArray” with some stats,
+all described in the “Value” class.
+
+The Key acts like a normal key in any other map, being unique and is the
+point of reference to returning a Value. A value acts like the content
+of a specific key. A value also contains a 2d array with statistics used
+by the algorithm.
+
+The functions insert and retrieve were implemented to make use of the
+map. Also another helping function,exists, was used to check if a
+specific key already exists in the map. Constructors and destructors
+were also implemented for correct memory management and efficient usage
+of the map.
+
+This map is exclusively used for calculating the best order of the
+predicates given, meaning that it finds the combination of predicates
+with the least total cost, by using formulas and specific metrics
+provided by the instructors of this course.
+
 # Time Statistics
 
 ## Small Sized Input (In seconds)

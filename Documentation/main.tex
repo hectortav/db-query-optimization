@@ -100,6 +100,15 @@ The flow of handlepredicates() is the following:
     \end{enumerate}
 \end{enumerate}
 
+\subsection{Map data structure used for the optimization algorithm}
+\tab For the implementation of the optimization algorithm, a map data structure was used. This map uses a “Key” as a key and returns a “Value”. A map is a data structure that uses some information as identification for some other information. In our case, it uses a “PredicateArray” to produce another “PredicateArray” with some stats, all described in the “Value” class.
+
+\tab The Key acts like a normal key in any other map, being unique and is the point of reference to returning a Value. A value acts like the content of a specific key. A value also contains a 2d array with statistics used by the algorithm.
+
+\tab The functions insert and retrieve were implemented to make use of the map. Also another helping function,exists, was used to check if a specific key already exists in the map. Constructors and destructors were also implemented for correct memory management and efficient usage of the map.
+
+\tab This map is exclusively used for calculating the best order of the predicates given, meaning that it finds the combination of predicates with the least total cost, by using formulas and specific metrics provided by the instructors of this course.
+
 
 \section{Implementation Observations}
 
