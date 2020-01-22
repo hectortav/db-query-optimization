@@ -746,7 +746,9 @@ void tuplereorder(tuple* array,tuple* array2, int offset,int shift, bool isLastC
 
     }
     if (allHistsEmpty) {
+        pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
          lastJobDoneArrays[queryIndex][reorderIndex] = true;
+         pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
          pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     }
     delete[] psum;
@@ -812,7 +814,9 @@ void quickSort(tuple* tuples, int startIndex, int stopIndex, int queryIndex, int
     }
 
     if (isLastCall && queryIndex != -1  && reorderIndex != -1) {
+        pthread_mutex_lock(&predicateJobsDoneMutexes[queryIndex]);
         lastJobDoneArrays[queryIndex][reorderIndex] = true;
+        pthread_mutex_unlock(&predicateJobsDoneMutexes[queryIndex]);
         pthread_cond_signal(&predicateJobsDoneConds[queryIndex]);
     }
 }
