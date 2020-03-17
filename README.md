@@ -1,6 +1,8 @@
 # Software Development for Information Systems
 
-[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
+<a href="https://github.com/hectortav/db-query-optimization/actions">
+<img alt="Tests" src="https://github.com/hectortav/db-query-optimization/workflows/C/C++%20CI/badge.svg"></a>
+
 ## How to compile and run the main program
 ----------------------------------
 ```
