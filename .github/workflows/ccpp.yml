@@ -13,8 +13,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
-    - name: configure
-      run: ./configure
+    - name: install cunit
+      run: sudo apt-get install libcunit1-dev libcunit1-doc libcunit1
     - name: make
       run: make
     - name: make tests
