@@ -50,7 +50,7 @@ implemented a Sort Merge Join Algorithm, in the second one we performed
 a query analysis, similar to the one used in the <span>*SIGMOD
 2018*</span> competition, while in the last part we implemented CPU
 personalization and a query optimizer. The project is hosted in GitHub
-(https://github.com/hectortav/Project2020) and contains a Makefile for
+(https://github.com/hectortav/db-query-optimization) and contains a Makefile for
 compilation and a bash script (testProgram.sh) to easily test the
 program. To run the executable, produced by the Makefile, called
 "final", you can use one or more of the following flags to provide cli
