@@ -20,4 +20,4 @@ jobs:
     - name: make tests
       run: cd tests && make
     - name: run tests
-      run: ./main
+      run: cd tests && ./main
