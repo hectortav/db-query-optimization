@@ -3,16 +3,20 @@
 [![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 ## How to compile and run the main program
 ----------------------------------
+```
 make
 ./final
+```
 
 or use testProgram.sh script
 
 ### How to compile and run the unit testing program
 ------------------------------------------
+```
 cd tests
 make
 ./main
+```
 
 ### How to install CUnit on Linux
 -----------------------------
